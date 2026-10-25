@@ -18,6 +18,9 @@ export interface WeatherHour {
   skyCover?: number; // 0-100 %
   precipChance?: number; // 0-100 %
   pressureInHg?: number;
+  /** Surface pressure, hPa, and dew point, °F: from the weather provider when it has them. */
+  pressureHpa?: number;
+  dewPointF?: number;
 }
 
 export interface GroundGrid {
@@ -156,6 +159,8 @@ export interface ConditionsReading {
   gustMph?: number;
   sun: { altitudeDeg: number; azimuthDeg: number; phase: "night" | "dawn" | "morning" | "midday" | "afternoon" | "dusk" };
   thermal: { state: ThermalState; plain: string };
+  /** Pressure trend, front, dew point, cloud and moon, as plain sentences. Empty when the model has no data. */
+  atmosphere?: string;
   /** The next few hours, so Esau can say "by ten the thermals flip". */
   outlook: { localTime: string; windMph: number; windFromCompass: string; thermal: ThermalState }[];
 }

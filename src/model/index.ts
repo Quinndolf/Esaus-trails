@@ -45,5 +45,17 @@ export {
   type ScentHit,
   type ScentCause,
 } from './scent';
+export {
+  atmosphereAt,
+  moonPhase,
+  pressureTrend,
+  pressureWord,
+  frontPassage,
+  mugginess,
+  type Atmosphere,
+  type Front,
+  type Moon,
+  type PressureTrend,
+} from './atmosphere';
 export { thermalLine, windLine, hourSummary, THERMAL_WORDS } from './describe';
 export { createConditionsModel, type ConditionsModel, type HourConditions, type PointReading } from './conditions';

@@ -113,6 +113,9 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
           <p className="hour-line" data-testid="hour-movement">
             {frame.m.line}
           </p>
+          <p className="hour-line" data-testid="hour-atmosphere">
+            {frame.hc.atmosphere.line}
+          </p>
           <div className="hour-legend">
             <span>
               <i className="sw rise" />

@@ -61,7 +61,8 @@ export async function getForecast(lat: number, lon: number, opts: GetForecastOpt
   const errors: string[] = [];
   for (const p of providers) {
     try {
-      const fc = await p(lat, lon, { fetch: opts.fetch, signal: opts.signal, now, nwsBase: opts.nwsBase });
+      let fc = await p(lat, lon, { fetch: opts.fetch, signal: opts.signal, now, nwsBase: opts.nwsBase });
+      if (!opts.providers) fc = await withPressure(fc, lat, lon, { fetch: opts.fetch, signal: opts.signal, now });
       if (opts.cache) await opts.cache.set(key, fc);
       return fc;
     } catch (err) {
@@ -71,4 +72,26 @@ export async function getForecast(lat: number, lon: number, opts: GetForecastOpt
   }
   if (cached) return { ...cached, stale: true };
   throw new Error(`No weather for this spot: ${errors.join('; ')}`);
+}
+
+/**
+ * NWS gridpoints have no air pressure. Borrow Open-Meteo's hourly pressure and dew point for the
+ * same hours so the pressure trend and front passage have something to read. Best effort: the
+ * forecast stands without it.
+ */
+export async function withPressure(fc: Forecast, lat: number, lon: number, opts: ProviderOptions): Promise<Forecast> {
+  if (fc.hours.some((h) => h.pressureHpa != null)) return fc;
+  try {
+    const om = await fetchOpenMeteo(lat, lon, opts);
+    const byHour = new Map(om.hours.map((h) => [h.at, h]));
+    return {
+      ...fc,
+      hours: fc.hours.map((h) => {
+        const o = byHour.get(h.at);
+        return o ? { ...h, pressureHpa: o.pressureHpa, dewPointF: h.dewPointF ?? o.dewPointF } : h;
+      }),
+    };
+  } catch {
+    return fc;
+  }
 }

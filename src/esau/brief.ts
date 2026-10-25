@@ -1,7 +1,7 @@
 import { localTime, readConditions, type ThermalFn } from "./conditions";
 import { compass } from "./geo";
 import { buildSystemPrompt } from "./persona";
-import { modelThermal } from "../model/esau";
+import { atmosphereForGrid, modelThermal } from "../model/esau";
 import { speciesBrain } from "./species";
 import type { SeasonPhase, SpeciesBrain, SpotScores } from "./species/types";
 import { readSpot } from "./terrain";
@@ -82,6 +82,13 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
     `Wind ${conditions.windMph} mph from the ${conditions.windFromCompass}${conditions.gustMph ? `, gusting ${Math.round(conditions.gustMph)}` : ""}; scent carries toward the ${conditions.scentTowardCompass}. ${conditions.tempF}°F.`,
   );
   lines.push(`Thermal on this slope: ${conditions.thermal.state}. ${conditions.thermal.plain}`);
+  try {
+    const atmo = atmosphereForGrid(g, new Date(conditions.at));
+    conditions.atmosphere = atmo.line;
+    lines.push(`Weather pattern: ${atmo.line}`);
+  } catch {
+    // No usable forecast hours around this time; the wind and thermal lines stand alone.
+  }
   if (spot.fromHunter && conditions.windMph >= 2) {
     const towardSpot = Math.abs(((spot.fromHunter.bearingDeg - conditions.scentToward + 540) % 360) - 180) <= 42;
     lines.push(towardSpot ? "The hunter's scent is blowing toward the tapped spot." : "The hunter's scent is not blowing toward the tapped spot.");

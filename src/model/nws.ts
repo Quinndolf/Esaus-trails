@@ -89,6 +89,7 @@ export function parseGridData(props: any, windowStart: number, windowHours = 48)
   const dir = expandSeries(props.windDirection);
   const sky = expandSeries(props.skyCover);
   const rh = expandSeries(props.relativeHumidity);
+  const dew = expandSeries(props.dewpoint, toF);
   const start = Math.floor(windowStart / 3600e3) * 3600e3;
   const hours: WeatherHour[] = [];
   for (let k = 0; k < windowHours; k++) {
@@ -105,6 +106,7 @@ export function parseGridData(props: any, windowStart: number, windowHours = 48)
       gustMph: gust.get(t),
       skyCoverPct: sky.get(t),
       humidityPct: rh.get(t),
+      dewPointF: dew.get(t),
     });
   }
   return hours;
@@ -131,6 +133,9 @@ export function parseObservation(props: any, station: string): WeatherObservatio
     gustMph: g?.value != null ? toMph(g.value, g.unitCode) : undefined,
     skyCoverPct: sky,
     humidityPct: props.relativeHumidity?.value ?? undefined,
+    // Stations report pressure in Pa.
+    pressureHpa: props.barometricPressure?.value != null ? props.barometricPressure.value / 100 : undefined,
+    dewPointF: props.dewpoint?.value != null ? toF(props.dewpoint.value, props.dewpoint.unitCode) : undefined,
   };
 }
 

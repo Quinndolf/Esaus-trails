@@ -36,6 +36,10 @@ export interface WeatherHour {
   /** Cloud cover 0-100. Clear skies make the strongest thermals both ways. */
   skyCoverPct?: number;
   humidityPct?: number;
+  /** Surface (station-level) air pressure, hPa. Drives the pressure trend and front detection. */
+  pressureHpa?: number;
+  /** Dew point, °F. Close to the air temperature means fog, dew and settled air. */
+  dewPointF?: number;
 }
 
 export interface WeatherObservation extends WeatherHour {
