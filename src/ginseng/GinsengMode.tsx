@@ -3,6 +3,7 @@ import type { ImageSource, Map as MLMap } from 'maplibre-gl';
 import { useEsau } from '../esau/ui/store';
 import { imageCorners } from '../hour/overlays';
 import { BottomSheet } from '../ui/BottomSheet';
+import { HowToSheet } from './HowToSheet';
 import { ginsengField, ginsengPixels } from './model';
 import { GINSENG_SOURCES, KY_GINSENG_RULES, seasonStatus } from './rules';
 import { useGinseng } from './store';
@@ -51,7 +52,7 @@ export function useGinsengLayer(map: MLMap | null) {
 /** Top-of-screen status in ginseng mode: the season, the rules, and a way out. */
 export function GinsengPill({ map }: { map: MLMap | null }) {
   const on = useEsau((s) => s.species === 'ginseng');
-  const { status, error, setRulesOpen, exit, load } = useGinseng();
+  const { status, error, setRulesOpen, setHowtoOpen, exit, load } = useGinseng();
   if (!on) return null;
   const season = seasonStatus(new Date());
   const center = () => {
@@ -66,6 +67,7 @@ export function GinsengPill({ map }: { map: MLMap | null }) {
       {status === 'error' && <span className="warn">{error}</span>}
       <div className="ginseng-actions">
         <button onClick={() => setRulesOpen(true)}>Rules</button>
+        <button onClick={() => setHowtoOpen(true)}>How to dig</button>
         <button
           onClick={() => {
             const c = center();
@@ -78,6 +80,12 @@ export function GinsengPill({ map }: { map: MLMap | null }) {
       </div>
     </div>
   );
+}
+
+export function GinsengHowToSheet() {
+  const open = useGinseng((s) => s.howtoOpen);
+  const setOpen = useGinseng((s) => s.setHowtoOpen);
+  return <HowToSheet open={open} onClose={() => setOpen(false)} />;
 }
 
 export function GinsengRulesSheet() {
@@ -110,7 +118,16 @@ export function GinsengRulesSheet() {
           <li key={s}>{s}</li>
         ))}
       </ul>
-      <button className="primary-btn" onClick={() => setOpen(false)}>
+      <button
+        className="primary-btn"
+        onClick={() => {
+          setOpen(false);
+          useGinseng.getState().setHowtoOpen(true);
+        }}
+      >
+        See how to harvest
+      </button>
+      <button className="link-btn" onClick={() => setOpen(false)}>
         Got it
       </button>
     </BottomSheet>
