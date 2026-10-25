@@ -40,3 +40,44 @@ describe('How to harvest slides', () => {
     await act(async () => root.unmount());
   });
 });
+
+describe('slide photos', () => {
+  it('uses a listed photo first with its credit, and the drawing one tap away', async () => {
+    const { loadSlidePhotos, resetSlidePhotos } = await import('../photos');
+    resetSlidePhotos();
+    const photos = await loadSlidePhotos(async () => ({
+      photos: {
+        know: { file: 'know.jpg', caption: 'A plant', author: 'W. Cass, NPS', license: 'Public domain', source: 'https://example.org/a' },
+        bad: { file: 'x.jpg' },
+      },
+    }));
+    expect(Object.keys(photos)).toEqual(['know']);
+    resetSlidePhotos();
+    await loadSlidePhotos(async () => ({
+      photos: { know: { file: 'know.jpg', caption: 'A plant', author: 'W. Cass, NPS', license: 'Public domain', source: 'https://example.org/a' } },
+    }));
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(createElement(HowToSheet, { open: true, onClose() {} })));
+    const click = async (label: string) => {
+      const b = [...host.querySelectorAll('button')].find((x) => x.textContent === label)!;
+      await act(async () => void b.click());
+    };
+    expect(host.querySelector('[data-testid="howto-photo"]')).toBeNull(); // step 1 has no photo
+    await click('Next');
+    expect(host.querySelector('[data-testid="howto-photo"] img')?.getAttribute('src')).toBe('/ginseng/photos/know.jpg');
+    expect(host.textContent).toContain('W. Cass, NPS, Public domain');
+    await click('Drawing');
+    expect(host.querySelector('[data-testid="howto-art"] svg')).toBeTruthy();
+    await act(async () => root.unmount());
+    resetSlidePhotos();
+  });
+
+  it('falls back to drawings when the manifest is missing', async () => {
+    const { loadSlidePhotos, resetSlidePhotos } = await import('../photos');
+    resetSlidePhotos();
+    expect(await loadSlidePhotos(async () => Promise.reject(new Error('404')))).toEqual({});
+    resetSlidePhotos();
+  });
+});
