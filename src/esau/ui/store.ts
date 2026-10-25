@@ -22,7 +22,10 @@ interface Turn {
 
 interface EsauState {
   open: boolean;
-  species: SpeciesId;
+  /** What the hunter is after. Null until they choose; Esau reads nothing before then. */
+  species: SpeciesId | null;
+  /** The picker is open to change the animal (it is always open while `species` is null). */
+  choosing: boolean;
   spot: LatLng | null;
   grid: GroundGrid | null;
   hourIndex: number;
@@ -39,7 +42,8 @@ interface EsauState {
 
   setHunter(h: Hunter | null): void;
   setPins(p: Pin[]): void;
-  setSpecies(s: SpeciesId): void;
+  setSpecies(s: SpeciesId | null): void;
+  setChoosing(open: boolean): void;
   setHour(i: number): void;
   /** The app's hour slider drives this: Esau reads the grid hour nearest `at`. */
   setTime(at: Date): void;
@@ -51,17 +55,17 @@ interface EsauState {
   close(): void;
 }
 
-const SPECIES_KEY = 'esau-species';
+const SPECIES_KEY = 'esau-hunt';
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-function savedSpecies(): SpeciesId {
+function savedSpecies(): SpeciesId | null {
   try {
     const v = localStorage.getItem(SPECIES_KEY);
-    if (v === 'whitetail' || v === 'elk' || v === 'mule_deer' || v === 'black_bear' || v === 'turkey' || v === 'hog' || v === 'ginseng') return v;
+    if (v === 'whitetail' || v === 'elk' || v === 'mule_deer' || v === 'black_bear' || v === 'turkey' || v === 'hog' || v === 'squirrel' || v === 'ginseng') return v;
   } catch {
     /* ignore */
   }
-  return 'whitetail';
+  return null;
 }
 
 export function nearestHour(grid: GroundGrid, at: Date): number {
@@ -79,6 +83,7 @@ let ticket = 0;
 export const useEsau = create<EsauState>((set, get) => ({
   open: false,
   species: savedSpecies(),
+  choosing: false,
   spot: null,
   grid: null,
   hourIndex: 0,
@@ -97,13 +102,17 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   setSpecies(species) {
     try {
-      localStorage.setItem(SPECIES_KEY, species);
+      if (species) localStorage.setItem(SPECIES_KEY, species);
+      else localStorage.removeItem(SPECIES_KEY);
     } catch {
       /* ignore */
     }
-    set({ species, reply: null, history: [] });
-    if (get().spot && get().grid) void get().ask();
+    ticket++;
+    set({ species, choosing: false, reply: null, history: [] });
+    if (species && get().spot && get().grid) void get().ask();
   },
+
+  setChoosing: (choosing) => set({ choosing }),
 
   setHour: (hourIndex) => set({ hourIndex }),
 
@@ -113,6 +122,7 @@ export const useEsau = create<EsauState>((set, get) => ({
   },
 
   async tapSpot(spot) {
+    if (!get().species) return;
     const t = ++ticket;
     set({ open: true, spot, photo: null, reply: null, history: [], status: 'loading-ground', error: null });
     try {
@@ -128,6 +138,10 @@ export const useEsau = create<EsauState>((set, get) => ({
   },
 
   async askPhoto(input) {
+    if (!get().species) {
+      set({ choosing: true });
+      return;
+    }
     const spot = { lat: input.position.lat, lng: input.position.lng };
     const t = ++ticket;
     set({ open: true, spot, photo: input, reply: null, history: [], status: 'loading-ground', error: null });
@@ -145,7 +159,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   async ask(question) {
     const s = get();
-    if (!s.spot || !s.grid) return;
+    if (!s.spot || !s.grid || !s.species) return;
     const t = ticket;
     const q = question?.trim();
     const base: SpotQuery = {
@@ -184,7 +198,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
 /** The instant rule-based read for the current hour, for scrubbing the slider without spending a call. */
 export function quickBrief(s: Pick<EsauState, 'species' | 'spot' | 'grid' | 'hourIndex' | 'hunter' | 'pins'>): EsauBrief | null {
-  if (!s.spot || !s.grid) return null;
+  if (!s.spot || !s.grid || !s.species) return null;
   try {
     return buildBrief({ species: s.species, spot: s.spot, grid: s.grid, hourIndex: s.hourIndex, hunter: s.hunter ?? undefined, pins: s.pins, timeZone: TZ });
   } catch {

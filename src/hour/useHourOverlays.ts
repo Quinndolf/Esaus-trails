@@ -13,6 +13,8 @@ import {
   trailLines,
   windArrows,
 } from './overlays';
+import { useEsau } from '../esau/ui/store';
+import { hourScope, type HourScope } from './scope';
 import { useHour } from './store';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -147,15 +149,27 @@ function ensureLayers(map: MLMap) {
   );
 }
 
-function setVisible(map: MLMap, on: boolean) {
-  for (const id of HOUR_LAYER_IDS)
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+const THERMAL_IDS = ['hour-thermal', 'hour-ticks'];
+const SCENT_IDS = ['hour-scent-fill', 'hour-scent-line'];
+const MOVEMENT_IDS = ['hour-presence', 'hour-trails-casing', 'hour-trails', 'hour-beds'];
+
+/** Only the layers that belong to the hunted animal draw; wind arrows are the one thing every animal shares. */
+function setVisible(map: MLMap, on: boolean, scope: HourScope | null) {
+  for (const id of HOUR_LAYER_IDS) {
+    const mine =
+      (!THERMAL_IDS.includes(id) || !!scope?.thermals) &&
+      (!SCENT_IDS.includes(id) || !!scope?.scent) &&
+      (!MOVEMENT_IDS.includes(id) || !!scope?.movement);
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on && mine ? 'visible' : 'none');
+  }
 }
 
 /** Paints the slider's hour on the map: thermals, deer presence, trails, beds, wind and the hunter's scent. */
 export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
   const { grid, conditions, movement, date, open, status } = useHour();
-  const show = open && status === 'ready';
+  const species = useEsau((st) => st.species);
+  const scope = useMemo(() => hourScope(species), [species]);
+  const show = open && status === 'ready' && !!scope;
 
   const frame = useMemo(() => {
     if (!grid || !conditions || !movement) return null;
@@ -169,7 +183,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
     // `map` only arrives after its style has loaded (MapView's onReady), so layers can go straight on.
     if (!map) return;
     ensureLayers(map);
-    setVisible(map, show && !!frame);
+    setVisible(map, show && !!frame, scope);
     if (!show || !frame || !grid) return;
     const corners = imageCorners(grid);
     (map.getSource('hour-thermal') as ImageSource).updateImage({
@@ -185,7 +199,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
     (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m));
     (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m));
     (map.getSource('hour-scent') as GeoJSONSource).setData(plumePolygon(frame.plume));
-  }, [map, frame, show, grid]);
+  }, [map, frame, show, grid, scope]);
 
   return frame;
 }

@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import { BASEMAP_LABELS, nextBasemap, type BasemapId } from './map/basemaps';
 import { cardinal, metersToFeet, type LngLat } from './map/geo';
-import { ALL_LAYERS, FOLDERS } from './layers/registry';
+import { ALL_LAYERS, foldersFor, scopeLayerState } from './layers/registry';
 import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
-import { EsauPanel, useEsau, useEsauMap } from './esau/ui';
+import { EsauPanel, HuntPill, SpeciesPicker, useEsau, useEsauMap } from './esau/ui';
+import { callsFor, CALL_GROUP_TITLE } from './calls/catalog';
 import {
   isAwaitingPinDrop,
   ManualPinPrompt,
@@ -68,8 +69,12 @@ export function App() {
   const { fix, status: gps } = useGeolocation();
   const compass = useHeading(mode === 'compass');
   const layers = useLayerState();
-  useMapLayers(map, ALL_LAYERS, layers.state);
-  const offlineLayers = useMemo(() => offlineOverlays(layers.state), [layers.state]);
+  // Layers meant for another animal are switched off on the map and left out of offline saves.
+  const species = useEsau((s) => s.species);
+  const scopedState = useMemo(() => scopeLayerState(layers.state, species), [layers.state, species]);
+  const folders = useMemo(() => foldersFor(species), [species]);
+  useMapLayers(map, ALL_LAYERS, scopedState);
+  const offlineLayers = useMemo(() => offlineOverlays(scopedState), [scopedState]);
 
   const heading = compass.heading ?? fix?.heading ?? null;
 
@@ -80,7 +85,7 @@ export function App() {
   useEffect(() => void useTools.getState().load(), []);
   useToolLayers(map);
   useGinsengLayer(map);
-  const ginsengOn = useEsau((s) => s.species === 'ginseng');
+  const ginsengOn = species === 'ginseng';
   // Picking Ginseng from Esau's animal chips counts as entering the mode too: rules first, then the ground.
   useEffect(() => {
     if (!ginsengOn || !map) return;
@@ -194,6 +199,7 @@ export function App() {
             {heading == null ? 'Finding heading…' : `${Math.round(heading)}° ${cardinal(heading)}`}
           </div>
         )}
+        <HuntPill />
         <GinsengPill map={map} />
         {notice && <div className="status-pill warn">{notice}</div>}
         {gps === 'denied' && <div className="status-pill warn">Location is off. Allow it in your browser settings.</div>}
@@ -252,7 +258,7 @@ export function App() {
         onClose={() => setSheet(null)}
         basemap={basemap}
         onBasemap={setBasemap}
-        folders={FOLDERS}
+        folders={folders}
         state={layers.state}
         onToggle={layers.toggle}
         onOptions={layers.setOptions}
@@ -264,17 +270,13 @@ export function App() {
         onPhotos={() => setSheet('photos')}
         onSaved={() => setSheet('saved')}
         onCalls={() => setSheet('calls')}
-        ginsengOn={ginsengOn}
-        onGinseng={() => {
-          if (ginsengOn) return useGinseng.getState().exit();
-          const c = map?.getCenter();
-          useGinseng.getState().enter(c ? [c.lng, c.lat] : null);
-        }}
+        hasCalls={callsFor(species).length > 0}
+        callsHint={callsFor(species).length ? `${CALL_GROUP_TITLE[callsFor(species)[0].species]} calls, hold to play` : ''}
         onMarkLocation={() => void markMyLocation()}
       />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
-      <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} />
+      <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} species={species} />
       <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
       <WaypointSheet />
       <ToolBar />
@@ -288,6 +290,7 @@ export function App() {
       />
       <EsauPanel />
       <ManualPinPrompt />
+      <SpeciesPicker />
     </div>
   );
 }

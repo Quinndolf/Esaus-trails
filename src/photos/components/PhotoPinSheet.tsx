@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { signFits } from '../../esau/species';
+import { useEsau } from '../../esau/ui/store';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { buildEsauPhotoInput, type EsauPhotoInput } from '../esauPhotoInput';
 import { normalizeTags, usePhotoPins } from '../store';
@@ -68,7 +70,9 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
     }
   };
 
-  const allTags = [...PRESET_TAGS, ...pin.tags.filter((t) => !(PRESET_TAGS as readonly string[]).includes(t))];
+  const species = useEsau((st) => st.species);
+  const presets = PRESET_TAGS.filter((t) => signFits(t, species));
+  const allTags = [...presets, ...pin.tags.filter((t) => !(presets as readonly string[]).includes(t))];
 
   return (
     <BottomSheet title="Photo" open onClose={close}>

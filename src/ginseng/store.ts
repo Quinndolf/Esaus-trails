@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { useEsau } from '../esau/ui/store';
-import type { GroundGrid, SpeciesId } from '../esau/types';
+import type { GroundGrid } from '../esau/types';
 import { bboxAround, fetchGround } from '../hour/ground';
 
 const SEEN_KEY = 'esau-ginseng-rules-seen';
-const PREV_KEY = 'esau-species-before-ginseng';
 
 interface GinsengState {
   grid: GroundGrid | null;
@@ -51,14 +50,7 @@ export const useGinseng = create<GinsengState>((set, get) => ({
 
   enter(center) {
     const esau = useEsau.getState();
-    if (esau.species !== 'ginseng') {
-      try {
-        sessionStorage.setItem(PREV_KEY, esau.species);
-      } catch {
-        /* ignore */
-      }
-      esau.setSpecies('ginseng');
-    }
+    if (esau.species !== 'ginseng') esau.setSpecies('ginseng');
     // First time in, the law comes before the map.
     if (!seen()) set({ rulesOpen: true });
     const { grid, status } = get();
@@ -66,14 +58,9 @@ export const useGinseng = create<GinsengState>((set, get) => ({
   },
 
   exit() {
-    let prev: SpeciesId = 'whitetail';
-    try {
-      const v = sessionStorage.getItem(PREV_KEY);
-      if (v && v !== 'ginseng') prev = v as SpeciesId;
-    } catch {
-      /* ignore */
-    }
-    useEsau.getState().setSpecies(prev);
+    // Ginseng is one of the things the hunter can be after; leaving it means choosing again.
+    useEsau.getState().setSpecies(null);
+    useEsau.getState().setChoosing(true);
     set({ rulesOpen: false, howtoOpen: false });
   },
 

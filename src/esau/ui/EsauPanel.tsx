@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { localTime } from '../conditions';
-import { SPECIES } from '../species';
 import type { EsauReply } from '../types';
 import { CloseIcon } from '../../ui/icons';
 import { quickBrief, useEsau } from './store';
@@ -75,22 +74,6 @@ export function EsauPanel() {
       </header>
 
       <div className="esau-body">
-        <div className="species-row" role="radiogroup" aria-label="Animal">
-          {SPECIES.map((sp) => (
-            <button
-              key={sp.id}
-              role="radio"
-              aria-checked={s.species === sp.id}
-              className={`chip ${s.species === sp.id ? 'is-active' : ''}`}
-              disabled={!sp.ready || busy}
-              onClick={() => s.setSpecies(sp.id)}
-            >
-              {sp.name}
-              {!sp.ready && <small> soon</small>}
-            </button>
-          ))}
-        </div>
-
         {brief && (
           <p className="esau-air">
             {hourLabel} · wind {brief.conditions.windMph} mph {brief.conditions.windFromCompass} · scent to {brief.conditions.scentTowardCompass} ·

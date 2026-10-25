@@ -53,7 +53,7 @@ export interface Pin {
   tags?: string[];
 }
 
-export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog" | "ginseng";
+export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog" | "squirrel" | "ginseng";
 
 /** Thermal state of a cell, same codes as the prototype. */
 export type ThermalState = "settled" | "rising" | "sinking" | "pooling";

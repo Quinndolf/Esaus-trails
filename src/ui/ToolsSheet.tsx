@@ -8,12 +8,13 @@ interface Props {
   onMarkLocation: () => void;
   onSaved: () => void;
   onCalls: () => void;
-  onGinseng: () => void;
-  ginsengOn: boolean;
+  /** Animal-specific tiles show only when the hunted animal has them (calls). */
+  hasCalls: boolean;
+  callsHint: string;
 }
 
 /** The Swiss-army knife: every map tool in one sheet. */
-export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, onGinseng, ginsengOn }: Props) {
+export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, hasCalls, callsHint }: Props) {
   const setMode = useTools((s) => s.setMode);
   const recording = useTools((s) => s.recording);
   const startTrack = useTools((s) => s.startTrack);
@@ -30,8 +31,7 @@ export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, o
     { id: 'drop', name: 'Drop waypoint', hint: 'Tap the map to place it', run: pick(() => setMode('drop-waypoint')) },
     { id: 'saved', name: 'Waypoints', hint: counts ? `${counts} saved` : 'Waypoints, shapes, tracks', run: onSaved },
     { id: 'photos', name: 'Photos', hint: 'Take or add a photo', run: onPhotos },
-    { id: 'ginseng', name: ginsengOn ? 'Exit ginseng mode' : 'Ginseng mode', hint: ginsengOn ? 'Back to hunting' : 'Where ginseng likely grows', run: pick(onGinseng), live: ginsengOn },
-    { id: 'calls', name: 'Calls', hint: 'Deer and squirrel, hold to play', run: onCalls },
+    ...(hasCalls ? [{ id: 'calls', name: 'Calls', hint: callsHint, run: onCalls }] : []),
     { id: 'measure', name: 'Measure distance', hint: 'Tap points on the map', run: pick(() => setMode('measure')) },
     { id: 'line', name: 'Draw line', hint: 'Routes, fence lines', run: pick(() => setMode('draw-line')) },
     { id: 'area', name: 'Draw area', hint: 'Plots, fields, acreage', run: pick(() => setMode('draw-area')) },
