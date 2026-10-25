@@ -73,3 +73,22 @@ as the slider moves. Hard wind also tucks beds into the lee.
 The slider itself lives in `src/hour/`. `useHour` (zustand) holds the ground, both models and
 the selected `date`; anything else that should follow the slider, Esau's panel included,
 subscribes to `useHour`.
+
+## Atmosphere (pressure, fronts, dew point, cloud, moon)
+
+`atmosphere.ts` adds the weather beyond wind and temperature. `createConditionsModel(...).at(date).atmosphere`
+carries it for the hour slider and Esau's field report.
+
+- Pressure: Open-Meteo `surface_pressure` (hPa), fetched alongside NWS (NWS gridpoints have none) by `withPressure`
+  in `forecast.ts`. Trend is the change over the last 3 hours, worded steady / rising / falling / rapidly.
+  A station's pressure is not blended into the forecast hours: sources sit on different baselines.
+- Front: a cold front is called when the wind veers 60° or more clockwise within about 6 hours while the temperature
+  falls 4 °F or more. Reads forecast hours only, so it can miss one at the edge of the forecast.
+- Dew point: NWS gridpoint dewpoint or Open-Meteo `dew_point_2m`. Humid air trims both daytime heating and night
+  cooling a little (`mugginess`); air within 3 °F of its dew point with under 5 mph wind is called fog and pools
+  cold air harder.
+- Moon: mean-lunation phase and lit fraction, good to about half a day.
+- `movementFactor` nudges how many deer are on their feet: up to about 1.15 on a rapidly falling barometer, 1.08
+  ahead of a front, 1.06 behind one, and a few percent toward night on a bright moon. These are deliberately small.
+  The studies behind them (see `src/esau/species/whitetail.ts`, WEATHER, PRESSURE, MOON AND CALLS) found time of day
+  dominates and weather and moon effects are weak or inconsistent. Treat them as hunter lore, not findings.
