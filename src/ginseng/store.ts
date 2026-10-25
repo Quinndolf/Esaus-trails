@@ -11,6 +11,8 @@ interface GinsengState {
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string | null;
   rulesOpen: boolean;
+  howtoOpen: boolean;
+  setHowtoOpen(open: boolean): void;
   setRulesOpen(open: boolean): void;
   /** Switch Esau to ginseng and read the ground around `center` ([lng, lat]). */
   enter(center: [number, number] | null): void;
@@ -33,6 +35,8 @@ export const useGinseng = create<GinsengState>((set, get) => ({
   status: 'idle',
   error: null,
   rulesOpen: false,
+  howtoOpen: false,
+  setHowtoOpen: (howtoOpen) => set({ howtoOpen }),
 
   setRulesOpen(rulesOpen) {
     if (!rulesOpen) {
@@ -70,7 +74,7 @@ export const useGinseng = create<GinsengState>((set, get) => ({
       /* ignore */
     }
     useEsau.getState().setSpecies(prev);
-    set({ rulesOpen: false });
+    set({ rulesOpen: false, howtoOpen: false });
   },
 
   async load(center) {

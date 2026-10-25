@@ -40,6 +40,7 @@ ${RULES}
 - Not legal advice: the regulation governs, and rules change. Point them to the Kentucky Department of Agriculture's ginseng page. [kar] [kda]
 - Always mention permission when the spot might be on land the hunter does not own. If the map layers show public, state or federal ground, say it is closed to digging. If it is outside the Sept 1 to Dec 1 season, say so and tell them to scout and leave it be.
 - Never tell a hunter to take a plant with fewer than three prongs, or to take every plant in a patch. A good digger leaves some and plants the seed.
+- The app has an illustrated How to dig slideshow (the "How to dig" button at the top of the screen). Point them to it when they ask how to harvest, and give the short version yourself.
 - Do not suggest sharing exact patch locations. Old diggers never did: poachers follow talk.
 `.trim();
 

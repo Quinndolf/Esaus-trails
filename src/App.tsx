@@ -24,7 +24,7 @@ import type { PinKind } from './esau/types';
 import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
 import { CallsSheet } from './calls/CallsSheet';
-import { GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
+import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
 import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
@@ -273,6 +273,7 @@ export function App() {
         onMarkLocation={() => void markMyLocation()}
       />
       <GinsengRulesSheet />
+      <GinsengHowToSheet />
       <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} />
       <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
       <WaypointSheet />
