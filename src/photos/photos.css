@@ -1,0 +1,353 @@
+/* Photo pins. Colors are tokens so the app shell can theme them. */
+:root {
+  --photo-sheet-bg: var(--panel, #1d2219);
+  --photo-sheet-fg: var(--text, #f1f3ec);
+  --photo-field-bg: var(--panel-2, #262c22);
+  --photo-muted: var(--muted, #a3ab98);
+  --photo-line: var(--line, #343b2e);
+  --photo-accent: var(--green, #34c759); /* toggle and "on" green */
+  --photo-danger: #ff453a;
+}
+
+.photo-add {
+  position: relative;
+}
+.photo-add__menu {
+  position: absolute;
+  bottom: 58px;
+  right: 0;
+  min-width: 220px;
+  background: var(--photo-sheet-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.4);
+}
+.photo-add__menu button {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--photo-line);
+  color: var(--photo-sheet-fg);
+  font-size: 16px;
+}
+.photo-add__menu button:last-child {
+  border-bottom: 0;
+}
+
+/* Marker: round thumbnail with a white ring and a point underneath.
+   MapLibre owns the element's transform, so nothing here may set one. */
+.photo-pin-marker {
+  position: relative;
+  width: 44px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.photo-pin-marker__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-sizing: border-box;
+  background: #555 center / cover no-repeat;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+}
+.photo-pin-marker::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  bottom: 0;
+  border: 7px solid transparent;
+  border-top: 10px solid #fff;
+  border-bottom: 0;
+}
+.photo-pin-marker.is-selected .photo-pin-marker__img {
+  border-color: var(--photo-accent);
+}
+.photo-pin-marker.is-selected::after {
+  border-top-color: var(--photo-accent);
+}
+.photo-pin-dropping,
+.photo-pin-dropping canvas {
+  cursor: crosshair;
+}
+
+.manual-pin {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--photo-sheet-bg);
+  color: var(--photo-sheet-fg);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.4);
+  z-index: 20;
+}
+.manual-pin__thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.manual-pin__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+}
+.manual-pin__body span {
+  color: var(--photo-muted);
+}
+.manual-pin__error {
+  color: var(--photo-danger) !important;
+}
+.manual-pin__actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.manual-pin__actions button,
+.photo-sheet__esau,
+.photo-sheet__confirm button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--photo-accent);
+  color: #08200f;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+button.is-quiet {
+  background: transparent;
+  color: var(--photo-sheet-fg);
+  border: 0;
+  min-height: 44px;
+  font-size: 15px;
+}
+button.is-danger {
+  background: var(--photo-danger);
+  color: #fff;
+}
+.is-danger-text {
+  color: var(--photo-danger) !important;
+}
+
+.photo-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+.photo-sheet > * {
+  flex: none;
+}
+.photo-sheet__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+.photo-sheet__actions button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--photo-field-bg);
+  color: var(--photo-sheet-fg);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.photo-sheet__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: 4px 0;
+}
+.photo-sheet__name:focus {
+  outline: none;
+  border-bottom-color: var(--photo-accent);
+}
+.photo-sheet__image {
+  width: 100%;
+  max-height: 40dvh;
+  object-fit: contain;
+  background: #000;
+  border-radius: 10px;
+}
+.photo-sheet__tags,
+.photo-list__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  border: 1px solid var(--photo-line);
+  background: transparent;
+  color: var(--photo-sheet-fg);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+.chip.is-on {
+  background: var(--photo-accent);
+  border-color: var(--photo-accent);
+  color: #08200f;
+  font-weight: 600;
+}
+.chip-add input {
+  width: 80px;
+  min-height: 34px;
+  border-radius: 17px;
+  border: 1px dashed var(--photo-line);
+  background: transparent;
+  color: var(--photo-sheet-fg);
+  padding: 0 12px;
+  font-size: 14px;
+}
+.photo-sheet__notes {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--photo-field-bg);
+  color: inherit;
+  border: 1px solid var(--photo-line);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS zooming in on focus */
+  resize: vertical;
+}
+.photo-sheet__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+.photo-sheet__meta dt {
+  color: var(--photo-muted);
+}
+.photo-sheet__meta dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.photo-sheet__meta small {
+  color: var(--photo-muted);
+}
+.photo-sheet__confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.photo-sheet__confirm span {
+  flex: 2;
+}
+
+.toggle {
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  border: 0;
+  padding: 2px;
+  background: #4a4d45;
+  transition: background 0.2s;
+}
+.toggle[aria-checked='true'] {
+  background: var(--photo-accent);
+}
+.toggle__knob {
+  display: block;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.toggle[aria-checked='true'] .toggle__knob {
+  transform: translateX(20px);
+}
+
+.photo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.photo-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.photo-list__setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.photo-list__setting div {
+  display: flex;
+  flex-direction: column;
+}
+.photo-list__setting small,
+.photo-row small,
+.photo-list__empty {
+  color: var(--photo-muted);
+}
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--photo-line);
+  color: inherit;
+  text-align: left;
+}
+.photo-row__thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: #333 center / cover no-repeat;
+  flex: none;
+}
+.photo-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.photo-row__text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.photo-row__tags {
+  text-transform: capitalize;
+}
