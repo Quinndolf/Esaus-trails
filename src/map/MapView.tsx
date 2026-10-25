@@ -62,7 +62,16 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
 
     map.on('zoomend', () => setZoomTick((n) => n + 1));
 
-    map.on('load', () => {
+    // MapLibre pops the credits open whenever a layer adds new ones. Keep them collapsed so they
+    // never cover the bearing pill; the (i) button still opens them.
+    const collapseCredits = () =>
+      el.current?.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
+    map.on('sourcedata', (e) => {
+      if (e.sourceDataType === 'metadata') collapseCredits();
+    });
+    map.once('idle', collapseCredits);
+
+    map.once('style.load', () => {
       map.addSource('gps-accuracy', { type: 'geojson', data: EMPTY });
       map.addSource('gps-cone', { type: 'geojson', data: EMPTY });
       map.addSource('gps-dot', { type: 'geojson', data: EMPTY });
@@ -90,9 +99,9 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
         source: 'gps-dot',
         paint: { 'circle-radius': 7, 'circle-color': '#2f8cff' },
       });
-      // Start collapsed so the credits never cover the controls.
-      el.current?.querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
       loaded.current = true;
+      // Handle for browser tests and debugging from the console.
+      (window as unknown as { __esauMap?: MLMap }).__esauMap = map;
       onReady(map);
     });
 
@@ -115,7 +124,7 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
       }
     };
     if (map.isStyleLoaded()) apply();
-    else map.once('load', apply);
+    else map.once('style.load', apply);
   }, [basemap]);
 
   // GPS dot, accuracy ring and (in compass mode) the sight cone.

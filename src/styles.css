@@ -102,3 +102,25 @@ button { font: inherit; color: inherit; }
 .area-row { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
 .area-main { flex: 1; text-align: left; border: none; background: transparent; padding: 12px 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
 .area-main span { color: var(--muted); font-size: 12px; }
+
+/* Layer system */
+.sheet-head .back-btn { position: absolute; left: 8px; top: 8px; }
+.sheet-head h2 { max-width: calc(100% - 100px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-row, .layer-row, .option-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.layer-row.is-disabled { cursor: default; }
+.layer-row.is-disabled .row-main strong { color: var(--muted); }
+.row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row-main > span { color: var(--muted); font-size: 12px; }
+.chev { color: var(--muted); flex: none; width: 18px; }
+.swatch { flex: none; width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,.25); }
+.link-btn { align-self: flex-start; border: none; background: none; padding: 4px 0 0; color: var(--green); font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
+.toggle { flex: none; width: 51px; height: 31px; border-radius: 16px; border: none; background: #4a5244; position: relative; cursor: pointer; transition: background .15s; padding: 0; }
+.toggle.is-on { background: var(--green); }
+.toggle:disabled { opacity: .35; }
+.toggle-knob { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .15s; }
+.toggle.is-on .toggle-knob { transform: translateX(20px); }
+.layer-master { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 12px; background: var(--panel-2); font-weight: 600; }
+.check { flex: none; width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; }
+.check.is-on { background: var(--green); border-color: var(--green); color: #07210f; }
+.check svg { width: 16px; height: 16px; }

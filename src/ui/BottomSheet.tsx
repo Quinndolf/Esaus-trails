@@ -1,15 +1,17 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { CloseIcon } from './icons';
+import { ChevronLeft, CloseIcon } from './icons';
 
 interface Props {
   title: string;
   open: boolean;
   onClose: () => void;
+  /** Shows a back arrow, for sheets with drill-down pages. */
+  onBack?: () => void;
   children: ReactNode;
 }
 
 /** onX-style sheet: fills most of the bottom of a phone, drag the handle down to dismiss. */
-export function BottomSheet({ title, open, onClose, children }: Props) {
+export function BottomSheet({ title, open, onClose, onBack, children }: Props) {
   const startY = useRef<number | null>(null);
   const [drag, setDrag] = useState(0);
 
@@ -38,6 +40,11 @@ export function BottomSheet({ title, open, onClose, children }: Props) {
           }}
         >
           <div className="sheet-handle" />
+          {onBack && (
+            <button className="icon-btn back-btn" aria-label="Back" onClick={onBack} onPointerDown={(e) => e.stopPropagation()}>
+              <ChevronLeft />
+            </button>
+          )}
           <h2>{title}</h2>
           <button className="icon-btn" aria-label="Close" onClick={onClose} onPointerDown={(e) => e.stopPropagation()}>
             <CloseIcon />
