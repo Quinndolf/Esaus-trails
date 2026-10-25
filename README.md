@@ -34,4 +34,4 @@ npm run build   # static site in dist/
 
 ## Hosting
 
-DigitalOcean droplet: `dist/` served as static files, `server/index.mjs` behind the same HTTPS host at `/api`. Location and compass need HTTPS on phones.
+DigitalOcean droplet: the build is served by nginx and `server/index.mjs` runs as a systemd service behind the same HTTPS host at `/api`. Location and compass need HTTPS on phones. Copy-paste steps are in [deploy/README.md](deploy/README.md).

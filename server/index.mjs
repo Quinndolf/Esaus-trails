@@ -4,6 +4,8 @@ import { createServer } from 'node:http';
 import { handleEsau } from './esau/route.ts';
 
 const PORT = Number(process.env.PORT || 8787);
+// The droplet sets HOST=127.0.0.1 so only nginx can reach the API; dev listens everywhere.
+const HOST = process.env.HOST || undefined;
 
 // NWS asks every client for a User-Agent with contact info, which a browser can't set.
 // The phone can call api.weather.gov directly, but going through here adds the header
@@ -42,4 +44,4 @@ createServer(async (req, res) => {
   }
   if (await handleEsau(req, res)) return;
   send(res, 404, { error: 'not found' });
-}).listen(PORT, () => console.log(`esau api on :${PORT}`));
+}).listen(PORT, HOST, () => console.log(`esau api on ${HOST ?? '*'}:${PORT}`));
