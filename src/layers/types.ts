@@ -1,3 +1,5 @@
+import type { SpeciesId } from '../esau/types';
+
 /** Where a layer's pixels come from. Every kind ends up as a MapLibre raster source. */
 export type LayerSource =
   | { kind: 'xyz'; tiles: string[]; tileSize?: number }
@@ -36,6 +38,8 @@ export interface ViewOption {
 }
 
 export interface LayerDef {
+  /** Hunted animals this layer is for. Absent means every animal. Others never see it. */
+  species?: SpeciesId[];
   id: string;
   name: string;
   description: string;

@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { signFits } from '../../esau/species';
+import { useEsau } from '../../esau/ui/store';
 import { metersToFeet } from '../../map/geo';
 import { usePhotoUrl } from '../../photos/usePhotoUrl';
 import { BottomSheet } from '../../ui/BottomSheet';
@@ -14,6 +16,7 @@ export function WaypointSheet() {
 }
 
 function Editor({ wp }: { wp: Waypoint }) {
+  const species = useEsau((st) => st.species);
   const { updateWaypoint, removeWaypoint, selectWaypoint, addWaypointPhoto, removeWaypointPhoto } = useTools.getState();
   const [name, setName] = useState(wp.name);
   const [notes, setNotes] = useState(wp.notes);
@@ -41,7 +44,7 @@ function Editor({ wp }: { wp: Waypoint }) {
 
       <h3 className="sheet-section">Icon</h3>
       <div className="icon-grid" role="radiogroup" aria-label="Icon">
-        {WAYPOINT_ICONS.map((icon) => (
+        {WAYPOINT_ICONS.filter((icon) => icon === wp.icon || signFits(icon, species)).map((icon) => (
           <button
             key={icon}
             role="radio"

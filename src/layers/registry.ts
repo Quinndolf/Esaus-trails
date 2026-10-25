@@ -1,4 +1,5 @@
-import type { LayerFolder } from './types';
+import type { SpeciesId } from '../esau/types';
+import type { LayerDef, LayerFolder, LayerState } from './types';
 import { DEER_ZONE_COLORS, KY_DEER_SEASON, kyDeerZonesGeoJSON } from './kyDeerZones';
 
 // Layer catalogue. State folders carry `state`; adding a state means adding its folders here.
@@ -91,6 +92,7 @@ export const FOLDERS: LayerFolder[] = [
     layers: [
       {
         id: 'ky-deer-zones',
+        species: ['whitetail', 'mule_deer'],
         name: `Deer zones ${KY_DEER_SEASON}`,
         description: `Deer hunting zone of each county for the ${KY_DEER_SEASON} season, from the KDFWR hunting guide map. Dashed counties changed zone this year. County lines are approximate; check the official guide before you hunt.`,
         source: {
@@ -107,6 +109,7 @@ export const FOLDERS: LayerFolder[] = [
       },
       {
         id: 'ky-elk-units',
+        species: ['elk'],
         name: 'Elk hunting units',
         description: 'Elk hunting units in the eastern Kentucky elk zone.',
         source: { kind: 'arcgis-export', url: `${KY}/Ky_Public_Hunting_Areas_WGS84WM/MapServer`, sublayers: [2] },
@@ -116,6 +119,7 @@ export const FOLDERS: LayerFolder[] = [
       },
       {
         id: 'ky-elk-zone',
+        species: ['elk'],
         name: 'Elk management zone',
         description: 'Boundary of the elk restoration zone.',
         source: { kind: 'arcgis-export', url: `${KY_PORTAL}/Hosted/Elk_mgt_zone_dissolved/MapServer` },
@@ -351,3 +355,17 @@ export const ALL_LAYERS = FOLDERS.flatMap((f) => f.layers);
 
 /** Layers on the first time the app opens, matching the prototype's land defaults. */
 export const DEFAULT_ON = ['ky-hunting-areas', 'ky-state-forests', 'ky-parcels', 'hillshade'];
+
+export const layerFits = (l: LayerDef, species: SpeciesId | null) => !l.species || (species != null && l.species.includes(species));
+
+/** The folders a hunter after `species` sees: layers meant for other animals are dropped, and so are folders left empty. */
+export function foldersFor(species: SpeciesId | null): LayerFolder[] {
+  return FOLDERS.map((f) => ({ ...f, layers: f.layers.filter((l) => layerFits(l, species)) })).filter((f) => f.layers.length > 0);
+}
+
+/** Layer state with every layer meant for another animal switched off, so the map and offline saves leave it out. */
+export function scopeLayerState(state: LayerState, species: SpeciesId | null): LayerState {
+  const on = { ...state.on };
+  for (const l of ALL_LAYERS) if (!layerFits(l, species)) on[l.id] = false;
+  return { ...state, on };
+}

@@ -1,5 +1,7 @@
 /** The call pads. Order is the order they appear on the sheet. Every pad plays a real recording or nothing. */
 
+import type { SpeciesId } from '../esau/types';
+
 export type CallSpecies = 'deer' | 'squirrel' | 'turkey';
 
 export interface CallDef {
@@ -8,6 +10,21 @@ export interface CallDef {
   name: string;
   /** What the sound is and when it is used, from the literature where there is some. */
   blurb: string;
+}
+
+/** Which call group belongs to each hunted animal. Animals not listed have no calls, so none are shown. */
+export const CALL_GROUP: Partial<Record<SpeciesId, CallSpecies>> = {
+  whitetail: 'deer',
+  mule_deer: 'deer',
+  squirrel: 'squirrel',
+  turkey: 'turkey',
+};
+
+export const CALL_GROUP_TITLE: Record<CallSpecies, string> = { deer: 'Deer', squirrel: 'Squirrel', turkey: 'Turkey' };
+
+export function callsFor(species: SpeciesId | null): CallDef[] {
+  const group = species && CALL_GROUP[species];
+  return group ? CALLS.filter((c) => c.species === group) : [];
 }
 
 export const CALLS: CallDef[] = [
