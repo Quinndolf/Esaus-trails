@@ -25,7 +25,7 @@ describe('bbox tiles', () => {
 
 describe('overlays in offline areas', () => {
   it('takes the layers that are on, minus live radar and empty picks', () => {
-    const on = { 'ky-hunting-areas': true, radar: true, hillshade: true, crops: true };
+    const on = { 'ky-hunting-areas': true, radar: true, hillshade: true, crops: true, 'ky-deer-zones': true };
     const picked = offlineOverlays({ on, options: { crops: [] } });
     expect(picked.map((o) => o.id).sort()).toEqual(['hillshade', 'ky-hunting-areas']);
   });
