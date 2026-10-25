@@ -19,6 +19,8 @@ import {
   usePhotoPinMarkers,
   usePhotoPins,
 } from './photos';
+import type { PinKind } from './esau/types';
+import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
 import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
@@ -29,7 +31,19 @@ import { ToolsSheet } from './ui/ToolsSheet';
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
 
-type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | null;
+/** Waypoint icons Esau treats as ground truth about the property. */
+const ESAU_PIN_KIND: Partial<Record<WaypointIcon, PinKind>> = {
+  food: 'food',
+  water: 'water',
+  bed: 'bed',
+  stand: 'stand',
+  blind: 'stand',
+  rub: 'sign',
+  scrape: 'sign',
+  trail: 'sign',
+};
+
+type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | null;
 
 function initialBasemap(): BasemapId {
   try {
@@ -58,19 +72,66 @@ export function App() {
   usePhotoPinMarkers(map);
   useManualPinDrop(map);
 
-  // Esau: a tap on open map reads that spot, unless a sheet or a photo pin drop owns the tap.
-  useEsauMap(map, () => isAwaitingPinDrop() || sheet !== null || usePhotoPins.getState().selectedPinId !== null);
+  useEffect(() => void useTools.getState().load(), []);
+  useToolLayers(map);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 3500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // Feed GPS into the route tracker while it records.
+  useEffect(() => {
+    if (fix) useTools.getState().addFix({ lngLat: fix.lngLat, accuracy: fix.accuracy, altitude: fix.altitude, time: fix.time });
+  }, [fix]);
+
+  // Opening a waypoint brings it on screen above the sheet.
+  const selectedWaypointId = useTools((s) => s.selectedWaypointId);
+  useEffect(() => {
+    const wp = useTools.getState().waypoints.find((w) => w.id === selectedWaypointId);
+    if (!map || !wp) return;
+    setMode((m) => (m === 'follow' ? 'free' : m));
+    const h = map.getContainer().clientHeight;
+    map.flyTo({ center: wp.position, zoom: Math.max(map.getZoom(), 16), offset: [0, -h * 0.4] });
+  }, [map, selectedWaypointId]);
+
+  async function markMyLocation() {
+    if (!fix) {
+      setNotice('No GPS fix yet. Step into the open and try again.');
+      return;
+    }
+    const t = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    await useTools.getState().addWaypoint({ position: fix.lngLat, altitude: fix.altitude, icon: 'x', name: `Marked ${t}` });
+  }
+
+  // Esau: a tap on open map reads that spot, unless a sheet, a photo pin drop or a map tool owns the tap.
+  useEsauMap(
+    map,
+    () =>
+      isAwaitingPinDrop() ||
+      isToolCapturingTaps() ||
+      sheet !== null ||
+      usePhotoPins.getState().selectedPinId !== null ||
+      useTools.getState().selectedWaypointId !== null,
+  );
   useEffect(() => {
     useEsau.getState().setHunter(
       fix ? { lat: fix.lngLat[1], lng: fix.lngLat[0], accuracyM: fix.accuracy, headingDeg: heading ?? undefined } : null,
     );
   }, [fix, heading]);
+  // Esau reads photo pins and the hunter's food, water, bed, stand and sign waypoints.
   const photoPins = usePhotoPins((s) => s.pins);
+  const waypoints = useTools((s) => s.waypoints);
   useEffect(() => {
-    useEsau.getState().setPins(
-      photoPins.map((p) => ({ id: p.id, kind: 'photo', lat: p.position.lat, lng: p.position.lng, name: p.name, note: p.notes, tags: p.tags })),
-    );
-  }, [photoPins]);
+    useEsau.getState().setPins([
+      ...photoPins.map((p) => ({ id: p.id, kind: 'photo' as const, lat: p.position.lat, lng: p.position.lng, name: p.name, note: p.notes, tags: p.tags })),
+      ...waypoints.flatMap((w) => {
+        const kind = ESAU_PIN_KIND[w.icon];
+        return kind ? [{ id: w.id, kind, lat: w.position[1], lng: w.position[0], name: w.name, note: w.notes }] : [];
+      }),
+    ]);
+  }, [photoPins, waypoints]);
 
   // Opening a photo pin (new from EXIF, or picked from the list) brings it on screen.
   const selectedPinId = usePhotoPins((s) => s.selectedPinId);
@@ -120,6 +181,7 @@ export function App() {
             {heading == null ? 'Finding heading…' : `${Math.round(heading)}° ${cardinal(heading)}`}
           </div>
         )}
+        {notice && <div className="status-pill warn">{notice}</div>}
         {gps === 'denied' && <div className="status-pill warn">Location is off. Allow it in your browser settings.</div>}
         {gps === 'unavailable' && <div className="status-pill warn">Can't get a GPS fix.</div>}
         {gps === 'waiting' && <div className="status-pill">Finding you…</div>}
@@ -182,7 +244,17 @@ export function App() {
         onOptions={layers.setOptions}
       />
       <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} />
-      <ToolsSheet open={sheet === 'tools'} onClose={() => setSheet(null)} onPhotos={() => setSheet('photos')} />
+      <ToolsSheet
+        open={sheet === 'tools'}
+        onClose={() => setSheet(null)}
+        onPhotos={() => setSheet('photos')}
+        onSaved={() => setSheet('saved')}
+        onMarkLocation={() => void markMyLocation()}
+      />
+      <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
+      <WaypointSheet />
+      <ToolBar />
+      <TrackerChip />
       <PhotosSheet open={sheet === 'photos'} onClose={() => setSheet(null)} />
       <PhotoPinSheet
         onAskEsau={(input) => {

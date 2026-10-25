@@ -52,3 +52,50 @@ export function angleDelta(a: number, b: number): number {
 export function metersToFeet(m: number): number {
   return m * 3.28084;
 }
+
+/** Great-circle distance in meters. */
+export function distance([lng1, lat1]: LngLat, [lng2, lat2]: LngLat): number {
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+export function pathLength(points: LngLat[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) total += distance(points[i - 1], points[i]);
+  return total;
+}
+
+/** Area of a closed ring in square meters (spherical excess approximation, fine at hunting-property scale). */
+export function polygonArea(ring: LngLat[]): number {
+  if (ring.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [lng1, lat1] = ring[i];
+    const [lng2, lat2] = ring[(i + 1) % ring.length];
+    sum += toRad(lng2 - lng1) * (2 + Math.sin(toRad(lat1)) + Math.sin(toRad(lat2)));
+  }
+  return Math.abs((sum * R * R) / 2);
+}
+
+/** Hunter-friendly distance: yards up close, miles further out. */
+export function formatDistance(meters: number): string {
+  const yards = meters * 1.09361;
+  if (yards < 1000) return `${Math.round(yards)} yd`;
+  const miles = meters / 1609.344;
+  return `${miles < 10 ? miles.toFixed(2) : miles.toFixed(1)} mi`;
+}
+
+export function formatArea(squareMeters: number): string {
+  const acres = squareMeters / 4046.8564224;
+  return `${acres < 10 ? acres.toFixed(1) : Math.round(acres).toLocaleString()} ac`;
+}
+
+export function formatDuration(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+}
