@@ -10,7 +10,18 @@ export type LayerSource =
       filter?: { layer: number; where?: string };
     }
   /** OGC WMS 1.1.1 GetMap in Web Mercator. `layers` are WMS layer names. */
-  | { kind: 'wms'; url: string; layers: string[]; styles?: string };
+  | { kind: 'wms'; url: string; layers: string[]; styles?: string }
+  /**
+   * Polygons shipped with the app (so they work offline), filled by one property. View options with a
+   * `value` show only features whose property equals it. `dashed` outlines features where that property is true.
+   */
+  | {
+      kind: 'geojson';
+      load: () => Promise<GeoJSON.FeatureCollection>;
+      property: string;
+      colors: Record<string, string>;
+      dashed?: string;
+    };
 
 /** A "view options" choice. Picking options narrows which sub-layers draw. */
 export interface ViewOption {

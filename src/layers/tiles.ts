@@ -10,13 +10,16 @@ export function activeOptionIds(layer: LayerDef, picked: string[] | undefined): 
   return defaults.length ? defaults : layer.options.map((o) => o.id);
 }
 
-/** MapLibre tile URL templates for a layer, given the hunter's picked view options. */
+/** MapLibre tile URL templates for a layer, given the hunter's picked view options. Bundled GeoJSON has none. */
 export function tileUrls(layer: LayerDef, picked?: string[]): string[] {
   const source = layer.source;
   const ids = new Set(activeOptionIds(layer, picked));
   const chosen = layer.options?.filter((o) => ids.has(o.id));
 
   switch (source.kind) {
+    case 'geojson':
+      return [];
+
     case 'xyz':
       return source.tiles;
 

@@ -17,8 +17,8 @@ describe('layer registry', () => {
       expect(names).toContain(n);
   });
 
-  it('every layer yields at least one https tile template with a placeholder', () => {
-    for (const l of ALL_LAYERS) {
+  it('every tiled layer yields at least one https tile template with a placeholder', () => {
+    for (const l of ALL_LAYERS.filter((x) => x.source.kind !== 'geojson')) {
       const urls = tileUrls(l);
       expect(urls.length).toBeGreaterThan(0);
       for (const u of urls) {
