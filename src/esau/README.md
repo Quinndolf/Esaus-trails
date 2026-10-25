@@ -46,3 +46,12 @@ Photo pins: `photoQuery(buildEsauPhotoInput(pin), { species, grid, hunter })` tu
 `server/esau/` holds the Claude call (`ask.ts`), the response schema and the `/api/esau` route. It needs `ANTHROPIC_API_KEY` in the server's environment or a `.env` file (see `.env.example`). Model `claude-opus-5-5`, effort `low` for taps and `medium` for questions and photos.
 
 `npm run esau:spots` runs Esau over the sample spots and writes `esau-sample-spots.md`. Without a key, or with `-- --dry`, it writes the field reports only.
+
+## On the map (`ui/`)
+
+- `useEsauMap(map, shouldSkip)`: a tap on open map reads that spot; draws the tapped spot and Esau's marks.
+- `EsauPanel`: the spot card with the species picker, the air for the chosen hour, Esau's read and an "ask" box. It sits low with no scrim so the map stays visible.
+- `useEsau` (zustand): `tapSpot`, `askPhoto` (wired to the photo pin sheet's "Ask Esau"), `ask(question)`, and `setTime(date)` for the app's hour slider. Changing the hour doesn't spend a call; the card offers "Ask Esau about 9:00 AM".
+- `groundFor(spot)`: fetches `/api/ground` and keeps the last six grids on the phone, so a spot already looked at still reads with no signal.
+
+`server/ground/` builds the grid: Open-Meteo elevation (Copernicus 90 m), NLCD 2021 land cover from the MRLC WMS, and weather from `src/model/forecast` (NWS, then Open-Meteo). `GET /api/ground?lat=&lng=` or `?west=&south=&east=&north=&cols=&rows=`.

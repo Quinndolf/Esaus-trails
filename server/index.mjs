@@ -2,6 +2,7 @@
 // Keeps secrets such as ANTHROPIC_API_KEY off the phone. Run with tsx so it can load the TypeScript in server/esau.
 import { createServer } from 'node:http';
 import { handleEsau } from './esau/route.ts';
+import { handleGround } from './ground/route.ts';
 
 const PORT = Number(process.env.PORT || 8787);
 
@@ -40,6 +41,7 @@ createServer(async (req, res) => {
   if (req.method === 'GET' && /^\/api\/nws\/(points|gridpoints|stations)\//.test(url.pathname)) {
     return proxyNws(res, url.pathname.slice('/api/nws'.length) + url.search);
   }
+  if (await handleGround(req, res)) return;
   if (await handleEsau(req, res)) return;
   send(res, 404, { error: 'not found' });
 }).listen(PORT, () => console.log(`esau api on :${PORT}`));
