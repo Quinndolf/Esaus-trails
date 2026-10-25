@@ -1,26 +1,12 @@
 /* Photo pins. Colors are tokens so the app shell can theme them. */
 :root {
-  --photo-sheet-bg: #1d1f1c;
-  --photo-sheet-fg: #f2f2ee;
-  --photo-muted: #a3a69c;
-  --photo-line: #34372f;
-  --photo-accent: #34c759; /* toggle and "on" green */
+  --photo-sheet-bg: var(--panel, #1d2219);
+  --photo-sheet-fg: var(--text, #f1f3ec);
+  --photo-field-bg: var(--panel-2, #262c22);
+  --photo-muted: var(--muted, #a3ab98);
+  --photo-line: var(--line, #343b2e);
+  --photo-accent: var(--green, #34c759); /* toggle and "on" green */
   --photo-danger: #ff453a;
-  --photo-fab-bg: #ffffff;
-  --photo-fab-fg: #1d1f1c;
-}
-
-.map-fab {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 0;
-  background: var(--photo-fab-bg);
-  color: var(--photo-fab-fg);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
-  display: grid;
-  place-items: center;
-  font-size: 20px;
 }
 
 .photo-add {
@@ -162,46 +148,31 @@ button.is-danger {
   color: var(--photo-danger) !important;
 }
 
-/* Bottom sheet, phone first: fills most of the bottom of the screen. */
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 85dvh;
-  overflow-y: auto;
-  background: var(--photo-sheet-bg);
-  color: var(--photo-sheet-fg);
-  border-radius: 16px 16px 0 0;
-  padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.4);
-  z-index: 30;
+.photo-sheet {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding-top: 4px;
 }
-.sheet > * {
+.photo-sheet > * {
   flex: none;
 }
-@media (min-width: 768px) {
-  .sheet {
-    left: 16px;
-    right: auto;
-    width: 400px;
-    bottom: 16px;
-    border-radius: 16px;
-  }
+.photo-sheet__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 8px 0 16px;
 }
-.sheet__grabber {
-  width: 40px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--photo-line);
-  margin: 0 auto;
-}
-.sheet__header {
+.photo-sheet__actions button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--photo-field-bg);
+  color: var(--photo-sheet-fg);
+  font-weight: 600;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -262,7 +233,7 @@ button.is-danger {
 .photo-sheet__notes {
   width: 100%;
   box-sizing: border-box;
-  background: #262924;
+  background: var(--photo-field-bg);
   color: inherit;
   border: 1px solid var(--photo-line);
   border-radius: 10px;

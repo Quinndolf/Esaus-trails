@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BottomSheet } from '../../ui/BottomSheet';
 import { buildEsauPhotoInput, type EsauPhotoInput } from '../esauPhotoInput';
 import { normalizeTags, usePhotoPins } from '../store';
 import { PRESET_TAGS, type PhotoPin } from '../types';
@@ -70,20 +71,15 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
   const allTags = [...PRESET_TAGS, ...pin.tags.filter((t) => !(PRESET_TAGS as readonly string[]).includes(t))];
 
   return (
-    <section className="sheet photo-sheet" aria-label="Photo pin">
-      <div className="sheet__grabber" />
-      <header className="sheet__header">
-        <input
-          className="photo-sheet__name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={saveText}
-          aria-label="Name"
-        />
-        <button type="button" className="is-quiet" onClick={close}>
-          Done
-        </button>
-      </header>
+    <BottomSheet title="Photo" open onClose={close}>
+      <div className="photo-sheet">
+      <input
+        className="photo-sheet__name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={saveText}
+        aria-label="Name"
+      />
 
       {image && <img className="photo-sheet__image" src={image} alt={pin.name} />}
 
@@ -169,6 +165,7 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
           Delete photo
         </button>
       )}
-    </section>
+      </div>
+    </BottomSheet>
   );
 }

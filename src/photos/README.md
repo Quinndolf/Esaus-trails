@@ -12,27 +12,18 @@ Photo pins: take a photo or pick one from the camera roll, read its EXIF, drop a
    - Otherwise the photo becomes `pending` and `ManualPinPrompt` asks the hunter to tap the map (or use their location), `source: 'manual'`.
 4. Each pin carries a name (defaults to "Photo Nov 8, 6:42 AM"), notes, and tags. Presets are bedding, food, trail, rub, scrape and sign; custom tags are allowed and lowercased.
 
-## Mounting it in the map shell
+## Mounted in the app
 
-```tsx
-import {
-  AddPhotoButton, ManualPinPrompt, PhotoList, PhotoPinSheet,
-  usePhotoPins, usePhotoPinMarkers, useManualPinDrop, isAwaitingPinDrop, flyToPin,
-} from './photos';
+`App.tsx` wires it up:
 
-usePhotoPins.getState().load();      // once at startup
-usePhotoPinMarkers(map);             // thumbnail markers; tap selects a pin
-useManualPinDrop(map);               // next map tap places a pending photo
+- `usePhotoPins.getState().load()` once at startup, then `usePhotoPinMarkers(map)` (thumbnail markers; tap opens the pin) and `useManualPinDrop(map)` (next map tap places a photo that had no GPS).
+- Tools → **Photos** opens `PhotosSheet`: take a photo, pick from the camera roll, browse and filter by tag, and the backup toggle.
+- `PhotoPinSheet` opens for the selected pin, and the map flies the pin just above the sheet.
+- `ManualPinPrompt` shows only while a photo needs a spot.
 
-<AddPhotoButton />                   // camera / camera roll
-<ManualPinPrompt />                  // shows only while a photo needs a spot
-<PhotoPinSheet onAskEsau={(input) => esau.analyzePhoto(input)} />
-<PhotoList onPick={(pin) => flyToPin(map, pin)} />   // for the waypoint list
-```
+Other pieces: `AddPhotoButton` is a standalone camera FAB, and `usePhotoPicker` gives the take/choose actions to any button.
 
-The map's "read this spot" tap handler should return early while `isAwaitingPinDrop()` is true, so a tap meant to place a photo doesn't also open a spot reading.
-
-`PhotoPinSheet` and `PhotoList` render their own content; `PhotoPinSheet` uses the `.sheet` class for now and can move into `src/ui/BottomSheet` once that lands.
+When the map gets its own "read this spot" tap handler, it should return early while `isAwaitingPinDrop()` is true, so a tap meant to place a photo doesn't also open a spot reading. `PhotoPinSheet` takes `onAskEsau` once the Esau module is in; until then its button is hidden.
 
 ## Esau
 
