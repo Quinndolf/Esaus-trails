@@ -3,8 +3,11 @@ import type { Map as MLMap, RasterSourceSpecification } from 'maplibre-gl';
 import { tileUrls } from './tiles';
 import type { LayerDef, LayerState } from './types';
 
-/** Overlays sit above the basemap and below the GPS dot and anything drawn later. */
-const BEFORE = 'gps-accuracy';
+/** Overlays sit above the basemap and below the hunter's own drawings and the GPS dot. */
+function insertBefore(map: MLMap): string | undefined {
+  const first = map.getStyle().layers.find((l) => l.id.startsWith('tools-') || l.id === 'gps-accuracy');
+  return first?.id;
+}
 
 function key(layer: LayerDef, state: LayerState): string {
   return tileUrls(layer, state.options[layer.id]).join('|');
@@ -17,7 +20,7 @@ export function useMapLayers(map: MLMap | null, layers: LayerDef[], state: Layer
 
   useEffect(() => {
     if (!map) return;
-    const before = map.getLayer(BEFORE) ? BEFORE : undefined;
+    const before = insertBefore(map);
 
     for (const layer of layers) {
       const id = `ovl-${layer.id}`;

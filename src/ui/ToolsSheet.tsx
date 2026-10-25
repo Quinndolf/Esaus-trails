@@ -1,25 +1,51 @@
+import { useTools } from '../tools/store';
 import { BottomSheet } from './BottomSheet';
-
-const TOOLS = ['Mark my location', 'Waypoints', 'Draw shapes', 'Measure distance', 'Tracker'];
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onPhotos: () => void;
+  onMarkLocation: () => void;
+  onSaved: () => void;
 }
 
-export function ToolsSheet({ open, onClose, onPhotos }: Props) {
+/** The Swiss-army knife: every map tool in one sheet. */
+export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved }: Props) {
+  const setMode = useTools((s) => s.setMode);
+  const recording = useTools((s) => s.recording);
+  const startTrack = useTools((s) => s.startTrack);
+  const stopTrack = useTools((s) => s.stopTrack);
+  const counts = useTools((s) => s.waypoints.length + s.shapes.length + s.tracks.length);
+
+  const pick = (fn: () => void) => () => {
+    fn();
+    onClose();
+  };
+
+  const tools = [
+    { id: 'mark', name: 'Mark my location', hint: 'Red X where you stand', run: pick(onMarkLocation), primary: true },
+    { id: 'drop', name: 'Drop waypoint', hint: 'Tap the map to place it', run: pick(() => setMode('drop-waypoint')) },
+    { id: 'saved', name: 'Waypoints', hint: counts ? `${counts} saved` : 'Waypoints, shapes, tracks', run: onSaved },
+    { id: 'photos', name: 'Photos', hint: 'Take or add a photo', run: onPhotos },
+    { id: 'measure', name: 'Measure distance', hint: 'Tap points on the map', run: pick(() => setMode('measure')) },
+    { id: 'line', name: 'Draw line', hint: 'Routes, fence lines', run: pick(() => setMode('draw-line')) },
+    { id: 'area', name: 'Draw area', hint: 'Plots, fields, acreage', run: pick(() => setMode('draw-area')) },
+    recording
+      ? { id: 'track', name: 'Stop tracker', hint: 'Save the route', run: pick(() => void stopTrack()), live: true }
+      : { id: 'track', name: 'Tracker', hint: 'Record your route', run: pick(startTrack) },
+  ];
+
   return (
     <BottomSheet title="Tools" open={open} onClose={onClose}>
       <div className="tool-grid">
-        <button className="tool-tile" onClick={onPhotos}>
-          Photos
-          <span className="hint">Take or add a photo</span>
-        </button>
-        {TOOLS.map((t) => (
-          <button key={t} className="tool-tile" disabled>
-            {t}
-            <span className="soon">Phase 3</span>
+        {tools.map((t) => (
+          <button
+            key={t.id}
+            className={`tool-tile ${'primary' in t && t.primary ? 'is-primary' : ''} ${'live' in t && t.live ? 'is-live' : ''}`}
+            onClick={t.run}
+          >
+            {t.name}
+            <span className="hint">{t.hint}</span>
           </button>
         ))}
       </div>
