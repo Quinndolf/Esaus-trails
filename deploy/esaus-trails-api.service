@@ -1,0 +1,21 @@
+[Unit]
+Description=Esau's Trails API (Claude proxy, weather proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=esau
+Group=esau
+WorkingDirectory=/opt/esaus-trails/app
+EnvironmentFile=/etc/esaus-trails/esau.env
+ExecStart=/opt/esaus-trails/node/bin/node /opt/esaus-trails/app/node_modules/tsx/dist/cli.mjs server/index.mjs
+Restart=always
+RestartSec=3
+# Keep it small next to the other app on this droplet.
+MemoryMax=300M
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
