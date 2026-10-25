@@ -2,12 +2,12 @@
 // - App shell: every file of the build is precached on install, so "Add to Home Screen" opens with no service.
 //   The build stamps BUILD and PRECACHE below (see vite.config.ts); each deploy gets a fresh cache and drops the old one.
 // - Pages: network first so a deploy shows up on the next open, falling back to the cached shell.
-// - Map tiles: served from any saved offline area first ("esau-area-*" caches), then the network.
+// - Map tiles and layers from other hosts: served from any saved offline area first ("esau-area-*" caches),
+//   then the network. Only GETs that a saved area actually holds are answered from cache.
 // - /api is never cached: Esau and the weather must be live or fail honestly.
 const BUILD = 'dev';
 const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
 const SHELL = `esau-shell-${BUILD}`;
-const TILE_HOSTS = ['server.arcgisonline.com'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(PRECACHE)));
@@ -28,12 +28,12 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  if (TILE_HOSTS.includes(url.hostname)) {
+  if (url.origin !== self.location.origin) {
     event.respondWith(caches.match(req.url, { ignoreVary: true }).then((hit) => hit || fetch(req)));
     return;
   }
 
-  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(

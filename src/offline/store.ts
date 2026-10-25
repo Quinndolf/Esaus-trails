@@ -10,6 +10,17 @@ export interface SavedArea {
   maxZoom: number;
   tiles: number;
   savedAt: string;
+  /** Names of the map layers saved with it (missing on areas saved before layers could go offline). */
+  overlays?: string[];
+}
+
+/** A map layer to save alongside the basemap, limited to the zooms it actually draws at. */
+export interface OfflineOverlay {
+  id: string;
+  name: string;
+  templates: string[];
+  minzoom?: number;
+  maxzoom?: number;
 }
 
 const KEY = 'esau-offline-areas';
@@ -31,8 +42,29 @@ function writeAreas(areas: SavedArea[]) {
   }
 }
 
-export function estimate(basemap: BasemapId, bounds: Bounds, minZoom: number, maxZoom: number): number {
-  return countTiles(bounds, minZoom, maxZoom) * templatesFor(basemap).length;
+interface Job {
+  templates: string[];
+  minZoom: number;
+  maxZoom: number;
+}
+
+// The basemap at every detail level, then each layer clipped to its own zooms. MapLibre stretches a
+// layer's top zoom when you zoom past it, so tiles above a layer's maxzoom are never asked for.
+function jobs(basemap: BasemapId, minZoom: number, maxZoom: number, overlays: OfflineOverlay[]): Job[] {
+  const out: Job[] = [{ templates: templatesFor(basemap), minZoom, maxZoom }];
+  for (const o of overlays) {
+    const lo = Math.max(minZoom, o.minzoom ?? 0);
+    const hi = Math.min(maxZoom, o.maxzoom ?? maxZoom);
+    if (lo <= hi) out.push({ templates: o.templates, minZoom: lo, maxZoom: hi });
+  }
+  return out;
+}
+
+export function estimate(basemap: BasemapId, bounds: Bounds, minZoom: number, maxZoom: number, overlays: OfflineOverlay[] = []): number {
+  return jobs(basemap, minZoom, maxZoom, overlays).reduce(
+    (n, j) => n + countTiles(bounds, j.minZoom, j.maxZoom) * j.templates.length,
+    0,
+  );
 }
 
 export interface DownloadProgress {
@@ -43,19 +75,22 @@ export interface DownloadProgress {
 
 /** Fetch every tile for the area into its own cache. Resolves with the saved record. */
 export async function saveArea(
-  opts: { name: string; basemap: BasemapId; bounds: Bounds; minZoom: number; maxZoom: number },
+  opts: { name: string; basemap: BasemapId; bounds: Bounds; minZoom: number; maxZoom: number; overlays?: OfflineOverlay[] },
   onProgress: (p: DownloadProgress) => void,
   signal: AbortSignal,
 ): Promise<SavedArea> {
   if (!('caches' in window)) throw new Error('This browser cannot store maps offline.');
-  const total = estimate(opts.basemap, opts.bounds, opts.minZoom, opts.maxZoom);
+  const { overlays = [], ...rest } = opts;
+  const total = estimate(opts.basemap, opts.bounds, opts.minZoom, opts.maxZoom, overlays);
   if (total > MAX_TILES) throw new Error(`That area is too big (${total} tiles). Zoom in or lower the detail.`);
 
   const id = `${Date.now().toString(36)}`;
   const cache = await caches.open(`esau-area-${id}`);
   const urls: string[] = [];
-  for (const template of templatesFor(opts.basemap)) {
-    for (const t of tilesIn(opts.bounds, opts.minZoom, opts.maxZoom)) urls.push(tileUrl(template, t));
+  for (const job of jobs(opts.basemap, opts.minZoom, opts.maxZoom, overlays)) {
+    for (const template of job.templates) {
+      for (const t of tilesIn(opts.bounds, job.minZoom, job.maxZoom)) urls.push(tileUrl(template, t));
+    }
   }
 
   const progress: DownloadProgress = { done: 0, failed: 0, total: urls.length };
@@ -83,7 +118,13 @@ export async function saveArea(
     throw new DOMException('Cancelled', 'AbortError');
   }
 
-  const area: SavedArea = { id, ...opts, tiles: progress.done - progress.failed, savedAt: new Date().toISOString() };
+  const area: SavedArea = {
+    id,
+    ...rest,
+    tiles: progress.done - progress.failed,
+    savedAt: new Date().toISOString(),
+    overlays: overlays.map((o) => o.name),
+  };
   writeAreas([area, ...listAreas()]);
   return area;
 }

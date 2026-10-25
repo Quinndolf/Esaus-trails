@@ -40,6 +40,8 @@ export interface LayerDef {
   exclusive?: boolean;
   /** Set when the layer can't load yet, e.g. a missing data key. Shown instead of the toggle. */
   unavailable?: string;
+  /** Live data (e.g. radar) that is stale by the time you'd use it offline, so downloads skip it. */
+  live?: boolean;
 }
 
 export interface LayerFolder {

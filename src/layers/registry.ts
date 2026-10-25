@@ -132,6 +132,7 @@ export const FOLDERS: LayerFolder[] = [
         opacity: 0.6,
         color: '#26c6da',
         attribution: 'NEXRAD via Iowa Environmental Mesonet',
+        live: true,
       },
     ],
   },
