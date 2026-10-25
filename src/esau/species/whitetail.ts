@@ -166,6 +166,8 @@ export const whitetail: SpeciesBrain = {
   id: "whitetail",
   name: "whitetail deer",
   ready: true,
+  nose: true,
+  words: { bedding: "bed", feeding: "feed", travel: "walk through" },
   knowledge: WHITETAIL_KNOWLEDGE,
   sources: WHITETAIL_SOURCES,
   phase: whitetailPhase,

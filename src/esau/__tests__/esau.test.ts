@@ -116,7 +116,7 @@ describe("brief", () => {
     expect(r).toContain("Esau: That saddle's a crossing.");
   });
   it("refuses species Esau has not studied", () => {
-    expect(() => buildBrief({ ...SAMPLE_SPOTS[0]!.query, species: "elk" })).toThrow(EsauInputError);
+    expect(() => buildBrief({ ...SAMPLE_SPOTS[0]!.query, species: "moose" as never })).toThrow(EsauInputError);
   });
   it("refuses a malformed grid", () => {
     expect(() => buildBrief({ ...SAMPLE_SPOTS[0]!.query, grid: { ...grid, elevationM: [1, 2] } })).toThrow(EsauInputError);
