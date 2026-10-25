@@ -1,10 +1,9 @@
-import { callById, type CallManifest, type CallRecording } from './catalog';
-import { makeNoise, PHRASES, type Synth } from './synth';
+import { CALLS, callById, type CallManifest, type CallRecording } from './catalog';
 
 /**
  * Press-and-hold call player. `press` starts a call and keeps it going; `release` fades it out.
- * A listed recording (public/calls/manifest.json) loops while held; otherwise the synthesized
- * stand-in repeats phrase after phrase. Nothing plays after the finger lifts.
+ * Real recordings only (public/calls/manifest.json). A pad with no listed recording, or a clip that
+ * will not decode, plays nothing: there is no synthesized fallback. Nothing plays after the finger lifts.
  */
 
 export interface PlayerEnv {
@@ -36,8 +35,6 @@ export const browserEnv: PlayerEnv = {
   rnd: Math.random,
 };
 
-const LOOKAHEAD_S = 0.6;
-const TICK_MS = 150;
 const FADE_IN_S = 0.03;
 const FADE_OUT_S = 0.12;
 
@@ -53,7 +50,6 @@ interface Voice {
 
 export class CallPlayer {
   private ctx: AudioContext | null = null;
-  private noise: AudioBuffer | null = null;
   private manifest: Promise<CallManifest> | null = null;
   private buffers = new Map<string, Promise<Clip | null>>();
   private held = new Set<string>();
@@ -62,10 +58,10 @@ export class CallPlayer {
   constructor(private env: PlayerEnv = browserEnv) {}
 
   /** Where each call's sound comes from right now. */
-  async sources(): Promise<Record<string, 'recording' | 'synth'>> {
+  async sources(): Promise<Record<string, 'recording' | 'missing'>> {
     const m = await this.loadManifest();
-    const out: Record<string, 'recording' | 'synth'> = {};
-    for (const id of Object.keys(PHRASES)) out[id] = m.recordings[id] ? 'recording' : 'synth';
+    const out: Record<string, 'recording' | 'missing'> = {};
+    for (const c of CALLS) out[c.id] = m.recordings[c.id] ? 'recording' : 'missing';
     return out;
   }
 
@@ -87,14 +83,20 @@ export class CallPlayer {
   }
 
   /** Call from a pointerdown handler: the audio context must start inside a user gesture. */
-  async press(id: string): Promise<void> {
-    if (!callById(id) || this.held.has(id)) return;
+  async press(id: string): Promise<'playing' | 'missing' | 'failed'> {
+    if (!callById(id)) return 'missing';
+    if (this.held.has(id)) return 'playing';
     this.held.add(id);
     const ctx = this.ensureContext();
     void ctx.resume?.();
     const clip = await this.buffer(id);
-    if (!this.held.has(id) || this.voices.has(id)) return; // let go while it loaded
-    this.voices.set(id, clip ? this.startRecording(ctx, clip) : this.startSynth(ctx, id));
+    if (!clip) {
+      this.held.delete(id);
+      return (await this.loadManifest()).recordings[id] ? 'failed' : 'missing';
+    }
+    if (!this.held.has(id) || this.voices.has(id)) return 'playing'; // let go while it loaded
+    this.voices.set(id, this.startRecording(ctx, clip));
+    return 'playing';
   }
 
   release(id: string): void {
@@ -114,10 +116,7 @@ export class CallPlayer {
   }
 
   private ensureContext(): AudioContext {
-    if (!this.ctx) {
-      this.ctx = this.env.createContext();
-      this.noise = makeNoise(this.ctx);
-    }
+    this.ctx ??= this.env.createContext();
     return this.ctx;
   }
 
@@ -139,7 +138,7 @@ export class CallPlayer {
           const bytes = await this.env.fetchBytes(`/calls/${rec.file}`);
           return { buf: await this.ensureContext().decodeAudioData(bytes), rec };
         } catch {
-          return null; // a missing or undecodable clip falls back to the synth
+          return null; // a missing or undecodable clip plays nothing
         }
       })();
       this.buffers.set(id, p);
@@ -147,43 +146,43 @@ export class CallPlayer {
     return p;
   }
 
+  /** Loops while held. A clip with `gap` plays once, waits that many seconds, and plays again. */
   private startRecording(ctx: AudioContext, { buf, rec }: Clip): Voice {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(1, ctx.currentTime + FADE_IN_S);
     gain.connect(ctx.destination);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-    if (rec.loopStart != null) src.loopStart = rec.loopStart;
-    if (rec.loopEnd != null) src.loopEnd = rec.loopEnd;
-    src.connect(gain);
-    src.start();
-    return { gain, stop: () => src.stop() };
-  }
-
-  private startSynth(ctx: AudioContext, id: string): Voice {
-    const phrase = PHRASES[id];
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + FADE_IN_S);
-    gain.connect(ctx.destination);
-    const s: Synth = { ctx, out: gain, noise: this.noise!, rnd: this.env.rnd };
-    let next = ctx.currentTime + 0.02;
-    let timer: unknown;
     let live = true;
-    const tick = () => {
+    let timer: unknown;
+    let src: AudioBufferSourceNode | null = null;
+    const play = () => {
       if (!live) return;
-      while (next < ctx.currentTime + LOOKAHEAD_S) next += Math.max(0.1, phrase(s, next));
-      timer = this.env.setTimer(tick, TICK_MS);
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      if (rec.gap == null) {
+        s.loop = true;
+        if (rec.loopStart != null) s.loopStart = rec.loopStart;
+        if (rec.loopEnd != null) s.loopEnd = rec.loopEnd;
+      } else {
+        s.onended = () => {
+          if (live) timer = this.env.setTimer(play, rec.gap! * 1000);
+        };
+      }
+      s.connect(gain);
+      s.start();
+      src = s;
     };
-    tick();
+    play();
     return {
       gain,
       stop: () => {
         live = false;
         this.env.clearTimer(timer);
-        gain.disconnect();
+        try {
+          src?.stop();
+        } catch {
+          /* already ended */
+        }
       },
     };
   }

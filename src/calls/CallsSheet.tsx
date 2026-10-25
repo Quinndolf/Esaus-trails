@@ -7,6 +7,7 @@ import './calls.css';
 const GROUPS: { species: CallSpecies; title: string }[] = [
   { species: 'deer', title: 'Deer' },
   { species: 'squirrel', title: 'Squirrel' },
+  { species: 'turkey', title: 'Turkey' },
 ];
 
 /** One hold-to-play pad. Pointer capture keeps the sound going if the finger slides a little. */
@@ -27,6 +28,7 @@ function Pad({ call, recorded }: { call: CallDef; recorded: boolean }) {
     <div className="call-row">
       <button
         className={`call-pad ${down ? 'is-down' : ''}`}
+        disabled={!recorded}
         aria-label={`${call.name}: press and hold`}
         data-testid={`call-${call.id}`}
         onPointerDown={(e) => {
@@ -52,17 +54,17 @@ function Pad({ call, recorded }: { call: CallDef; recorded: boolean }) {
         onBlur={() => down && stop()}
       >
         <span className="call-name">{call.name}</span>
-        <span className="call-hint">{down ? 'Calling…' : 'Hold'}</span>
+        <span className="call-hint">{!recorded ? 'No recording yet' : down ? 'Calling…' : 'Hold'}</span>
       </button>
       <p className="call-blurb">
-        {call.blurb} {!recorded && <em className="call-synth">Synthesized stand-in.</em>}
+        {call.blurb} {!recorded && <em className="call-missing">Real recording not added yet.</em>}
       </p>
     </div>
   );
 }
 
 export function CallsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [sources, setSources] = useState<Record<string, 'recording' | 'synth'>>({});
+  const [sources, setSources] = useState<Record<string, 'recording' | 'missing'>>({});
   const [credits, setCredits] = useState<Awaited<ReturnType<typeof callPlayer.credits>>>([]);
 
   useEffect(() => {

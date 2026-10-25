@@ -40,11 +40,13 @@ DigitalOcean droplet: the build is served by nginx and `server/index.mjs` runs a
 
 ## Call recordings
 
-The Calls sheet plays real recordings when they are listed in `public/calls/manifest.json`, and a
-synthesized stand-in otherwise. To add recordings, copy `scripts/calls-sources.example.json` to
-`scripts/calls-sources.json`, fill in one entry per call (direct mp3, wav or m4a URL, author, license, and the
-page that shows the license), and run `npm run calls:fetch` on a machine that can reach the sources. Only use
-public-domain or CC BY / CC BY-SA clips (check each page); the sheet shows the credit for every clip.
+The Calls sheet plays real recordings only (no synthesized sounds). A pad with no recording is disabled and says
+"No recording yet". `scripts/calls-sources.json` lists the clips (public domain, CC BY, and a few non-commercial
+turkey clips flagged for replacement before any paid release); run `npm run calls:fetch` on a machine that can reach
+the sources to download them into `public/calls/` and write the manifest, then commit the result. Still missing:
+whitetail grunt, bleat, snort-wheeze and rattle, an eastern gray squirrel bark, and the turkey gobble (NPS Rocky
+Mountain page `sounds-wildturkey.htm` has one: add its mp3 URL). Add an entry per call (direct mp3, wav or m4a URL, or
+`"ext"` for URLs without one; author; license; the page that shows the license). The sheet shows every clip's credit.
 
 ## Ginseng photos
 

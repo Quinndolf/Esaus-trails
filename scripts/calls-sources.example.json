@@ -6,6 +6,7 @@
     "license": "CC BY 4.0",
     "source": "https://example.org/page-with-the-license",
     "loopStart": 0,
-    "loopEnd": 4.2
+    "loopEnd": 4.2,
+    "ext": ".mp3"
   }
 ]

@@ -7,5 +7,5 @@
 .call-name { font-size: 18px; font-weight: 600; }
 .call-hint { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; }
 .call-blurb { margin: 0 4px; font-size: 13px; line-height: 1.4; color: var(--muted); }
-.call-synth { font-style: normal; opacity: .8; }
+.call-missing { font-style: normal; opacity: .8; }
 .call-credits { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); line-height: 1.5; }

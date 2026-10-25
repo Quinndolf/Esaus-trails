@@ -1,6 +1,6 @@
-/** The call pads. Order is the order they appear on the sheet. */
+/** The call pads. Order is the order they appear on the sheet. Every pad plays a real recording or nothing. */
 
-export type CallSpecies = 'deer' | 'squirrel';
+export type CallSpecies = 'deer' | 'squirrel' | 'turkey';
 
 export interface CallDef {
   id: string;
@@ -8,8 +8,6 @@ export interface CallDef {
   name: string;
   /** What the sound is and when it is used, from the literature where there is some. */
   blurb: string;
-  /** Filename under /calls/ the player prefers when it is listed in the manifest. */
-  file: string;
 }
 
 export const CALLS: CallDef[] = [
@@ -17,52 +15,73 @@ export const CALLS: CallDef[] = [
     id: 'deer-grunt',
     species: 'deer',
     name: 'Grunt',
-    blurb:
-      'Short low grunt, a tenth to four-tenths of a second. Dominant deer use it to move another deer along (Atkeson et al. 1988). Hold for a string of them, the way a buck trails a doe.',
-    file: 'deer-grunt.mp3',
+    blurb: 'Short low grunt. Dominant deer use it to move another deer along (Atkeson et al. 1988). Hold for a string of them.',
   },
   {
     id: 'deer-bleat',
     species: 'deer',
     name: 'Bleat',
-    blurb: 'Higher, tonal bleat. Fawns use it to call a doe; she comes to look (Atkeson et al. 1988). Hold to keep bleating.',
-    file: 'deer-bleat.mp3',
+    blurb: 'Higher, tonal bleat. Fawns use it to call a doe, and she comes to look (Atkeson et al. 1988).',
   },
   {
     id: 'deer-snort-wheeze',
     species: 'deer',
     name: 'Snort-wheeze',
-    blurb:
-      'A grunt, three sharp snorts, then a long breathy wheeze. The most aggressive buck call, a challenge during the rut (Atkeson et al. 1988). It can pull a buck in or send a smaller one running.',
-    file: 'deer-snort-wheeze.mp3',
+    blurb: 'A grunt, three snorts, then a long wheeze. The most aggressive buck call, a challenge during the rut (Atkeson et al. 1988).',
   },
   {
     id: 'deer-rattle',
     species: 'deer',
     name: 'Rattle',
-    blurb: 'Antlers clacking and grinding, two bucks sparring. Pre-rut and rut. Hold for as long as the fight lasts.',
-    file: 'deer-rattle.mp3',
+    blurb: 'Antlers clacking and grinding, two bucks sparring. Pre-rut and rut.',
   },
   {
     id: 'squirrel-bark',
     species: 'squirrel',
-    name: 'Bark',
-    blurb: 'Sharp repeated "kuk" alarm bark. Squirrels give it at a hawk or a hunter, and it makes others look for the trouble.',
-    file: 'squirrel-bark.mp3',
+    name: 'Gray squirrel bark',
+    blurb: 'Sharp repeated alarm bark of an eastern gray squirrel.',
   },
   {
-    id: 'squirrel-distress',
+    id: 'squirrel-red-chatter',
     species: 'squirrel',
-    name: 'Distress',
-    blurb: 'A harsh high squeal, a squirrel in trouble. Brings neighbours to look, and the predators that listen for it.',
-    file: 'squirrel-distress.mp3',
+    name: 'Red squirrel chatter',
+    blurb: 'A red squirrel scolding in the spruce and pine. Fast, rattling chatter.',
   },
   {
-    id: 'squirrel-cutter',
+    id: 'squirrel-pine',
     species: 'squirrel',
-    name: 'Cutter',
-    blurb: 'Fast scolding chatter, one run of clicks after another. Use it to find squirrels or to keep one talking.',
-    file: 'squirrel-cutter.mp3',
+    name: 'Pine squirrel',
+    blurb: 'Another American red (pine) squirrel, recorded in the Rockies.',
+  },
+  {
+    id: 'turkey-yelp',
+    species: 'turkey',
+    name: 'Hen yelp',
+    blurb: 'The basic hen call. Brings a gobbler looking for company in spring.',
+  },
+  {
+    id: 'turkey-hen-call',
+    species: 'turkey',
+    name: 'Hen calling',
+    blurb: 'A clean run of hen calling, the kind used to call up a tom.',
+  },
+  {
+    id: 'turkey-cluck-purr',
+    species: 'turkey',
+    name: 'Cluck and purr',
+    blurb: 'Soft contact calls: a hen content and feeding close by. Good to finish a bird that hangs up.',
+  },
+  {
+    id: 'turkey-putt',
+    species: 'turkey',
+    name: 'Putt',
+    blurb: 'The sharp alarm note. A putt tells turkeys something is wrong. Not a call to use on a bird you are working.',
+  },
+  {
+    id: 'turkey-gobble',
+    species: 'turkey',
+    name: 'Gobble',
+    blurb: 'A tom gobbling. Use it to locate a bird at dawn, and expect a gobbler to answer.',
   },
 ];
 
@@ -77,6 +96,8 @@ export interface CallRecording {
   /** Loop points in seconds, if the clip should loop only part of itself. */
   loopStart?: number;
   loopEnd?: number;
+  /** Seconds of silence between repeats while the pad is held. 0 or absent loops seamlessly. */
+  gap?: number;
 }
 
 export interface CallManifest {
