@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import { BASEMAP_LABELS, nextBasemap, type BasemapId } from './map/basemaps';
 import { cardinal, metersToFeet, type LngLat } from './map/geo';
+import { ALL_LAYERS, FOLDERS } from './layers/registry';
+import { useLayerState } from './layers/useLayerState';
+import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
@@ -45,6 +48,8 @@ export function App() {
   const [start] = useState(() => lastKnownFix());
   const { fix, status: gps } = useGeolocation();
   const compass = useHeading(mode === 'compass');
+  const layers = useLayerState();
+  useMapLayers(map, ALL_LAYERS, layers.state);
 
   const heading = compass.heading ?? fix?.heading ?? null;
 
@@ -163,7 +168,16 @@ export function App() {
         </button>
       </div>
 
-      <LayersSheet open={sheet === 'layers'} onClose={() => setSheet(null)} basemap={basemap} onBasemap={setBasemap} />
+      <LayersSheet
+        open={sheet === 'layers'}
+        onClose={() => setSheet(null)}
+        basemap={basemap}
+        onBasemap={setBasemap}
+        folders={FOLDERS}
+        state={layers.state}
+        onToggle={layers.toggle}
+        onOptions={layers.setOptions}
+      />
       <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} />
       <ToolsSheet open={sheet === 'tools'} onClose={() => setSheet(null)} onPhotos={() => setSheet('photos')} />
       <PhotosSheet open={sheet === 'photos'} onClose={() => setSheet(null)} />
