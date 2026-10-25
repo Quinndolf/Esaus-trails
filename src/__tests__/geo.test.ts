@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { angleDelta, cardinal, coneRing, destination, normalizeBearing } from '../map/geo';
-
-
+import { nextBasemap } from '../map/basemaps';
+import { countTiles, latToTileY, lngToTileX, tilesIn } from '../offline/tiles';
 
 describe('geo', () => {
   it('moves north by about 111 km per degree', () => {
@@ -27,5 +27,22 @@ describe('geo', () => {
     expect(angleDelta(10, 350)).toBe(-20);
   });
 
+  it('cycles satellite, topo, hybrid', () => {
+    expect(nextBasemap('satellite')).toBe('topo');
+    expect(nextBasemap('topo')).toBe('hybrid');
+    expect(nextBasemap('hybrid')).toBe('satellite');
+  });
 });
 
+describe('tiles', () => {
+  it('matches known slippy tile numbers', () => {
+    expect(lngToTileX(-85.3, 10)).toBe(269);
+    expect(latToTileY(37.6, 10)).toBe(396);
+  });
+
+  it('counts the same tiles it yields', () => {
+    const b = { west: -85.32, south: 37.58, east: -85.28, north: 37.62 };
+    expect([...tilesIn(b, 12, 16)].length).toBe(countTiles(b, 12, 16));
+    expect(countTiles(b, 16, 16)).toBeGreaterThan(20);
+  });
+});
