@@ -141,7 +141,7 @@ describe("photo pins", () => {
     name: "Bench thicket",
     notes: "Beds flattened in the leaves",
     tags: ["bedding"],
-    position: [cell(11, 24).lng, cell(11, 24).lat] as [number, number],
+    position: cell(11, 24),
     altitude: 250,
     takenAt: "2026-11-08T13:05:00Z",
     heading: 200,

@@ -8,7 +8,9 @@ import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
+import { EsauPanel, useEsau, useEsauMap } from './esau/ui';
 import {
+  isAwaitingPinDrop,
   ManualPinPrompt,
   PhotoPinSheet,
   PhotosSheet,
@@ -18,6 +20,7 @@ import {
   usePhotoPins,
 } from './photos';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
+import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
@@ -54,6 +57,20 @@ export function App() {
   useEffect(() => void usePhotoPins.getState().load(), []);
   usePhotoPinMarkers(map);
   useManualPinDrop(map);
+
+  // Esau: a tap on open map reads that spot, unless a sheet or a photo pin drop owns the tap.
+  useEsauMap(map, () => isAwaitingPinDrop() || sheet !== null || usePhotoPins.getState().selectedPinId !== null);
+  useEffect(() => {
+    useEsau.getState().setHunter(
+      fix ? { lat: fix.lngLat[1], lng: fix.lngLat[0], accuracyM: fix.accuracy, headingDeg: heading ?? undefined } : null,
+    );
+  }, [fix, heading]);
+  const photoPins = usePhotoPins((s) => s.pins);
+  useEffect(() => {
+    useEsau.getState().setPins(
+      photoPins.map((p) => ({ id: p.id, kind: 'photo', lat: p.position.lat, lng: p.position.lng, name: p.name, note: p.notes, tags: p.tags })),
+    );
+  }, [photoPins]);
 
   // Opening a photo pin (new from EXIF, or picked from the list) brings it on screen.
   const selectedPinId = usePhotoPins((s) => s.selectedPinId);
@@ -124,6 +141,7 @@ export function App() {
           <OfflineIcon />
           <span>Offline</span>
         </button>
+        <HourButton map={map} />
       </div>
 
       <button className="fab tools-fab" onClick={() => setSheet('tools')} aria-label="Tools">
@@ -152,6 +170,7 @@ export function App() {
         </button>
       </div>
 
+      <HourPanel map={map} hunter={fix?.lngLat ?? null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}
@@ -165,7 +184,13 @@ export function App() {
       <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} />
       <ToolsSheet open={sheet === 'tools'} onClose={() => setSheet(null)} onPhotos={() => setSheet('photos')} />
       <PhotosSheet open={sheet === 'photos'} onClose={() => setSheet(null)} />
-      <PhotoPinSheet />
+      <PhotoPinSheet
+        onAskEsau={(input) => {
+          usePhotoPins.getState().select(null);
+          void useEsau.getState().askPhoto(input);
+        }}
+      />
+      <EsauPanel />
       <ManualPinPrompt />
     </div>
   );

@@ -1,0 +1,195 @@
+import { create } from 'zustand';
+import { buildBrief, type EsauBrief } from '../brief';
+import { askEsau, EsauApiError } from '../client';
+import { offlineRead } from '../offline';
+import { photoQuery, type PhotoInputLike } from '../photo';
+import type { EsauReply, GroundGrid, LatLng, Pin, SpeciesId, SpotQuery } from '../types';
+import { groundFor } from './ground';
+
+export interface Hunter {
+  lat: number;
+  lng: number;
+  accuracyM?: number;
+  headingDeg?: number;
+}
+
+export type Status = 'idle' | 'loading-ground' | 'asking' | 'ready' | 'error';
+
+interface Turn {
+  role: 'hunter' | 'esau';
+  text: string;
+}
+
+interface EsauState {
+  open: boolean;
+  species: SpeciesId;
+  spot: LatLng | null;
+  grid: GroundGrid | null;
+  hourIndex: number;
+  /** The hour Esau's current reply was for, so the panel can offer to re-ask. */
+  replyHour: number | null;
+  reply: EsauReply | null;
+  history: Turn[];
+  status: Status;
+  error: string | null;
+  hunter: Hunter | null;
+  /** Pins on the map Esau should know about (photo pins, waypoints). */
+  pins: Pin[];
+  photo: PhotoInputLike | null;
+
+  setHunter(h: Hunter | null): void;
+  setPins(p: Pin[]): void;
+  setSpecies(s: SpeciesId): void;
+  setHour(i: number): void;
+  /** The app's hour slider drives this: Esau reads the grid hour nearest `at`. */
+  setTime(at: Date): void;
+  /** Last time the slider asked for, kept so a newly loaded grid starts on it. */
+  time: Date | null;
+  tapSpot(spot: LatLng): Promise<void>;
+  askPhoto(input: PhotoInputLike): Promise<void>;
+  ask(question?: string): Promise<void>;
+  close(): void;
+}
+
+const SPECIES_KEY = 'esau-species';
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function savedSpecies(): SpeciesId {
+  try {
+    const v = localStorage.getItem(SPECIES_KEY);
+    if (v === 'whitetail' || v === 'elk' || v === 'mule_deer' || v === 'black_bear' || v === 'turkey' || v === 'hog') return v;
+  } catch {
+    /* ignore */
+  }
+  return 'whitetail';
+}
+
+export function nearestHour(grid: GroundGrid, at: Date): number {
+  let best = 0, bestD = Infinity;
+  grid.weather.hours.forEach((h, i) => {
+    const d = Math.abs(Date.parse(h.at) - at.getTime());
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+/** Bumped on every new spot so a slow answer for an old tap can't overwrite a new one. */
+let ticket = 0;
+
+export const useEsau = create<EsauState>((set, get) => ({
+  open: false,
+  species: savedSpecies(),
+  spot: null,
+  grid: null,
+  hourIndex: 0,
+  replyHour: null,
+  reply: null,
+  history: [],
+  status: 'idle',
+  error: null,
+  hunter: null,
+  pins: [],
+  photo: null,
+  time: null,
+
+  setHunter: (hunter) => set({ hunter }),
+  setPins: (pins) => set({ pins }),
+
+  setSpecies(species) {
+    try {
+      localStorage.setItem(SPECIES_KEY, species);
+    } catch {
+      /* ignore */
+    }
+    set({ species, reply: null, history: [] });
+    if (get().spot && get().grid) void get().ask();
+  },
+
+  setHour: (hourIndex) => set({ hourIndex }),
+
+  setTime(at) {
+    const grid = get().grid;
+    set({ time: at, ...(grid ? { hourIndex: nearestHour(grid, at) } : {}) });
+  },
+
+  async tapSpot(spot) {
+    const t = ++ticket;
+    set({ open: true, spot, photo: null, reply: null, history: [], status: 'loading-ground', error: null });
+    try {
+      const grid = await groundFor(spot);
+      if (t !== ticket) return;
+      const time = get().time;
+      set({ grid, hourIndex: time ? nearestHour(grid, time) : 0 });
+      await get().ask();
+    } catch (err) {
+      if (t !== ticket) return;
+      set({ status: 'error', error: err instanceof Error ? err.message : "Couldn't read the ground here." });
+    }
+  },
+
+  async askPhoto(input) {
+    const spot = { lat: input.position.lat, lng: input.position.lng };
+    const t = ++ticket;
+    set({ open: true, spot, photo: input, reply: null, history: [], status: 'loading-ground', error: null });
+    try {
+      const grid = await groundFor(spot);
+      if (t !== ticket) return;
+      // A photo is read at the hour it was taken when that hour is in the forecast; else now.
+      set({ grid, hourIndex: input.takenAt ? nearestHour(grid, new Date(input.takenAt)) : 0 });
+      await get().ask();
+    } catch (err) {
+      if (t !== ticket) return;
+      set({ status: 'error', error: err instanceof Error ? err.message : "Couldn't read the ground here." });
+    }
+  },
+
+  async ask(question) {
+    const s = get();
+    if (!s.spot || !s.grid) return;
+    const t = ticket;
+    const q = question?.trim();
+    const base: SpotQuery = {
+      species: s.species,
+      spot: s.spot,
+      hunter: s.hunter ?? undefined,
+      grid: s.grid,
+      hourIndex: s.hourIndex,
+      pins: s.pins,
+      timeZone: TZ,
+      question: q || undefined,
+      history: s.history.length ? s.history : undefined,
+    };
+    const query = s.photo ? photoQuery(s.photo, { ...base, question: base.question }) : base;
+    // A follow-up keeps Esau's earlier words in front of him.
+    const history: Turn[] = [...s.history];
+    if (s.reply && q) history.push({ role: 'esau', text: s.reply.say });
+    if (q) history.push({ role: 'hunter', text: q });
+    set({ status: 'asking', error: null });
+    try {
+      const reply = await askEsau(query);
+      if (t !== ticket) return;
+      set({ reply, replyHour: s.hourIndex, history, status: 'ready' });
+    } catch (err) {
+      if (t !== ticket) return;
+      const msg = err instanceof EsauApiError || err instanceof Error ? err.message : 'Esau hit a snag.';
+      set({ status: 'error', error: msg });
+    }
+  },
+
+  close() {
+    ticket++;
+    set({ open: false, spot: null, photo: null, reply: null, history: [], status: 'idle', error: null });
+  },
+}));
+
+/** The instant rule-based read for the current hour, for scrubbing the slider without spending a call. */
+export function quickBrief(s: Pick<EsauState, 'species' | 'spot' | 'grid' | 'hourIndex' | 'hunter' | 'pins'>): EsauBrief | null {
+  if (!s.spot || !s.grid) return null;
+  try {
+    return buildBrief({ species: s.species, spot: s.spot, grid: s.grid, hourIndex: s.hourIndex, hunter: s.hunter ?? undefined, pins: s.pins, timeZone: TZ });
+  } catch {
+    return null;
+  }
+}
+
+export { offlineRead };
