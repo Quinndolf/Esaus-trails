@@ -1,6 +1,7 @@
 import { localTime, readConditions, type ThermalFn } from "./conditions";
 import { compass } from "./geo";
 import { buildSystemPrompt } from "./persona";
+import { modelThermal } from "../model/esau";
 import { speciesBrain } from "./species";
 import type { SeasonPhase, SpeciesBrain, SpotScores } from "./species/types";
 import { readSpot } from "./terrain";
@@ -35,7 +36,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
 
   const spot = readSpot(g, q.spot, { hunter: q.hunter, pins: q.pins });
-  const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal });
+  // The wind and thermal module's model by default; tests can pass the prototype rules.
+  const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
   const scores = species.scores(spot, conditions, phase);
 

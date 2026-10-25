@@ -8,8 +8,7 @@ export interface PhotoInputLike {
   name: string;
   notes: string;
   tags: string[];
-  /** [lng, lat] */
-  position: [number, number];
+  position: LatLng;
   altitude: number | null;
   takenAt: string | null;
   heading: number | null;
@@ -26,7 +25,7 @@ export function photoQuery(
   input: PhotoInputLike,
   ctx: Omit<SpotQuery, "spot" | "photo"> & { hunter?: SpotQuery["hunter"] },
 ): SpotQuery {
-  const spot: LatLng = { lat: input.position[1], lng: input.position[0] };
+  const spot: LatLng = { lat: input.position.lat, lng: input.position.lng };
   let hourIndex = ctx.hourIndex;
   if (hourIndex === undefined && input.takenAt) {
     const t = new Date(input.takenAt).getTime();
