@@ -14,6 +14,9 @@ const ROLE_LABEL: Record<EsauReply['spotRole'], string> = {
   'security cover': 'Security cover',
   'open ground': 'Open ground',
   unlikely: 'Unlikely',
+  'good ground': 'Good ground',
+  'fair ground': 'Fair ground',
+  'poor ground': 'Poor ground',
 };
 
 /** The spot card: what's here, and what Esau makes of it. Sits low so the map stays visible. */

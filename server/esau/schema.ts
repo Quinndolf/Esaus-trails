@@ -5,7 +5,7 @@ export const EsauAnswer = z.object({
   say: z.string(),
   headline: z.string(),
   confidence: z.enum(["low", "fair", "good"]),
-  spotRole: z.enum(["bedding", "feeding", "travel", "staging", "security cover", "open ground", "unlikely"]),
+  spotRole: z.enum(["bedding", "feeding", "travel", "staging", "security cover", "open ground", "unlikely", "good ground", "fair ground", "poor ground"]),
   marks: z.array(
     z.object({
       kind: z.enum(["bedding", "feeding", "travel", "stand", "approach", "avoid"]),

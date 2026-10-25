@@ -53,7 +53,7 @@ export interface Pin {
   tags?: string[];
 }
 
-export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog";
+export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog" | "ginseng";
 
 /** Thermal state of a cell, same codes as the prototype. */
 export type ThermalState = "settled" | "rising" | "sinking" | "pooling";
@@ -181,7 +181,9 @@ export interface EsauReply {
   headline: string;
   confidence: "low" | "fair" | "good";
   /** What this spot most likely is to the animal right now. */
-  spotRole: "bedding" | "feeding" | "travel" | "staging" | "security cover" | "open ground" | "unlikely";
+  spotRole:
+    | "bedding" | "feeding" | "travel" | "staging" | "security cover" | "open ground" | "unlikely"
+    | "good ground" | "fair ground" | "poor ground";
   marks: EsauMark[];
   /** Short list of what would change his read (e.g. "fresh rubs on that bench"). */
   wouldChangeMyMind: string[];

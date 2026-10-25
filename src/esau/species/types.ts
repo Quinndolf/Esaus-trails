@@ -24,6 +24,12 @@ export interface SpeciesBrain {
   knowledge: string;
   /** Citable works, keyed as the knowledge text references them. */
   sources: Record<string, string>;
+  /** A plant, not an animal: no scent, wind or thermal advice. */
+  plant?: boolean;
+  /** Replaces Esau's hunting persona (ginseng mode). Must keep the same reply format. */
+  persona?: string;
+  /** Replaces the ROUGH SCORES line of the field report with species-specific lines. */
+  report?(spot: SpotReading, cond: ConditionsReading, phase: SeasonPhase, at: Date): string[];
   /** Whether the animal hunts by nose. Turkeys don't; everything with hair does. */
   nose: boolean;
   /** How the offline read names what a spot is for, in this animal's terms. */

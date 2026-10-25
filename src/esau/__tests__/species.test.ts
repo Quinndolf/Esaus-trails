@@ -22,7 +22,7 @@ describe("every species", () => {
   });
 
   it("keeps species apart: each prompt carries only its own animal's knowledge", () => {
-    const heads = ["WHITETAIL DEER", "ELK (Cervus", "MULE DEER (Odocoileus", "BLACK BEAR (Ursus", "WILD TURKEY (Meleagris", "WILD HOG (feral"];
+    const heads = ["WHITETAIL DEER", "ELK (Cervus", "MULE DEER (Odocoileus", "BLACK BEAR (Ursus", "WILD TURKEY (Meleagris", "WILD HOG (feral", "AMERICAN GINSENG (Panax"];
     for (const id of ids) {
       const sys = buildBrief(q(id)).system;
       expect(heads.filter((h) => sys.includes(h))).toHaveLength(1);

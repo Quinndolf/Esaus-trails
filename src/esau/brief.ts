@@ -78,10 +78,14 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
 
   lines.push("");
   lines.push("AIR");
-  lines.push(
-    `Wind ${conditions.windMph} mph from the ${conditions.windFromCompass}${conditions.gustMph ? `, gusting ${Math.round(conditions.gustMph)}` : ""}; scent carries toward the ${conditions.scentTowardCompass}. ${conditions.tempF}°F.`,
-  );
-  lines.push(`Thermal on this slope: ${conditions.thermal.state}. ${conditions.thermal.plain}`);
+  if (species.plant) lines.push(`${conditions.tempF}°F. Wind and thermals do not matter to a plant; do not talk about scent.`);
+  else {
+    lines.push(
+      `Wind ${conditions.windMph} mph from the ${conditions.windFromCompass}${conditions.gustMph ? `, gusting ${Math.round(conditions.gustMph)}` : ""}; scent carries toward the ${conditions.scentTowardCompass}. ${conditions.tempF}°F.`,
+    );
+    lines.push(`Thermal on this slope: ${conditions.thermal.state}. ${conditions.thermal.plain}`);
+  }
+  if (!species.plant)
   try {
     const atmo = atmosphereForGrid(g, new Date(conditions.at));
     conditions.atmosphere = atmo.line;
@@ -89,12 +93,12 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   } catch {
     // No usable forecast hours around this time; the wind and thermal lines stand alone.
   }
-  if (spot.fromHunter && conditions.windMph >= 2) {
+  if (!species.plant && spot.fromHunter && conditions.windMph >= 2) {
     const towardSpot = Math.abs(((spot.fromHunter.bearingDeg - conditions.scentToward + 540) % 360) - 180) <= 42;
     lines.push(towardSpot ? "The hunter's scent is blowing toward the tapped spot." : "The hunter's scent is not blowing toward the tapped spot.");
-    if (!species.nose) lines.push(`A ${species.name} doesn't hunt by nose, so scent hardly matters; sound and movement do.`);
+    if (!species.nose && !species.plant) lines.push(`A ${species.name} doesn't hunt by nose, so scent hardly matters; sound and movement do.`);
   }
-  if (conditions.outlook.length) {
+  if (!species.plant && conditions.outlook.length) {
     lines.push(
       "Next hours: " +
         conditions.outlook.map((o) => `${o.localTime.replace(/^\w+, \w+ \d+, /, "")} ${o.windMph} mph ${o.windFromCompass}, ${o.thermal}`).join("; "),
@@ -102,7 +106,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   }
 
   lines.push("");
-  lines.push(`ROUGH SCORES (simple rules, weigh them, don't trust them): bedding ${pct(scores.bedding)}, feeding ${pct(scores.feeding)}, travel ${pct(scores.travel)}.`);
+  if (species.report) lines.push(...species.report(spot, conditions, phase, new Date(conditions.at)));
+  else lines.push(`ROUGH SCORES (simple rules, weigh them, don't trust them): bedding ${pct(scores.bedding)}, feeding ${pct(scores.feeding)}, travel ${pct(scores.travel)}.`);
   if (g.notes?.length) lines.push(`Data notes: ${g.notes.join(" ")}`);
 
   if (q.photo) {

@@ -57,7 +57,7 @@ const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 function savedSpecies(): SpeciesId {
   try {
     const v = localStorage.getItem(SPECIES_KEY);
-    if (v === 'whitetail' || v === 'elk' || v === 'mule_deer' || v === 'black_bear' || v === 'turkey' || v === 'hog') return v;
+    if (v === 'whitetail' || v === 'elk' || v === 'mule_deer' || v === 'black_bear' || v === 'turkey' || v === 'hog' || v === 'ginseng') return v;
   } catch {
     /* ignore */
   }
