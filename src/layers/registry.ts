@@ -1,4 +1,5 @@
 import type { LayerFolder } from './types';
+import { DEER_ZONE_COLORS, KY_DEER_SEASON, kyDeerZonesGeoJSON } from './kyDeerZones';
 
 // Layer catalogue. State folders carry `state`; adding a state means adding its folders here.
 // Sources marked "prototype" are the exact endpoints the Deer Trails prototype used.
@@ -88,6 +89,22 @@ export const FOLDERS: LayerFolder[] = [
     name: 'Hunting Districts',
     state: 'KY',
     layers: [
+      {
+        id: 'ky-deer-zones',
+        name: `Deer zones ${KY_DEER_SEASON}`,
+        description: `Deer hunting zone of each county for the ${KY_DEER_SEASON} season, from the KDFWR hunting guide map. Dashed counties changed zone this year. County lines are approximate; check the official guide before you hunt.`,
+        source: {
+          kind: 'geojson',
+          load: kyDeerZonesGeoJSON,
+          property: 'zone',
+          colors: DEER_ZONE_COLORS,
+          dashed: 'changed',
+        },
+        opacity: 0.5,
+        color: DEER_ZONE_COLORS[1],
+        attribution: `Deer zones: KDFWR hunting guide ${KY_DEER_SEASON}; counties: US Census`,
+        options: ([1, 2, 3, 4] as const).map((z) => ({ id: `zone-${z}`, name: `Zone ${z}`, value: z, color: DEER_ZONE_COLORS[z] })),
+      },
       {
         id: 'ky-elk-units',
         name: 'Elk hunting units',

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { Map as MLMap, RasterSourceSpecification } from 'maplibre-gl';
-import { tileUrls } from './tiles';
+import type { ExpressionSpecification, GeoJSONSource, Map as MLMap, RasterSourceSpecification } from 'maplibre-gl';
+import { activeOptionIds, tileUrls } from './tiles';
 import type { LayerDef, LayerState } from './types';
 
 /** Overlays sit above the basemap and below the hunter's own drawings and the GPS dot. */
@@ -10,7 +10,49 @@ function insertBefore(map: MLMap): string | undefined {
 }
 
 function key(layer: LayerDef, state: LayerState): string {
+  if (layer.source.kind === 'geojson') return `geojson:${activeOptionIds(layer, state.options[layer.id]).join(',')}`;
   return tileUrls(layer, state.options[layer.id]).join('|');
+}
+
+const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+
+// A bundled polygon layer: a fill colored by one property, thin outlines, and dashed outlines where flagged.
+function addGeoJSON(map: MLMap, id: string, layer: LayerDef, picked: string[] | undefined, before: string | undefined) {
+  if (layer.source.kind !== 'geojson') return;
+  const { load, property, colors, dashed } = layer.source;
+  map.addSource(id, { type: 'geojson', data: EMPTY, attribution: layer.attribution });
+  load().then((data) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
+
+  const ids = new Set(activeOptionIds(layer, picked));
+  const values = layer.options?.filter((o) => ids.has(o.id) && o.value != null).map((o) => o.value as string | number);
+  const filter: ExpressionSpecification | undefined = values?.length
+    ? ['in', ['get', property], ['literal', values]]
+    : undefined;
+  const fill = ['match', ['get', property], ...Object.entries(colors).flatMap(([k, c]) => [Number.isNaN(Number(k)) ? k : Number(k), c]), '#9e9e9e'];
+  const minzoom = layer.minzoom ?? 0;
+
+  map.addLayer(
+    { id, type: 'fill', source: id, minzoom, ...(filter && { filter }), paint: { 'fill-color': fill as ExpressionSpecification, 'fill-opacity': layer.opacity ?? 0.5 } },
+    before,
+  );
+  map.addLayer(
+    { id: `${id}-line`, type: 'line', source: id, minzoom, ...(filter && { filter }), paint: { 'line-color': '#3e2723', 'line-width': 1, 'line-opacity': 0.7 } },
+    before,
+  );
+  if (dashed) {
+    const flagged: ExpressionSpecification = ['==', ['get', dashed], true];
+    map.addLayer(
+      {
+        id: `${id}-dashed`,
+        type: 'line',
+        source: id,
+        minzoom,
+        filter: filter ? ['all', filter, flagged] : flagged,
+        paint: { 'line-color': '#3e2723', 'line-width': 2.5, 'line-dasharray': [2, 1.5] },
+      },
+      before,
+    );
+  }
 }
 
 /** Keep the map's overlay rasters in step with the layer toggles and view options. */
@@ -29,7 +71,7 @@ export function useMapLayers(map: MLMap | null, layers: LayerDef[], state: Layer
       const next = want ? key(layer, state) : undefined;
 
       if (have && have !== next) {
-        if (map.getLayer(id)) map.removeLayer(id);
+        for (const l of [id, `${id}-line`, `${id}-dashed`]) if (map.getLayer(l)) map.removeLayer(l);
         if (map.getSource(id)) map.removeSource(id);
         added.current.delete(layer.id);
       }
@@ -38,6 +80,11 @@ export function useMapLayers(map: MLMap | null, layers: LayerDef[], state: Layer
         // An empty view-option pick means "show nothing" rather than "show everything".
         const picked = state.options[layer.id];
         if (layer.options && picked && picked.length === 0) continue;
+        if (layer.source.kind === 'geojson') {
+          addGeoJSON(map, id, layer, picked, before);
+          added.current.set(layer.id, next);
+          continue;
+        }
         const source: RasterSourceSpecification = {
           type: 'raster',
           tiles,
