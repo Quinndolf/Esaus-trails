@@ -1,0 +1,41 @@
+/* Esau's spot card: low on the screen, no scrim, so the map stays readable behind it. */
+.esau-panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; max-height: 52vh; max-height: 52dvh; display: flex; flex-direction: column;
+  background: var(--panel); border-radius: 16px 16px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.5); animation: sheet-in .2s ease-out; }
+.esau-panel.is-expanded { max-height: 85vh; max-height: 85dvh; }
+@media (min-width: 720px) { .esau-panel { left: auto; right: 16px; width: 400px; bottom: 16px; border-radius: 16px; max-height: 70vh; } }
+.esau-head { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 16px 8px 6px 16px; }
+.esau-grip { position: absolute; top: 0; left: 50%; width: 64px; height: 18px; margin-left: -32px; border: none; background: transparent; cursor: pointer; }
+.esau-grip::after { content: ''; position: absolute; top: 7px; left: 12px; right: 12px; height: 5px; border-radius: 3px; background: var(--line); }
+.esau-spot { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.esau-spot strong { font-size: 17px; }
+.esau-spot span { color: var(--muted); font-size: 13px; }
+.esau-body { overflow-y: auto; padding: 0 16px calc(var(--safe-b) + 16px); }
+.species-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 4px; scrollbar-width: none; }
+.species-row::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.chip.is-active { background: var(--green); border-color: var(--green); color: #07210f; }
+.chip:disabled:not(.is-active) { color: var(--muted); cursor: default; }
+.chip small { font-weight: 400; opacity: .8; }
+.esau-air { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.esau-wait { margin: 12px 0; color: var(--muted); font-style: italic; }
+.esau-reply { margin: 8px 0; padding: 12px; border-radius: 12px; background: var(--panel-2); border-left: 3px solid var(--accent); }
+.esau-reply p { margin: 8px 0 0; line-height: 1.45; }
+.esau-reply-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line); color: var(--text); white-space: nowrap; }
+.badge.conf-good { background: rgba(52, 199, 89, .25); }
+.badge.conf-low { background: rgba(255, 122, 89, .25); }
+.esau-mind { color: var(--muted); font-size: 13px; }
+.esau-mind span { color: var(--text); font-weight: 600; }
+.esau-meta { color: var(--muted); font-size: 12px; }
+.esau-ask { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+
+.esau-spot-marker { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.4); pointer-events: none; }
+.esau-mark { display: flex; align-items: center; gap: 6px; pointer-events: none; }
+.esau-mark__dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; background: var(--accent); flex: none; }
+.esau-mark__label { background: rgba(18, 22, 16, .85); color: var(--text); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.esau-mark--bedding .esau-mark__dot { background: #b5651d; }
+.esau-mark--feeding .esau-mark__dot { background: #e2c044; }
+.esau-mark--travel .esau-mark__dot { background: #f28c28; }
+.esau-mark--stand .esau-mark__dot { background: var(--green); }
+.esau-mark--approach .esau-mark__dot { background: var(--blue); }
+.esau-mark--avoid .esau-mark__dot { background: var(--warn); }
