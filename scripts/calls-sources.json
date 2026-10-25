@@ -1,0 +1,54 @@
+[
+  {
+    "id": "squirrel-red-chatter",
+    "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLSGYredsquirrel2004320.mp3",
+    "author": "National Park Service, Yellowstone National Park",
+    "license": "Public domain (US government work)",
+    "source": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-redsquirrel.htm",
+    "gap": 0.4
+  },
+  {
+    "id": "squirrel-pine",
+    "url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-RedSquirrelROMO662017HollowellPark.mp3",
+    "author": "National Park Service, Rocky Mountain National Park",
+    "license": "Public domain (US government work)",
+    "source": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-wildlife-soundscapes.htm",
+    "gap": 0.4
+  },
+  {
+    "id": "turkey-hen-call",
+    "url": "http://soundbible.com/grab.php?id=1889&type=mp3",
+    "ext": ".mp3",
+    "author": "JimBob",
+    "license": "CC BY 3.0",
+    "source": "https://soundbible.com/1889-Turkey-Call.html",
+    "gap": 0.6
+  },
+  {
+    "id": "turkey-yelp",
+    "url": "http://soundbible.com/grab.php?id=1341&type=mp3",
+    "ext": ".mp3",
+    "author": "National Wild Turkey Federation, via SoundBible",
+    "license": "CC BY-NC 3.0 (noncommercial; replace before any paid release)",
+    "source": "https://soundbible.com/1341-Turkey-Hen-Yelping.html",
+    "gap": 0.6
+  },
+  {
+    "id": "turkey-cluck-purr",
+    "url": "http://soundbible.com/grab.php?id=1330&type=mp3",
+    "ext": ".mp3",
+    "author": "National Wild Turkey Federation, via SoundBible",
+    "license": "CC BY-NC 3.0 (noncommercial; replace before any paid release)",
+    "source": "https://soundbible.com/1330-Turkey-Cluck-And-Purr.html",
+    "gap": 0.8
+  },
+  {
+    "id": "turkey-putt",
+    "url": "http://soundbible.com/grab.php?id=1318&type=mp3",
+    "ext": ".mp3",
+    "author": "National Wild Turkey Federation, via SoundBible",
+    "license": "CC BY-NC 3.0 (noncommercial; replace before any paid release)",
+    "source": "https://soundbible.com/1318-Turkey-Putt.html",
+    "gap": 1.0
+  }
+]

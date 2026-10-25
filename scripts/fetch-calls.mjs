@@ -5,8 +5,8 @@
 //   cp scripts/calls-sources.example.json scripts/calls-sources.json   # then fill it in
 //   npm run calls:fetch
 //
-// Only add clips whose license lets you use them: public domain (CC0), or CC BY / CC BY-SA with the
-// attribution shown in the app. Check each source page yourself. Use mp3, wav or m4a: Safari on
+// Only add clips whose license lets you use them: public domain (CC0, US government), or CC BY / CC BY-SA with the
+// attribution shown in the app. Non-commercial (NC) clips are fine for a private beta, not for a paid app. Check each source page yourself. Use mp3, wav or m4a: Safari on
 // iPhone does not decode ogg everywhere.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -19,8 +19,13 @@ const IDS = [
   'deer-snort-wheeze',
   'deer-rattle',
   'squirrel-bark',
-  'squirrel-distress',
-  'squirrel-cutter',
+  'squirrel-red-chatter',
+  'squirrel-pine',
+  'turkey-yelp',
+  'turkey-hen-call',
+  'turkey-cluck-purr',
+  'turkey-putt',
+  'turkey-gobble',
 ];
 const OK_EXT = new Set(['.mp3', '.wav', '.m4a', '.aac']);
 
@@ -35,8 +40,9 @@ for (const s of sources) {
   try {
     if (!IDS.includes(s.id)) throw new Error(`id must be one of ${IDS.join(', ')}`);
     for (const k of ['url', 'author', 'license', 'source']) if (!s[k]) throw new Error(`missing "${k}"`);
-    const ext = extname(new URL(s.url).pathname).toLowerCase();
-    if (!OK_EXT.has(ext)) throw new Error(`url must end in ${[...OK_EXT].join(', ')} (got "${ext}")`);
+    // Some hosts (SoundBible's grab.php) have no extension in the URL: say it with "ext": ".mp3".
+    const ext = (s.ext ?? extname(new URL(s.url).pathname)).toLowerCase();
+    if (!OK_EXT.has(ext)) throw new Error(`url must end in ${[...OK_EXT].join(', ')}, or set "ext" (got "${ext}")`);
     const res = await fetch(s.url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const file = `${s.id}${ext}`;
@@ -48,6 +54,7 @@ for (const s of sources) {
       source: s.source,
       ...(s.loopStart != null ? { loopStart: s.loopStart } : {}),
       ...(s.loopEnd != null ? { loopEnd: s.loopEnd } : {}),
+      ...(s.gap != null ? { gap: s.gap } : {}),
     };
     console.log(`ok   ${where} -> ${file}`);
   } catch (err) {
@@ -56,5 +63,5 @@ for (const s of sources) {
   }
 }
 await writeFile(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-console.log(`${Object.keys(manifest.recordings).length} recordings listed; the rest use the synthesized stand-ins.`);
+console.log(`${Object.keys(manifest.recordings).length} recordings listed; the rest stay disabled ("No recording yet") on the Calls sheet.`);
 process.exit(failed ? 1 : 0);

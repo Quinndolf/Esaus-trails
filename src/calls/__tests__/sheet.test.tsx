@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CallsSheet } from '../CallsSheet';
+import { CALLS } from '../catalog';
 import { callPlayer } from '../player';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -11,9 +12,9 @@ describe('Calls sheet', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('presses on pointer down and releases on pointer up and cancel', async () => {
-    const press = vi.spyOn(callPlayer, 'press').mockResolvedValue();
+    const press = vi.spyOn(callPlayer, 'press').mockResolvedValue('playing');
     const release = vi.spyOn(callPlayer, 'release').mockImplementation(() => {});
-    vi.spyOn(callPlayer, 'sources').mockResolvedValue({});
+    vi.spyOn(callPlayer, 'sources').mockResolvedValue(Object.fromEntries(CALLS.map((c) => [c.id, c.id === 'turkey-putt' ? 'missing' : 'recording'])) as any);
     vi.spyOn(callPlayer, 'credits').mockResolvedValue([]);
     vi.spyOn(callPlayer, 'warm').mockResolvedValue();
     vi.spyOn(callPlayer, 'releaseAll').mockImplementation(() => {});
@@ -34,7 +35,11 @@ describe('Calls sheet', () => {
     await act(async () => void bark.dispatchEvent(ev('pointerdown')));
     await act(async () => void bark.dispatchEvent(ev('pointercancel')));
     expect(release).toHaveBeenCalledWith('squirrel-bark');
-    expect(host.querySelectorAll('.call-pad').length).toBe(7);
+    expect(host.querySelectorAll('.call-pad').length).toBe(CALLS.length);
+    expect(host.textContent).toContain('Turkey');
+    const putt = host.querySelector('[data-testid="call-turkey-putt"]') as HTMLButtonElement;
+    expect(putt.disabled).toBe(true);
+    expect(putt.textContent).toContain('No recording yet');
     await act(async () => root.unmount());
   });
 });
