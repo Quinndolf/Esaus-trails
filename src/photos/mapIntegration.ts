@@ -102,7 +102,16 @@ export function isAwaitingPinDrop(): boolean {
   return usePhotoPins.getState().pending !== null;
 }
 
-/** Flies the map to a pin, e.g. after picking it from the list. */
-export function flyToPin(map: MlMap, pin: PhotoPin) {
-  map.flyTo({ center: pin.position, zoom: Math.max(map.getZoom(), 16) });
+/**
+ * Flies the map to a pin, e.g. after picking it from the list. With
+ * `aboveSheet`, the pin lands near the top of the screen so a bottom sheet
+ * covering most of a phone doesn't hide it.
+ */
+export function flyToPin(map: MlMap, pin: PhotoPin, { aboveSheet = false } = {}) {
+  const h = map.getContainer().clientHeight;
+  map.flyTo({
+    center: pin.position,
+    zoom: Math.max(map.getZoom(), 16),
+    offset: aboveSheet ? [0, -h * 0.4] : [0, 0],
+  });
 }

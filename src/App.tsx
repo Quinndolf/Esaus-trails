@@ -1,10 +1,19 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import { BASEMAP_LABELS, nextBasemap, type BasemapId } from './map/basemaps';
 import { cardinal, metersToFeet, type LngLat } from './map/geo';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
+import {
+  ManualPinPrompt,
+  PhotoPinSheet,
+  PhotosSheet,
+  flyToPin,
+  useManualPinDrop,
+  usePhotoPinMarkers,
+  usePhotoPins,
+} from './photos';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
@@ -14,7 +23,7 @@ import { ToolsSheet } from './ui/ToolsSheet';
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
 
-type Sheet = 'layers' | 'offline' | 'tools' | null;
+type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | null;
 
 function initialBasemap(): BasemapId {
   try {
@@ -36,6 +45,19 @@ export function App() {
   const compass = useHeading(mode === 'compass');
 
   const heading = compass.heading ?? fix?.heading ?? null;
+
+  useEffect(() => void usePhotoPins.getState().load(), []);
+  usePhotoPinMarkers(map);
+  useManualPinDrop(map);
+
+  // Opening a photo pin (new from EXIF, or picked from the list) brings it on screen.
+  const selectedPinId = usePhotoPins((s) => s.selectedPinId);
+  useEffect(() => {
+    const pin = usePhotoPins.getState().pins.find((p) => p.id === selectedPinId);
+    if (!map || !pin) return;
+    setMode((m) => (m === 'follow' ? 'free' : m));
+    flyToPin(map, pin, { aboveSheet: true });
+  }, [map, selectedPinId]);
 
   const setBasemap = useCallback((b: BasemapId) => {
     setBasemapState(b);
@@ -127,7 +149,10 @@ export function App() {
 
       <LayersSheet open={sheet === 'layers'} onClose={() => setSheet(null)} basemap={basemap} onBasemap={setBasemap} />
       <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} />
-      <ToolsSheet open={sheet === 'tools'} onClose={() => setSheet(null)} />
+      <ToolsSheet open={sheet === 'tools'} onClose={() => setSheet(null)} onPhotos={() => setSheet('photos')} />
+      <PhotosSheet open={sheet === 'photos'} onClose={() => setSheet(null)} />
+      <PhotoPinSheet />
+      <ManualPinPrompt />
     </div>
   );
 }

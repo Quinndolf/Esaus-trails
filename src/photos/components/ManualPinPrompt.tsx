@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePhotoPins } from '../store';
 import { usePhotoUrl } from '../usePhotoUrl';
-import { getDeviceFix } from './AddPhotoButton';
+import { getDeviceFix } from './usePhotoPicker';
 
 /**
  * Shown when a photo has no GPS in it. The hunter taps the map where it was
