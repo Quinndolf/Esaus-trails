@@ -45,3 +45,11 @@ synthesized stand-in otherwise. To add recordings, copy `scripts/calls-sources.e
 `scripts/calls-sources.json`, fill in one entry per call (direct mp3, wav or m4a URL, author, license, and the
 page that shows the license), and run `npm run calls:fetch` on a machine that can reach the sources. Only use
 public-domain or CC BY / CC BY-SA clips (check each page); the sheet shows the credit for every clip.
+
+## Ginseng photos
+
+The "How to harvest" slides show a real photo, with its credit, when one is listed in
+`public/ginseng/photos/manifest.json`; otherwise the drawing. `scripts/ginseng-photos.json` already lists two
+public-domain NPS photos of the plant (Wendy Cass, Shenandoah National Park). Run `npm run ginseng:photos` on a
+machine that can reach the sources to download them. Add entries for the other steps (dig, seed, leave, sell, legal)
+with your own photos or ones whose license allows reuse, and check each page's license.

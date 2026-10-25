@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BottomSheet } from '../ui/BottomSheet';
 import { SLIDES } from './slides';
+import { loadSlidePhotos, type SlidePhotos } from './photos';
 import './slides.css';
 
 const AUTO_MS = 9000;
@@ -9,9 +10,18 @@ const AUTO_MS = 9000;
 export function HowToSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [photos, setPhotos] = useState<SlidePhotos>({});
+  const [showDrawing, setShowDrawing] = useState(false);
   const startX = useRef<number | null>(null);
   const slide = SLIDES[i];
+  const photo = photos[slide.id];
   const go = (n: number) => setI(Math.max(0, Math.min(SLIDES.length - 1, n)));
+
+  useEffect(() => {
+    if (open) void loadSlidePhotos().then(setPhotos);
+  }, [open]);
+
+  useEffect(() => setShowDrawing(false), [i]);
 
   useEffect(() => {
     if (!open) {
@@ -45,9 +55,31 @@ export function HowToSheet({ open, onClose }: { open: boolean; onClose: () => vo
           Step {i + 1} of {SLIDES.length} · <span className={`gs-tag ${slide.kind === 'law' ? 'is-law' : ''}`}>{slide.kind}</span>
         </p>
         <h3 className="gs-title">{slide.title}</h3>
-        <div className="gs-art" key={slide.id} data-testid="howto-art">
-          {slide.art}
-        </div>
+        {photo && (
+          <div className="gs-mode" role="tablist" aria-label="Picture type">
+            <button role="tab" aria-selected={!showDrawing} className={!showDrawing ? 'is-on' : ''} onClick={() => setShowDrawing(false)}>
+              Photo
+            </button>
+            <button role="tab" aria-selected={showDrawing} className={showDrawing ? 'is-on' : ''} onClick={() => setShowDrawing(true)}>
+              Drawing
+            </button>
+          </div>
+        )}
+        {photo && !showDrawing ? (
+          <figure className="gs-photo" data-testid="howto-photo">
+            <img src={`/ginseng/photos/${photo.file}`} alt={photo.caption} loading="lazy" />
+            <figcaption>
+              {photo.caption}. {photo.author}, {photo.license}.{' '}
+              <a href={photo.source} target="_blank" rel="noreferrer">
+                Source
+              </a>
+            </figcaption>
+          </figure>
+        ) : (
+          <div className="gs-art" key={slide.id} data-testid="howto-art">
+            {slide.art}
+          </div>
+        )}
         <ul className="gs-caption" data-testid="howto-caption">
           {slide.caption.map((c) => (
             <li key={c}>{c}</li>
@@ -70,7 +102,7 @@ export function HowToSheet({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <p className="gs-foot">
-          Drawings, not photos. "Law" steps come from Kentucky's regulation; "field practice" is common digger habit, not law. Not legal
+          Pictures are drawings unless a photo is shown with its credit. "Law" steps come from Kentucky's regulation; "field practice" is common digger habit, not law. Not legal
           advice: check the Department of Agriculture before you dig.
         </p>
       </div>

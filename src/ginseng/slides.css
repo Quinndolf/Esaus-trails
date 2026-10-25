@@ -44,3 +44,9 @@
 @keyframes gs-fall { 0% { transform: translate(0, 0); opacity: 1; } 55% { transform: translate(0, 44px); opacity: 1; } 100% { transform: translate(96px, 46px); opacity: 0; } }
 @keyframes gs-press { 0%, 50% { transform: translate(0, 0); } 75% { transform: translate(0, 38px); } 100% { transform: translate(0, 0); } }
 @keyframes gs-air { 0% { transform: translateX(0); opacity: 0; } 30%, 70% { opacity: 1; } 100% { transform: translateX(150px); opacity: 0; } }
+.gs-mode { display: flex; gap: 6px; margin-bottom: 8px; }
+.gs-mode button { flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); font-size: 13px; font-weight: 600; cursor: pointer; }
+.gs-mode button.is-on { background: var(--green); border-color: var(--green); color: #07210f; }
+.gs-photo { margin: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+.gs-photo img { display: block; width: 100%; height: auto; }
+.gs-photo figcaption { padding: 8px 10px; font-size: 12px; line-height: 1.4; color: var(--muted); background: var(--panel-2); }
