@@ -25,7 +25,7 @@ const ClockIcon = () => (
 );
 
 function hourLabel(d: Date, first: boolean) {
-  const t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const t = d.toLocaleTimeString('en-US', { hour: 'numeric' });
   return first ? `Now · ${t}` : `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${t}`;
 }
 
