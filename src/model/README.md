@@ -61,3 +61,15 @@ The client also works without it; leave `nwsBase` unset to call NWS directly.
 
 `npm test` runs the model suite on synthetic ground (a south face, a hollow, a ridge) for a
 Kentucky day in late October.
+
+## Bedding, trails and the hour slider
+
+`movement.ts` ports the prototype's whitetail bedding score, travel-cost surface, bed picking
+and Dijkstra food-to-bed trails, keeping its weights. On top of that, `whitetailActivity`
+splits each hour into bedded, moving and feeding from sun height, wind and heat. `presence`
+blends bedding, corridors and food by that split, so probable deer shift across the ground
+as the slider moves. Hard wind also tucks beds into the lee.
+
+The slider itself lives in `src/hour/`. `useHour` (zustand) holds the ground, both models and
+the selected `date`; anything else that should follow the slider, Esau's panel included,
+subscribes to `useHour`.

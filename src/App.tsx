@@ -18,6 +18,7 @@ import {
   usePhotoPins,
 } from './photos';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
+import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
@@ -124,6 +125,7 @@ export function App() {
           <OfflineIcon />
           <span>Offline</span>
         </button>
+        <HourButton map={map} />
       </div>
 
       <button className="fab tools-fab" onClick={() => setSheet('tools')} aria-label="Tools">
@@ -152,6 +154,7 @@ export function App() {
         </button>
       </div>
 
+      <HourPanel map={map} hunter={fix?.lngLat ?? null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}
