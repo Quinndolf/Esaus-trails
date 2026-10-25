@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { GroundGrid } from '../esau/types';
+import { useEsau } from '../esau/ui/store';
 import type { ConditionsModel } from '../model/conditions';
 import { conditionsForGrid } from '../model/esau';
 import { createMovementModel, type MovementModel } from '../model/movement';
@@ -39,7 +40,11 @@ export const useHour = create<HourState>((set, get) => ({
   hours: [],
   date: floorHour(new Date()),
   open: false,
-  setDate: (date) => set({ date }),
+  setDate: (date) => {
+    set({ date });
+    // One clock for the whole app: Esau's tap panel reads the same hour.
+    useEsau.getState().setTime(date);
+  },
   setOpen: (open) => set({ open }),
   useGrid(grid, now = new Date()) {
     // Esau's tap reading and the slider share one conditions model per grid.
