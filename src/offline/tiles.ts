@@ -48,6 +48,24 @@ export function* tilesIn(b: Bounds, minZoom: number, maxZoom: number): Generator
   }
 }
 
+/** Web Mercator coords of a pixel, with MapLibre's own arithmetic so the numbers print identically. */
+function mercCoords(px: number, py: number, z: number): [number, number] {
+  const resolution = (2 * Math.PI * 6378137) / 256 / Math.pow(2, z);
+  return [px * resolution - (2 * Math.PI * 6378137) / 2.0, py * resolution - (2 * Math.PI * 6378137) / 2.0];
+}
+
+/** The tile's box exactly as MapLibre fills {bbox-epsg-3857}, so a saved URL matches the live request. */
+export function tileBBox3857(t: TileXYZ): string {
+  const y = Math.pow(2, t.z) - t.y - 1;
+  const min = mercCoords(t.x * 256, y * 256, t.z);
+  const max = mercCoords((t.x + 1) * 256, (y + 1) * 256, t.z);
+  return min[0] + ',' + min[1] + ',' + max[0] + ',' + max[1];
+}
+
 export function tileUrl(template: string, t: TileXYZ): string {
-  return template.replace('{z}', String(t.z)).replace('{x}', String(t.x)).replace('{y}', String(t.y));
+  return template
+    .replace(/{z}/g, String(t.z))
+    .replace(/{x}/g, String(t.x))
+    .replace(/{y}/g, String(t.y))
+    .replace(/{bbox-epsg-3857}/g, () => tileBBox3857(t));
 }

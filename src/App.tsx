@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import { BASEMAP_LABELS, nextBasemap, type BasemapId } from './map/basemaps';
 import { cardinal, metersToFeet, type LngLat } from './map/geo';
 import { ALL_LAYERS, FOLDERS } from './layers/registry';
+import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
@@ -65,6 +66,7 @@ export function App() {
   const compass = useHeading(mode === 'compass');
   const layers = useLayerState();
   useMapLayers(map, ALL_LAYERS, layers.state);
+  const offlineLayers = useMemo(() => offlineOverlays(layers.state), [layers.state]);
 
   const heading = compass.heading ?? fix?.heading ?? null;
 
@@ -243,7 +245,7 @@ export function App() {
         onToggle={layers.toggle}
         onOptions={layers.setOptions}
       />
-      <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} />
+      <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} overlays={offlineLayers} />
       <ToolsSheet
         open={sheet === 'tools'}
         onClose={() => setSheet(null)}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import { BASEMAP_LABELS, type BasemapId } from '../map/basemaps';
-import { MAX_TILES, deleteArea, estimate, listAreas, saveArea, type DownloadProgress, type SavedArea } from '../offline/store';
+import { MAX_TILES, deleteArea, estimate, listAreas, saveArea, type DownloadProgress, type OfflineOverlay, type SavedArea } from '../offline/store';
 import type { Bounds } from '../offline/tiles';
 import { BottomSheet } from './BottomSheet';
 import { TrashIcon } from './icons';
@@ -18,6 +18,8 @@ interface Props {
   onClose: () => void;
   map: MLMap | null;
   basemap: BasemapId;
+  /** Map layers that are on, saved along with the basemap. */
+  overlays: OfflineOverlay[];
 }
 
 function viewBounds(map: MLMap): Bounds {
@@ -25,7 +27,7 @@ function viewBounds(map: MLMap): Bounds {
   return { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
 }
 
-export function OfflineSheet({ open, onClose, map, basemap }: Props) {
+export function OfflineSheet({ open, onClose, map, basemap, overlays }: Props) {
   const [areas, setAreas] = useState<SavedArea[]>(() => listAreas());
   const [detail, setDetail] = useState<(typeof DETAIL)[number]['id']>('high');
   const [name, setName] = useState('');
@@ -40,7 +42,7 @@ export function OfflineSheet({ open, onClose, map, basemap }: Props) {
 
   const maxZoom = DETAIL.find((d) => d.id === detail)!.maxZoom;
   const minZoom = Math.max(8, maxZoom - 6);
-  const tiles = bounds ? estimate(basemap, bounds, minZoom, maxZoom) : 0;
+  const tiles = bounds ? estimate(basemap, bounds, minZoom, maxZoom, overlays) : 0;
   const tooBig = tiles > MAX_TILES;
 
   async function download() {
@@ -50,7 +52,7 @@ export function OfflineSheet({ open, onClose, map, basemap }: Props) {
     setProgress({ done: 0, failed: 0, total: tiles });
     try {
       const area = await saveArea(
-        { name: name.trim() || `Area ${areas.length + 1}`, basemap, bounds, minZoom, maxZoom },
+        { name: name.trim() || `Area ${areas.length + 1}`, basemap, bounds, minZoom, maxZoom, overlays },
         setProgress,
         abort.current.signal,
       );
@@ -70,6 +72,11 @@ export function OfflineSheet({ open, onClose, map, basemap }: Props) {
       <h3 className="sheet-section">Save what's on screen</h3>
       <p className="hint">
         Saves the {BASEMAP_LABELS[basemap].toLowerCase()} map for the area you're looking at, so it works with no service.
+      </p>
+      <p className="hint" data-testid="offline-overlays">
+        {overlays.length
+          ? `Also saves your layers: ${overlays.map((o) => o.name).join(', ')}.`
+          : 'No map layers are on, so only the basemap is saved.'}
       </p>
       <input
         className="text-input"
@@ -124,7 +131,9 @@ export function OfflineSheet({ open, onClose, map, basemap }: Props) {
               >
                 <strong>{a.name}</strong>
                 <span>
-                  {BASEMAP_LABELS[a.basemap]} · {a.tiles.toLocaleString()} tiles · {new Date(a.savedAt).toLocaleDateString()}
+                  {BASEMAP_LABELS[a.basemap]}
+                  {a.overlays?.length ? ` + ${a.overlays.length} layer${a.overlays.length > 1 ? 's' : ''}` : ''} · {a.tiles.toLocaleString()} tiles ·{' '}
+                  {new Date(a.savedAt).toLocaleDateString()}
                 </span>
               </button>
               <button
