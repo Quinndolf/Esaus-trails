@@ -1,0 +1,11 @@
+[
+  {
+    "id": "deer-grunt",
+    "url": "https://example.org/path/to/clip.mp3",
+    "author": "Recordist name",
+    "license": "CC BY 4.0",
+    "source": "https://example.org/page-with-the-license",
+    "loopStart": 0,
+    "loopEnd": 4.2
+  }
+]

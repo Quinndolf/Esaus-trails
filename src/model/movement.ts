@@ -317,7 +317,7 @@ function trailsAndCorridor(grid: GroundGrid, s: Static, beds: Bed[], pins: Pin[]
  * bedded through the middle of the day, out feeding after dark. Heat, a hard
  * wind and a bright midday all push them toward the bed.
  */
-export function whitetailActivity(sun: SunPosition, weather: WeatherHour): Activity {
+export function whitetailActivity(sun: SunPosition, weather: WeatherHour, moveFactor = 1): Activity {
   const alt = sun.altitude;
   const twilight = smoothstep(-14, -4, alt) * smoothstep(16, 4, alt); // peak from just before light to ~16° up
   let moving = 0.12 + 0.68 * twilight;
@@ -325,6 +325,7 @@ export function whitetailActivity(sun: SunPosition, weather: WeatherHour): Activ
   if (weather.windMph >= 18) moving *= 0.6;
   if (weather.tempF >= 75 && alt > 10) moving *= 0.6;
   if (weather.tempF <= 20 && alt > 15) moving *= 1.25; // cold snaps bring midday feeding
+  moving *= moveFactor; // pressure trend, front and moon: small nudges from the atmosphere model
   const bedded = Math.max(0.05, 1 - moving - feeding);
   const sum = bedded + moving + feeding;
   moving /= sum;
@@ -349,7 +350,7 @@ function movementLine(a: Activity, beds: number): string {
 
 export interface MovementModel {
   terrain: Terrain;
-  at(sun: SunPosition, weather: WeatherHour, wind?: WindField): MovementHour;
+  at(sun: SunPosition, weather: WeatherHour, wind?: WindField, moveFactor?: number): MovementHour;
 }
 
 /** Build once per grid and pin set; `at` is cheap and memoized per temperature/wind band. */
@@ -358,7 +359,7 @@ export function createMovementModel(grid: GroundGrid, pins: Pin[] = []): Movemen
   const bands = new Map<string, { bedding: Float32Array; beds: Bed[]; trails: Trail[]; corridor: Float32Array }>();
   return {
     terrain: s.terrain,
-    at(sun, weather, wind) {
+    at(sun, weather, wind, moveFactor = 1) {
       const warm = weather.tempF >= 48;
       const windy = weather.windMph >= 12 && !!wind;
       const key = `${warm}|${windy}`;
@@ -369,7 +370,7 @@ export function createMovementModel(grid: GroundGrid, pins: Pin[] = []): Movemen
         band = { bedding, beds, ...trailsAndCorridor(grid, s, beds, pins) };
         bands.set(key, band);
       }
-      const activity = whitetailActivity(sun, weather);
+      const activity = whitetailActivity(sun, weather, moveFactor);
       const n = band.bedding.length;
       const presence = new Float32Array(n);
       let top = 0.001;

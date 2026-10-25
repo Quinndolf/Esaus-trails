@@ -50,5 +50,5 @@ export function buildSystemPrompt(species: SpeciesBrain): string {
   const sources = Object.entries(species.sources)
     .map(([k, v]) => `[${k}] ${v}`)
     .join("\n");
-  return `${ESAU_PERSONA}\n\n=== KNOWLEDGE: ${species.name.toUpperCase()} ===\n${species.knowledge}\n\n=== SOURCES ===\n${sources}`;
+  return `${species.persona ?? ESAU_PERSONA}\n\n=== KNOWLEDGE: ${species.name.toUpperCase()} ===\n${species.knowledge}\n\n=== SOURCES ===\n${sources}`;
 }

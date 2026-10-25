@@ -1,4 +1,6 @@
 import type { EsauBrief } from "./brief";
+import { CLASS_WORDS, ginsengClass, ginsengFactors, siteFromSpot } from "../ginseng/model";
+import { seasonStatus } from "../ginseng/rules";
 import type { EsauReply } from "./types";
 
 /**
@@ -7,6 +9,7 @@ import type { EsauReply } from "./types";
  */
 export function offlineRead(b: EsauBrief): EsauReply {
   const { spot, conditions: c, scores, species } = b;
+  if (species.id === "ginseng") return ginsengOfflineRead(b);
   const top = (Object.entries(scores) as [keyof typeof scores, number][]).sort((a, z) => z[1] - a[1])[0]!;
   const role: EsauReply["spotRole"] =
     top[1] < 0.35 ? (spot.cover.woody ? "unlikely" : "open ground") : top[0] === "bedding" ? "bedding" : top[0] === "feeding" ? "feeding" : "travel";
@@ -33,6 +36,27 @@ export function offlineRead(b: EsauBrief): EsauReply {
     spotRole: role,
     marks: [],
     wouldChangeMyMind: ["What sign you find on the ground"],
+    meta: { model: "offline-rules", servedBy: "offline-rules", inputTokens: 0, outputTokens: 0, ms: 0 },
+  };
+}
+
+function ginsengOfflineRead(b: EsauBrief): EsauReply {
+  const { spot, conditions: c } = b;
+  const f = ginsengFactors(siteFromSpot(spot));
+  const cls = ginsengClass(f.score);
+  const season = seasonStatus(new Date(c.at));
+  const role: EsauReply["spotRole"] = cls === "high" || cls === "good" ? "good ground" : cls === "fair" ? "fair ground" : "poor ground";
+  const ground = `${spot.aspectName ? `${spot.aspectName} ` : ""}${spot.landform} in ${spot.cover.name}`;
+  const law = season.open
+    ? "Season's open through December 1, but only five-year plants with three prongs, seed back in the ground, and only with the landowner's say-so. Nothing on state or federal land."
+    : "Season's closed until September 1, so scout it and leave it be.";
+  return {
+    say: `No signal, so this is the short version. That ${ground} is ${CLASS_WORDS[cls]}. The map can't see the understory or the soil, so look for tulip-poplar, bloodroot, wild ginger and damp black leaf litter before you believe it. ${law} I'll give you the full read when you're back in service.`,
+    headline: cls === "poor" ? "Not ginseng ground" : cls === "fair" ? "Possible, not the best" : "Worth a look",
+    confidence: "low",
+    spotRole: role,
+    marks: [],
+    wouldChangeMyMind: ["Whether the understory plants are there", "Who owns the ground"],
     meta: { model: "offline-rules", servedBy: "offline-rules", inputTokens: 0, outputTokens: 0, ms: 0 },
   };
 }

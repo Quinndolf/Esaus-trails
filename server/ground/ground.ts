@@ -132,7 +132,7 @@ export function toWeatherHours(hours: ModelHour[], now: Date): WeatherHour[] {
   return hours
     .filter((h) => Date.parse(h.at) >= thisHour)
     .slice(0, 24)
-    .map((h) => ({ at: h.at, tempF: h.tempF, windMph: h.windMph, windFrom: h.windFrom, gustMph: h.gustMph, skyCover: h.skyCoverPct }));
+    .map((h) => ({ at: h.at, tempF: h.tempF, windMph: h.windMph, windFrom: h.windFrom, gustMph: h.gustMph, skyCover: h.skyCoverPct, pressureHpa: h.pressureHpa, dewPointF: h.dewPointF }));
 }
 
 // Terrain and cover don't change; weather does. Keep both, briefly, in memory.

@@ -1,3 +1,4 @@
+import { atmosphereAt, type Atmosphere } from './atmosphere';
 import { cardinal, cellAt, compassWord, gridCenter, M_TO_FT, type LngLat } from './geo';
 import { DRIVER_WORDS, hourSummary, thermalLine, THERMAL_WORDS, windLine } from './describe';
 import { computeScent, tracePlume, type Plume, type ScentField } from './scent';
@@ -23,6 +24,8 @@ export interface HourConditions {
   thermal: ThermalField;
   wind: WindField;
   scent: ScentField;
+  /** Pressure trend, front passage, dew point, cloud and moon for this hour. */
+  atmosphere: Atmosphere;
   /** One line for the whole ground this hour. */
   summary: string;
 }
@@ -96,6 +99,7 @@ export function createConditionsModel(
       thermal,
       wind,
       scent,
+      atmosphere: atmosphereAt(forecast, date, { isNight: sun.altitude < -0.833 }),
       summary: hourSummary(thermal, weather, sun),
     };
     if (memo.size >= keep) memo.delete(memo.keys().next().value as number);
@@ -124,7 +128,7 @@ export function createConditionsModel(
           plume: null,
         },
         summary: hc.summary,
-        brief: `${wl} ${hc.summary} This spot is outside the analyzed ground, so no terrain read.`,
+        brief: `${wl} ${hc.summary} ${hc.atmosphere.line} This spot is outside the analyzed ground, so no terrain read.`,
       };
     }
     const elevationFt = Math.round((grid.elevationM[i] * M_TO_FT) / 5) * 5;
@@ -176,7 +180,7 @@ export function createConditionsModel(
       scent: { towardDeg, mph: hc.scent.driftMph[i], driver, reachYards: plume.reachYards, plume },
       summary: hc.summary,
       brief:
-        `${Math.round(hc.weather.tempF)}°F. ${wl} ${sunWord} ${hc.summary} At this spot: ${ground} ${air} ${smell}${stale}`.replace(
+        `${Math.round(hc.weather.tempF)}°F. ${wl} ${sunWord} ${hc.summary} ${hc.atmosphere.line} At this spot: ${ground} ${air} ${smell}${stale}`.replace(
           /\s+/g,
           ' ',
         ),

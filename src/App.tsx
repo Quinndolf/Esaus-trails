@@ -23,6 +23,9 @@ import {
 import type { PinKind } from './esau/types';
 import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
+import { CallsSheet } from './calls/CallsSheet';
+import { GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
+import { useGinseng } from './ginseng/store';
 import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
@@ -44,7 +47,7 @@ const ESAU_PIN_KIND: Partial<Record<WaypointIcon, PinKind>> = {
   trail: 'sign',
 };
 
-type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | null;
+type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null;
 
 function initialBasemap(): BasemapId {
   try {
@@ -76,6 +79,14 @@ export function App() {
 
   useEffect(() => void useTools.getState().load(), []);
   useToolLayers(map);
+  useGinsengLayer(map);
+  const ginsengOn = useEsau((s) => s.species === 'ginseng');
+  // Picking Ginseng from Esau's animal chips counts as entering the mode too: rules first, then the ground.
+  useEffect(() => {
+    if (!ginsengOn || !map) return;
+    const c = map.getCenter();
+    useGinseng.getState().enter([c.lng, c.lat]);
+  }, [ginsengOn, map]);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!notice) return;
@@ -183,6 +194,7 @@ export function App() {
             {heading == null ? 'Finding heading…' : `${Math.round(heading)}° ${cardinal(heading)}`}
           </div>
         )}
+        <GinsengPill map={map} />
         {notice && <div className="status-pill warn">{notice}</div>}
         {gps === 'denied' && <div className="status-pill warn">Location is off. Allow it in your browser settings.</div>}
         {gps === 'unavailable' && <div className="status-pill warn">Can't get a GPS fix.</div>}
@@ -251,8 +263,17 @@ export function App() {
         onClose={() => setSheet(null)}
         onPhotos={() => setSheet('photos')}
         onSaved={() => setSheet('saved')}
+        onCalls={() => setSheet('calls')}
+        ginsengOn={ginsengOn}
+        onGinseng={() => {
+          if (ginsengOn) return useGinseng.getState().exit();
+          const c = map?.getCenter();
+          useGinseng.getState().enter(c ? [c.lng, c.lat] : null);
+        }}
         onMarkLocation={() => void markMyLocation()}
       />
+      <GinsengRulesSheet />
+      <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} />
       <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
       <WaypointSheet />
       <ToolBar />

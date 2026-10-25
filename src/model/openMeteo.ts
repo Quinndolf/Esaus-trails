@@ -6,7 +6,7 @@ import type { Forecast, WeatherHour } from './types';
  * whenever the NWS is down. Its "current" block is a model nowcast, not a station,
  * so we treat it as a light correction only.
  */
-const HOURLY = 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,relative_humidity_2m';
+const HOURLY = 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,relative_humidity_2m,surface_pressure,dew_point_2m';
 
 export function openMeteoUrl(lat: number, lon: number): string {
   const q = new URLSearchParams({
@@ -41,6 +41,8 @@ export function parseOpenMeteo(body: any, lat: number, lon: number, now: Date): 
       gustMph: h.wind_gusts_10m?.[k] ?? undefined,
       skyCoverPct: h.cloud_cover?.[k] ?? undefined,
       humidityPct: h.relative_humidity_2m?.[k] ?? undefined,
+      pressureHpa: h.surface_pressure?.[k] ?? undefined,
+      dewPointF: h.dew_point_2m?.[k] ?? undefined,
     });
   });
   const c = body?.current;
@@ -55,6 +57,8 @@ export function parseOpenMeteo(body: any, lat: number, lon: number, now: Date): 
           gustMph: c.wind_gusts_10m ?? undefined,
           skyCoverPct: c.cloud_cover ?? undefined,
           humidityPct: c.relative_humidity_2m ?? undefined,
+          pressureHpa: c.surface_pressure ?? undefined,
+          dewPointF: c.dew_point_2m ?? undefined,
         }
       : undefined;
   return {

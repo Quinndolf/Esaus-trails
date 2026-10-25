@@ -31,6 +31,8 @@ export function blendHours(a: WeatherHour, b: WeatherHour, t: number, at: string
     gustMph: lerpOpt(a.gustMph, b.gustMph, t),
     skyCoverPct: lerpOpt(a.skyCoverPct, b.skyCoverPct, t),
     humidityPct: lerpOpt(a.humidityPct, b.humidityPct, t),
+    pressureHpa: lerpOpt(a.pressureHpa, b.pressureHpa, t),
+    dewPointF: lerpOpt(a.dewPointF, b.dewPointF, t),
   };
 }
 
@@ -72,7 +74,8 @@ export function weatherAt(forecast: Forecast, date: Date): WeatherAt {
   if (obs) {
     const dh = Math.abs(t - Date.parse(obs.at)) / 3600e3;
     observedWeight = clamp(1 - dh / OBS_FADE_H, 0, 1) * 0.85;
-    if (observedWeight > 0) base = blendHours(base, obs, observedWeight, at);
+    // Station and model pressures sit on different baselines, so only the forecast's pressure is used.
+    if (observedWeight > 0) base = blendHours(base, { ...obs, pressureHpa: undefined }, observedWeight, at);
   }
   return { ...base, extrapolated, observedWeight };
 }

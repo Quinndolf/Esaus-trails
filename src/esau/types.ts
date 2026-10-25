@@ -18,6 +18,9 @@ export interface WeatherHour {
   skyCover?: number; // 0-100 %
   precipChance?: number; // 0-100 %
   pressureInHg?: number;
+  /** Surface pressure, hPa, and dew point, °F: from the weather provider when it has them. */
+  pressureHpa?: number;
+  dewPointF?: number;
 }
 
 export interface GroundGrid {
@@ -50,7 +53,7 @@ export interface Pin {
   tags?: string[];
 }
 
-export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog";
+export type SpeciesId = "whitetail" | "elk" | "mule_deer" | "black_bear" | "turkey" | "hog" | "ginseng";
 
 /** Thermal state of a cell, same codes as the prototype. */
 export type ThermalState = "settled" | "rising" | "sinking" | "pooling";
@@ -156,6 +159,8 @@ export interface ConditionsReading {
   gustMph?: number;
   sun: { altitudeDeg: number; azimuthDeg: number; phase: "night" | "dawn" | "morning" | "midday" | "afternoon" | "dusk" };
   thermal: { state: ThermalState; plain: string };
+  /** Pressure trend, front, dew point, cloud and moon, as plain sentences. Empty when the model has no data. */
+  atmosphere?: string;
   /** The next few hours, so Esau can say "by ten the thermals flip". */
   outlook: { localTime: string; windMph: number; windFromCompass: string; thermal: ThermalState }[];
 }
@@ -176,7 +181,9 @@ export interface EsauReply {
   headline: string;
   confidence: "low" | "fair" | "good";
   /** What this spot most likely is to the animal right now. */
-  spotRole: "bedding" | "feeding" | "travel" | "staging" | "security cover" | "open ground" | "unlikely";
+  spotRole:
+    | "bedding" | "feeding" | "travel" | "staging" | "security cover" | "open ground" | "unlikely"
+    | "good ground" | "fair ground" | "poor ground";
   marks: EsauMark[];
   /** Short list of what would change his read (e.g. "fresh rubs on that bench"). */
   wouldChangeMyMind: string[];

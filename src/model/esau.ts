@@ -1,5 +1,6 @@
 import type { ThermalFn } from '../esau/conditions';
 import type { GroundGrid } from '../esau/types';
+import { atmosphereAt, type Atmosphere } from './atmosphere';
 import { createConditionsModel, type ConditionsModel } from './conditions';
 import type { Forecast, WeatherHour } from './types';
 
@@ -23,6 +24,8 @@ export function forecastFromGrid(grid: GroundGrid): Forecast {
     windFrom: h.windFrom,
     gustMph: h.gustMph,
     skyCoverPct: h.skyCover,
+    pressureHpa: h.pressureHpa,
+    dewPointF: h.dewPointF,
   }));
   return {
     source: /open-meteo/i.test(grid.weather.source) ? 'open-meteo' : 'nws',
@@ -48,3 +51,10 @@ export const modelThermal: ThermalFn = ({ grid, cellIndex, hour }) => {
   const hc = conditionsForGrid(grid).at(new Date(hour.at));
   return STATES[hc.thermal.state[cellIndex]] ?? 'settled';
 };
+
+/** Pressure trend, front, dew point, cloud and moon for the hour Esau is asked about. */
+export function atmosphereForGrid(grid: GroundGrid, at: Date): Atmosphere {
+  const fc = forecastFromGrid(grid);
+  const sun = conditionsForGrid(grid).at(at).sun;
+  return atmosphereAt(fc, at, { isNight: sun.altitude < -0.833 });
+}

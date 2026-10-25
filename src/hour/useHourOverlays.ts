@@ -160,7 +160,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
   const frame = useMemo(() => {
     if (!grid || !conditions || !movement) return null;
     const hc = conditions.at(date);
-    const m = movement.at(hc.sun, hc.weather, hc.wind);
+    const m = movement.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor);
     const source = hunter && cellAt(grid, hunter) != null ? hunter : gridCenter(grid);
     return { hc, m, plume: tracePlume(conditions.terrain, hc.scent, source) };
   }, [grid, conditions, movement, date, hunter?.[0], hunter?.[1]]);

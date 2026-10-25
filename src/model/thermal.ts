@@ -1,4 +1,5 @@
 import { clamp, DEG, normalizeBearing, smoothstep } from './geo';
+import { mugginess } from './atmosphere';
 import { hoursSince } from './sun';
 import type { Terrain } from './terrain';
 import { ThermalState, type SunPosition, type SunTimes, type WeatherHour } from './types';
@@ -67,8 +68,12 @@ export function computeThermals(t: Terrain, ctx: ThermalContext): ThermalField {
   const n = t.slopeDeg.length;
   const { sun, sunTimes, weather, date } = ctx;
   const sky = clamp(weather.skyCoverPct ?? 25, 0, 100) / 100;
-  const heatClear = 1 - 0.75 * sky;
-  const coolClear = 1 - 0.8 * sky;
+  // Humid air (high dew point) takes the edge off both daytime heating and night cooling.
+  const muggy = mugginess(weather.dewPointF);
+  const heatClear = (1 - 0.75 * sky) * (1 - 0.1 * muggy);
+  const coolClear = (1 - 0.8 * sky) * (1 - 0.2 * muggy);
+  // Air sitting on its dew point with no wind: fog, and cold air settles harder into the lows.
+  const fogged = weather.dewPointF != null && weather.tempF - weather.dewPointF < 3 && weather.windMph < 5;
   const window = thermalWindow(weather);
 
   const sinceRise = hoursSince(date, sunTimes.sunrise);
@@ -126,7 +131,7 @@ export function computeThermals(t: Terrain, ctx: ThermalContext): ThermalField {
       // Flat ground in the sun: convection lifts scent straight up, no ground flow.
     } else if (net < 0) {
       if (lowGround && slope < 10) {
-        k = clamp(-net, 0, 1) * window;
+        k = clamp(-net * (fogged ? 1.2 : 1), 0, 1) * window;
         st = ThermalState.Pooling;
         if (hasAspect) bearing = aspect;
         speed = 0.3 + 0.8 * k;
