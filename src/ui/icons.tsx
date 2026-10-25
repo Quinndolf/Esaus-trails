@@ -29,3 +29,12 @@ export const CloseIcon = (p: SVGProps<SVGSVGElement>) => (
 export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...p}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
 );
+export const ChevronRight = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}><path d="m9 6 6 6-6 6" /></svg>
+);
+export const ChevronLeft = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}><path d="m15 6-6 6 6 6" /></svg>
+);
+export const CheckIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}><path d="m5 12 5 5 9-10" /></svg>
+);
