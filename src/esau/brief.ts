@@ -85,6 +85,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (spot.fromHunter && conditions.windMph >= 2) {
     const towardSpot = Math.abs(((spot.fromHunter.bearingDeg - conditions.scentToward + 540) % 360) - 180) <= 42;
     lines.push(towardSpot ? "The hunter's scent is blowing toward the tapped spot." : "The hunter's scent is not blowing toward the tapped spot.");
+    if (!species.nose) lines.push(`A ${species.name} doesn't hunt by nose, so scent hardly matters; sound and movement do.`);
   }
   if (conditions.outlook.length) {
     lines.push(

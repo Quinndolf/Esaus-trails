@@ -24,6 +24,10 @@ export interface SpeciesBrain {
   knowledge: string;
   /** Citable works, keyed as the knowledge text references them. */
   sources: Record<string, string>;
+  /** Whether the animal hunts by nose. Turkeys don't; everything with hair does. */
+  nose: boolean;
+  /** How the offline read names what a spot is for, in this animal's terms. */
+  words: { bedding: string; feeding: string; travel: string };
   phase(at: Date, lat: number, rutPeak?: Date): SeasonPhase;
   scores(spot: SpotReading, cond: ConditionsReading, phase: SeasonPhase): SpotScores;
 }

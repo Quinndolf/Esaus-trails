@@ -33,7 +33,7 @@ Photo pins: `photoQuery(buildEsauPhotoInput(pin), { species, grid, hunter })` tu
 | `types.ts` | `GroundGrid`, `SpotQuery`, `EsauReply` and the readings |
 | `terrain.ts` | Per-grid slope, aspect, relief, flow, landform; `readSpot()` |
 | `conditions.ts` | Wind, scent, sun and thermals for an hour. `ThermalFn` is the seam the wind and thermal model plugs into |
-| `species/` | One knowledge base per animal. Whitetail is done; the others are listed but not ready, so Esau won't blur species |
+| `species/` | One knowledge base per animal: whitetail, elk, mule deer, black bear, wild turkey, wild hog. Each has its own sources, seasons, scores and words; the prompt carries only the chosen animal |
 | `persona.ts` | Who Esau is and how he talks |
 | `brief.ts` | The field report |
 | `offline.ts` | The no-signal answer |
