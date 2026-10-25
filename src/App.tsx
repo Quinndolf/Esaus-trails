@@ -23,6 +23,7 @@ import {
 import type { PinKind } from './esau/types';
 import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
+import { CallsSheet } from './calls/CallsSheet';
 import { HourButton, HourPanel } from './hour/HourPanel';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
@@ -44,7 +45,7 @@ const ESAU_PIN_KIND: Partial<Record<WaypointIcon, PinKind>> = {
   trail: 'sign',
 };
 
-type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | null;
+type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null;
 
 function initialBasemap(): BasemapId {
   try {
@@ -251,8 +252,10 @@ export function App() {
         onClose={() => setSheet(null)}
         onPhotos={() => setSheet('photos')}
         onSaved={() => setSheet('saved')}
+        onCalls={() => setSheet('calls')}
         onMarkLocation={() => void markMyLocation()}
       />
+      <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} />
       <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
       <WaypointSheet />
       <ToolBar />
