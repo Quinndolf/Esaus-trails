@@ -43,9 +43,8 @@ DigitalOcean droplet: the build is served by nginx and `server/index.mjs` runs a
 The Calls sheet plays real recordings only (no synthesized sounds). A pad with no recording is disabled and says
 "No recording yet". `scripts/calls-sources.json` lists the clips (public domain, CC BY, and a few non-commercial
 turkey clips flagged for replacement before any paid release); run `npm run calls:fetch` on a machine that can reach
-the sources to download them into `public/calls/` and write the manifest, then commit the result. Still missing:
-whitetail grunt, bleat, snort-wheeze and rattle and an eastern gray squirrel bark (Pixabay candidates are
-being downloaded by hand, since Pixabay only serves downloads to a browser). Add an entry per call (direct mp3, wav or m4a URL, or
+the sources to download them into `public/calls/` and write the manifest, then commit the result. Pixabay clips (Pixabay Content License) were downloaded by hand and live only in the
+manifest; the fetch script keeps them. Still missing: antler rattle. Add an entry per call (direct mp3, wav or m4a URL, or
 `"ext"` for URLs without one; author; license; the page that shows the license). The sheet shows every clip's credit.
 
 ## Ginseng photos
