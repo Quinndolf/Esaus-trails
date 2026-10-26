@@ -99,6 +99,7 @@ export function EsauPanel() {
             )}
             <p className="esau-meta">
               {offline ? 'Short read without service' : `Esau's read for ${replyHourLabel}`}
+              {offline && s.reply.meta.offlineWhy ? ` (${s.reply.meta.offlineWhy})` : ''}
             </p>
           </article>
         )}
