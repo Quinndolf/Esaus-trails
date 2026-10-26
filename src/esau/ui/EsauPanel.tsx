@@ -21,7 +21,6 @@ const ROLE_LABEL: Record<EsauReply['spotRole'], string> = {
 /** The spot card: what's here, and what Esau makes of it. Sits low so the map stays visible. */
 export function EsauPanel() {
   const s = useEsau();
-  const [question, setQuestion] = useState('');
   const [expanded, setExpanded] = useState(false);
 
   const brief = useMemo(
@@ -41,13 +40,6 @@ export function EsauPanel() {
   const stale = s.reply && s.replyHour !== s.hourIndex;
   const busy = s.status === 'loading-ground' || s.status === 'asking';
   const offline = s.reply?.meta.servedBy === 'offline-rules';
-
-  const send = () => {
-    const q = question.trim();
-    if (!q || busy) return;
-    setQuestion('');
-    void s.ask(q);
-  };
 
   return (
     <section className={`esau-panel ${expanded ? 'is-expanded' : ''}`} role="dialog" aria-label="Esau's read of this spot">
@@ -110,27 +102,6 @@ export function EsauPanel() {
           </button>
         )}
 
-        {s.grid && (
-          <form
-            className="esau-ask"
-            onSubmit={(e) => {
-              e.preventDefault();
-              send();
-            }}
-          >
-            <input
-              className="text-input"
-              value={question}
-              placeholder="Ask Esau about this spot"
-              onChange={(e) => setQuestion(e.target.value)}
-              maxLength={500}
-              enterKeyHint="send"
-            />
-            <button className="text-btn" disabled={busy || !question.trim()} type="submit">
-              Ask
-            </button>
-          </form>
-        )}
       </div>
     </section>
   );

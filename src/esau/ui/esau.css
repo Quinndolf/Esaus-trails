@@ -27,7 +27,6 @@
 .esau-mind { color: var(--muted); font-size: 13px; }
 .esau-mind span { color: var(--text); font-weight: 600; }
 .esau-meta { color: var(--muted); font-size: 12px; }
-.esau-ask { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 
 .esau-spot-marker { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.4); pointer-events: none; }
 .esau-mark { display: flex; align-items: center; gap: 6px; pointer-events: none; }
