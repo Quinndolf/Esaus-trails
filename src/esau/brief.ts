@@ -1,6 +1,7 @@
 import { localTime, readConditions, type ThermalFn } from "./conditions";
 import { compass } from "./geo";
 import { buildSystemPrompt } from "./persona";
+import { deerPredictionLines } from "../model/deerRead";
 import { atmosphereForGrid, modelThermal } from "../model/esau";
 import { speciesBrain } from "./species";
 import type { SeasonPhase, SpeciesBrain, SpotScores } from "./species/types";
@@ -103,6 +104,11 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
       "Next hours: " +
         conditions.outlook.map((o) => `${o.localTime.replace(/^\w+, \w+ \d+, /, "")} ${o.windMph} mph ${o.windFromCompass}, ${o.thermal}`).join("; "),
     );
+  }
+
+  if (species.id === "whitetail") {
+    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at), q.pins);
+    if (pred.length) lines.push("", ...pred);
   }
 
   lines.push("");

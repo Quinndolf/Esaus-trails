@@ -1,4 +1,5 @@
-import { coverClass, foodScore } from '../esau/landcover';
+import { coverClass } from '../esau/landcover';
+import { foodForGrid, foodForSeason, foodSeason, FOOD_NONE, type FoodNow, type FoodSeason } from './food';
 import type { GroundGrid, Pin } from '../esau/types';
 import { cellAt, cellCenter, clamp, idx, M_TO_FT, M_TO_YD, smoothstep, yardsBetween, type LngLat } from './geo';
 import { analyzeTerrain, type Terrain } from './terrain';
@@ -38,6 +39,10 @@ export interface MovementHour {
   corridor: Float32Array;
   /** 0-1, where a deer most likely is this hour. */
   presence: Float32Array;
+  /** 0-1 predicted food draw this season (acorns, crops, browse), and which kind drives each cell. */
+  food: Float32Array;
+  foodKind: Uint8Array;
+  foodSeason: FoodSeason;
   beds: Bed[];
   trails: Trail[];
   activity: Activity;
@@ -61,14 +66,45 @@ interface Static {
   canopy: Float32Array;
   saddle: Uint8Array;
   edge: Uint8Array;
+  cost: Float32Array;
+}
+
+interface FoodLayer {
+  now: FoodNow;
   foodCells: number[];
   foodYd: Float32Array;
   /** 0-1 food draw near each cell, for the feeding share of presence. */
   foodNear: Float32Array;
-  cost: Float32Array;
 }
 
-function buildStatic(grid: GroundGrid, pins: Pin[]): Static {
+/** Where deer find food this season, from the food model (acorns, crops, browse) plus the hunter's food pins. */
+function buildFoodLayer(grid: GroundGrid, pins: Pin[], season: FoodSeason): FoodLayer {
+  const n = grid.cols * grid.rows;
+  const now = foodForSeason(foodForGrid(grid), season);
+  const foodCells: number[] = [];
+  for (let i = 0; i < n; i++) if (now.value[i]! >= 0.55) foodCells.push(i);
+  for (const p of pins) {
+    if (p.kind !== 'food') continue;
+    const i = cellAt(grid, [p.lng, p.lat]);
+    if (i != null) foodCells.push(i);
+  }
+  const uniqueFood = Array.from(new Set(foodCells));
+  const foodYd = new Float32Array(n).fill(9999);
+  if (uniqueFood.length) {
+    const pts = uniqueFood.map((i) => cellCenter(grid, i));
+    for (let i = 0; i < n; i++) {
+      const p = cellCenter(grid, i);
+      let best = 9999;
+      for (const q of pts) best = Math.min(best, yardsBetween(p, q));
+      foodYd[i] = best;
+    }
+  }
+  const foodNear = new Float32Array(n);
+  for (let i = 0; i < n; i++) foodNear[i] = smoothstep(220, 0, foodYd[i]);
+  return { now, foodCells: uniqueFood, foodYd, foodNear };
+}
+
+function buildStatic(grid: GroundGrid): Static {
   const terrain = analyzeTerrain(grid);
   const { cols, rows } = grid;
   const n = cols * rows;
@@ -103,27 +139,6 @@ function buildStatic(grid: GroundGrid, pins: Pin[]): Static {
     }
   }
 
-  const foodCells: number[] = [];
-  for (let i = 0; i < n; i++) if (foodScore(grid.cover[i] ?? 0, grid.crop[i] ?? 0) >= 0.55) foodCells.push(i);
-  for (const p of pins) {
-    if (p.kind !== 'food') continue;
-    const i = cellAt(grid, [p.lng, p.lat]);
-    if (i != null) foodCells.push(i);
-  }
-  const uniqueFood = Array.from(new Set(foodCells));
-  const foodYd = new Float32Array(n).fill(9999);
-  if (uniqueFood.length) {
-    const pts = uniqueFood.map((i) => cellCenter(grid, i));
-    for (let i = 0; i < n; i++) {
-      const p = cellCenter(grid, i);
-      let best = 9999;
-      for (const q of pts) best = Math.min(best, yardsBetween(p, q));
-      foodYd[i] = best;
-    }
-  }
-  const foodNear = new Float32Array(n);
-  for (let i = 0; i < n; i++) foodNear[i] = smoothstep(220, 0, foodYd[i]);
-
   // Travel cost: steep, wet, built-up and wide-open ground is expensive; edges, saddles and draws are cheap.
   const cost = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -143,12 +158,13 @@ function buildStatic(grid: GroundGrid, pins: Pin[]): Static {
     if (FOREST.has(grid.cover[i]) && !edge[i]) k *= 0.86;
     cost[i] = Math.max(0.18, k);
   }
-  return { terrain, canopy, saddle, edge, foodCells: uniqueFood, foodYd, foodNear, cost };
+  return { terrain, canopy, saddle, edge, cost };
 }
 
 function beddingScores(
   grid: GroundGrid,
   s: Static,
+  fl: FoodLayer,
   warm: boolean,
   wind: WindField | null,
   windy: boolean,
@@ -173,10 +189,10 @@ function beddingScores(
     if (d >= 6 && d <= 24) b += 0.16 * (1 - Math.abs(d - 14) / 16);
     else if (d > 32) b -= 0.28;
     if (d >= 8 && d <= 26) b += 0.08;
-    const fy = s.foodYd[i];
+    const fy = fl.foodYd[i];
     const y = fy < 50 ? 0.2 : fy < 140 ? 0.55 : fy < 380 ? 1 : fy < 700 ? 0.45 : 0.12;
     b += 0.22 * y;
-    if (foodScore(cover, grid.crop[i] ?? 0) > 0.7) b -= 0.12;
+    if (fl.now.value[i]! > 0.7 && fl.now.kind[i] !== FOOD_NONE) b -= 0.12;
     if (s.edge[i] && FOREST.has(cover)) b += 0.06;
     // New: in a real wind deer tuck into the lee.
     if (windy && wind?.sheltered[i]) b += 0.08;
@@ -268,7 +284,7 @@ function dijkstra(cost: Float32Array, cols: number, rows: number, sources: numbe
   return { dist, prev };
 }
 
-function trailsAndCorridor(grid: GroundGrid, s: Static, beds: Bed[], pins: Pin[]) {
+function trailsAndCorridor(grid: GroundGrid, s: Static, fl: FoodLayer, beds: Bed[], pins: Pin[]) {
   const n = grid.cols * grid.rows;
   const corridor = new Float32Array(n);
   const trails: Trail[] = [];
@@ -282,7 +298,7 @@ function trailsAndCorridor(grid: GroundGrid, s: Static, beds: Bed[], pins: Pin[]
     const i = cellAt(grid, [p.lng, p.lat]);
     if (i != null) targets.add(i);
   }
-  const sources = s.foodCells.slice(0, 80);
+  const sources = fl.foodCells.slice(0, 80);
   if (sources.length && targets.size) {
     const { dist, prev } = dijkstra(s.cost, grid.cols, grid.rows, sources);
     [...targets]
@@ -350,24 +366,29 @@ function movementLine(a: Activity, beds: number): string {
 
 export interface MovementModel {
   terrain: Terrain;
-  at(sun: SunPosition, weather: WeatherHour, wind?: WindField, moveFactor?: number): MovementHour;
+  at(sun: SunPosition, weather: WeatherHour, wind?: WindField, moveFactor?: number, date?: Date): MovementHour;
 }
 
 /** Build once per grid and pin set; `at` is cheap and memoized per temperature/wind band. */
 export function createMovementModel(grid: GroundGrid, pins: Pin[] = []): MovementModel {
-  const s = buildStatic(grid, pins);
+  const s = buildStatic(grid);
+  const foods = new Map<FoodSeason, FoodLayer>();
   const bands = new Map<string, { bedding: Float32Array; beds: Bed[]; trails: Trail[]; corridor: Float32Array }>();
   return {
     terrain: s.terrain,
-    at(sun, weather, wind, moveFactor = 1) {
+    at(sun, weather, wind, moveFactor = 1, date) {
+      // With no date, assume the late-season mix the prototype used: crops lead.
+      const season: FoodSeason = date ? foodSeason(date) : 'late';
+      let fl = foods.get(season);
+      if (!fl) foods.set(season, (fl = buildFoodLayer(grid, pins, season)));
       const warm = weather.tempF >= 48;
       const windy = weather.windMph >= 12 && !!wind;
-      const key = `${warm}|${windy}`;
+      const key = `${season}|${warm}|${windy}`;
       let band = bands.get(key);
       if (!band) {
-        const bedding = beddingScores(grid, s, warm, wind ?? null, windy);
+        const bedding = beddingScores(grid, s, fl, warm, wind ?? null, windy);
         const beds = pickBeds(grid, bedding);
-        band = { bedding, beds, ...trailsAndCorridor(grid, s, beds, pins) };
+        band = { bedding, beds, ...trailsAndCorridor(grid, s, fl, beds, pins) };
         bands.set(key, band);
       }
       const activity = whitetailActivity(sun, weather, moveFactor);
@@ -378,7 +399,7 @@ export function createMovementModel(grid: GroundGrid, pins: Pin[] = []): Movemen
         const v =
           activity.bedded * band.bedding[i] ** 2 +
           activity.moving * band.corridor[i] +
-          activity.feeding * s.foodNear[i];
+          activity.feeding * fl.foodNear[i];
         presence[i] = v;
         top = Math.max(top, v);
       }
@@ -387,6 +408,9 @@ export function createMovementModel(grid: GroundGrid, pins: Pin[] = []): Movemen
         bedding: band.bedding,
         corridor: band.corridor,
         presence,
+        food: fl.now.value,
+        foodKind: fl.now.kind,
+        foodSeason: season,
         beds: band.beds,
         trails: band.trails,
         activity,

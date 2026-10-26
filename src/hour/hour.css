@@ -111,3 +111,7 @@
     bottom: calc(var(--safe-b) + 28px);
   }
 }
+
+.food-mast { color: #e8961e; }
+.food-crop { color: #6ec846; }
+.food-browse { color: #46aaa0; }

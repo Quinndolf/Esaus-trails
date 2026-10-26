@@ -44,6 +44,21 @@ export function presencePixels(m: MovementHour): Uint8ClampedArray {
   return px;
 }
 
+/** Predicted food this season: amber acorn ground, green crops, teal browse. Fainter than deer presence. */
+const FOOD_RGB: Rgba[] = [[0, 0, 0], [232, 150, 30], [110, 200, 70], [70, 170, 160]];
+export function foodPixels(m: MovementHour): Uint8ClampedArray {
+  const n = m.food.length;
+  const px = new Uint8ClampedArray(n * 4);
+  for (let i = 0; i < n; i++) {
+    const v = m.food[i];
+    const k = m.foodKind[i];
+    if (!k || v < 0.3) continue;
+    const [r, g, b] = FOOD_RGB[k];
+    px.set([r, g, b, Math.round(40 + 140 * Math.min(1, (v - 0.3) / 0.7))], i * 4);
+  }
+  return px;
+}
+
 /** Corners for a MapLibre image source: top-left, top-right, bottom-right, bottom-left. */
 export function imageCorners(g: ElevationGrid): [LngLat, LngLat, LngLat, LngLat] {
   return [

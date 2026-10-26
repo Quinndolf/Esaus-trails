@@ -36,6 +36,10 @@ export interface GroundGrid {
   cover: number[];
   /** USDA Cropland Data Layer codes, length cols*rows (0 = none/unknown). */
   crop: number[];
+  /** NDVI x 100 from overhead imagery (NAIP), length cols*rows. Absent when the imagery could not be read. */
+  greenness?: number[];
+  /** USFS forest type group per cell (500 = oak-hickory). Absent until that raster is wired. */
+  forestType?: number[];
   weather: { source: string; hours: WeatherHour[] };
   notes?: string[];
 }
