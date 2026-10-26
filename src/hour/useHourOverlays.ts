@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import type { GeoJSONSource, ImageSource, Map as MLMap } from 'maplibre-gl';
 import type { LngLat } from '../map/geo';
 import { cellAt, gridCenter } from '../model/geo';
+import type { MovementHour } from '../model/movement';
 import { tracePlume } from '../model/scent';
 import {
   bedPoints,
@@ -15,6 +16,7 @@ import {
 } from './overlays';
 import { useEsau } from '../esau/ui/store';
 import { hourScope, type HourScope } from './scope';
+import { likelihoodField } from './likelihood';
 import { useHour } from './store';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -57,11 +59,11 @@ function ensureLayers(map: MLMap) {
   for (const id of GEOJSON) map.addSource(id, { type: 'geojson', data: EMPTY });
   const raster = { 'raster-resampling': 'linear', 'raster-fade-duration': 0 } as const;
   map.addLayer(
-    { id: 'hour-thermal', type: 'raster', source: 'hour-thermal', paint: { ...raster, 'raster-opacity': 0.42 } },
+    { id: 'hour-thermal', type: 'raster', source: 'hour-thermal', paint: { ...raster, 'raster-opacity': 0.7 } },
     before,
   );
   map.addLayer(
-    { id: 'hour-presence', type: 'raster', source: 'hour-presence', paint: { ...raster, 'raster-opacity': 0.7 } },
+    { id: 'hour-presence', type: 'raster', source: 'hour-presence', paint: { ...raster, 'raster-opacity': 0.85 } },
     before,
   );
   map.addLayer(
@@ -118,7 +120,7 @@ function ensureLayers(map: MLMap) {
       type: 'fill',
       source: 'hour-scent',
       filter: ['==', ['geometry-type'], 'Polygon'],
-      paint: { 'fill-color': '#c8f560', 'fill-opacity': 0.22 },
+      paint: { 'fill-color': '#c8f560', 'fill-opacity': 0.35 },
     },
     before,
   );
@@ -151,7 +153,8 @@ function ensureLayers(map: MLMap) {
 
 const THERMAL_IDS = ['hour-thermal', 'hour-ticks'];
 const SCENT_IDS = ['hour-scent-fill', 'hour-scent-line'];
-const MOVEMENT_IDS = ['hour-presence', 'hour-trails-casing', 'hour-trails', 'hour-beds'];
+const MOVEMENT_IDS = ['hour-trails-casing', 'hour-trails', 'hour-beds'];
+const PRESENCE_IDS = ['hour-presence'];
 
 /** Only the layers that belong to the hunted animal draw; wind arrows are the one thing every animal shares. */
 function setVisible(map: MLMap, on: boolean, scope: HourScope | null) {
@@ -159,7 +162,8 @@ function setVisible(map: MLMap, on: boolean, scope: HourScope | null) {
     const mine =
       (!THERMAL_IDS.includes(id) || !!scope?.thermals) &&
       (!SCENT_IDS.includes(id) || !!scope?.scent) &&
-      (!MOVEMENT_IDS.includes(id) || !!scope?.movement);
+      (!MOVEMENT_IDS.includes(id) || !!scope?.movement) &&
+      (!PRESENCE_IDS.includes(id) || !!(scope?.movement || scope?.likelihood));
     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on && mine ? 'visible' : 'none');
   }
 }
@@ -176,8 +180,9 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
     const hc = conditions.at(date);
     const m = movement.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor);
     const source = hunter && cellAt(grid, hunter) != null ? hunter : gridCenter(grid);
-    return { hc, m, plume: tracePlume(conditions.terrain, hc.scent, source) };
-  }, [grid, conditions, movement, date, hunter?.[0], hunter?.[1]]);
+    const like = scope?.likelihood && species ? likelihoodField(grid, species, hc) : null;
+    return { hc, m, like, plume: tracePlume(conditions.terrain, hc.scent, source) };
+  }, [grid, conditions, movement, date, species, scope?.likelihood, hunter?.[0], hunter?.[1]]);
 
   useEffect(() => {
     // `map` only arrives after its style has loaded (MapView's onReady), so layers can go straight on.
@@ -191,7 +196,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
       coordinates: corners,
     });
     (map.getSource('hour-presence') as ImageSource).updateImage({
-      url: toDataUrl(presencePixels(frame.m), grid.cols, grid.rows),
+      url: toDataUrl(presencePixels(scope?.movement || !frame.like ? frame.m : ({ presence: frame.like } as MovementHour)), grid.cols, grid.rows),
       coordinates: corners,
     });
     (map.getSource('hour-wind') as GeoJSONSource).setData(windArrows(grid, frame.hc));

@@ -1,3 +1,5 @@
+import { hollowGrid } from '../esau/fixtures/hollow';
+import { hourWeights, likelihoodField } from '../hour/likelihood';
 import { describe, expect, it } from 'vitest';
 import { callsFor } from '../calls/catalog';
 import { SPECIES, signFits } from '../esau/species';
@@ -97,5 +99,28 @@ describe('hour slider uses each hour\'s forecast', () => {
     expect(windy.weather.windMph).toBeGreaterThan(15);
     expect(windy.weather.windFrom).toBe(90);
     expect(windy.thermal.thermalWindow).toBeLessThan(calm.thermal.thermalWindow);
+  });
+});
+
+describe('likelihood shading for animals without a movement model', () => {
+  const g = hollowGrid();
+  const hc = (alt: number, az: number) =>
+    ({ date: new Date('2026-10-25T15:00:00Z'), sun: { altitude: alt, azimuth: az }, weather: { windMph: 4, windFrom: 270, tempF: 55 } }) as never;
+
+  it('scores every cell 0-1 with the likeliest at 1, for each animal', () => {
+    for (const sp of ['elk', 'turkey', 'squirrel', 'hog', 'black_bear', 'mule_deer'] as const) {
+      const f = likelihoodField(g, sp, hc(30, 120))!;
+      expect(f).toHaveLength(32 * 32);
+      expect(Math.max(...f)).toBeCloseTo(1, 5);
+      expect(Math.min(...f)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('moves the shading as the hour changes', () => {
+    const day = likelihoodField(g, 'squirrel', hc(40, 180))!;
+    const night = likelihoodField(g, 'squirrel', hc(-30, 0))!;
+    expect(day.some((v, i) => Math.abs(v - night[i]) > 0.1)).toBe(true);
+    expect(hourWeights('squirrel', -30, 0).rest).toBe(1);
+    expect(hourWeights('elk', 40, 180).rest).toBeGreaterThan(0.5);
   });
 });

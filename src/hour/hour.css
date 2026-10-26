@@ -111,13 +111,3 @@
     bottom: calc(var(--safe-b) + 28px);
   }
 }
-
-/* The day strip under the slider: thermals (or activity) hour by hour */
-.day-strip { margin: 0 8px; }
-.day-cells { position: relative; display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 1px; background: var(--line); }
-.day-cells i { flex: 1; }
-.day-cells i.is-now { outline: 2px solid var(--text); outline-offset: -2px; border-radius: 3px; }
-.day-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: #ffe27a; opacity: .9; }
-.day-mark.set { background: #ff9d4d; }
-.day-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-.sw.act { background: #34c759; }

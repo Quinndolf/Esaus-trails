@@ -26,7 +26,7 @@ export function thermalPixels(hc: HourConditions): Uint8ClampedArray {
   for (let i = 0; i < n; i++) {
     const st = hc.thermal.state[i] as ThermalState;
     const [r, g, b] = THERMAL_RGB[st];
-    px.set([r, g, b, st === ThermalState.Settled ? 0 : Math.round(40 + 150 * hc.thermal.strength[i])], i * 4);
+    px.set([r, g, b, st === ThermalState.Settled ? 0 : Math.round(70 + 170 * hc.thermal.strength[i])], i * 4);
   }
   return px;
 }
