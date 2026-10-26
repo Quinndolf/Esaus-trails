@@ -41,6 +41,13 @@
       "license": "CC BY-NC 3.0 (noncommercial; replace before any paid release)",
       "source": "https://soundbible.com/1318-Turkey-Putt.html",
       "gap": 1
+    },
+    "turkey-gobble": {
+      "file": "turkey-gobble.mp3",
+      "author": "National Park Service, Rocky Mountain National Park",
+      "license": "Public domain (US government work)",
+      "source": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-wildturkey.htm",
+      "gap": 1.0
     }
   }
 }
