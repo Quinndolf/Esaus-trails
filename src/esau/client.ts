@@ -10,6 +10,12 @@ export interface AskOptions {
   timeoutMs?: number;
 }
 
+/** Say why Esau fell back, so "offline" never hides a server problem. */
+function withWhy(reply: EsauReply, why: string): EsauReply {
+  console.warn("Esau fell back to the offline read:", why);
+  return { ...reply, meta: { ...reply.meta, offlineWhy: why } };
+}
+
 export class EsauApiError extends Error {
   readonly status: number;
   constructor(message: string, status: number) {
@@ -41,13 +47,15 @@ export async function askEsau(q: SpotQuery, opts: AskOptions = {}): Promise<Esau
     });
   } catch (err) {
     if (opts.signal?.aborted) throw err;
-    return offlineRead(brief);
+    return withWhy(offlineRead(brief), `couldn't reach the server (${err instanceof Error ? err.message : "network error"})`);
   } finally {
     clearTimeout(timer);
   }
   // Server can't reach Claude right now: the short offline read beats an error in the timber.
-  if (res.status === 502 || res.status === 503 || res.status === 504) return offlineRead(brief);
   const body = await res.json().catch(() => ({}));
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    return withWhy(offlineRead(brief), `${res.status}: ${body.detail ?? body.error ?? "server error"}`);
+  }
   if (!res.ok) throw new EsauApiError(body.error ?? `Esau couldn't answer (${res.status})`, res.status);
   return body as EsauReply;
 }

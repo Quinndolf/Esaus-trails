@@ -137,7 +137,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   lines.push(
     q.question?.trim()
       ? `THE HUNTER ASKS: ${q.question.trim()}`
-      : "The hunter tapped this spot. Tell them what it is to the animal right now and what you'd do about it.",
+      : `The hunter tapped this spot and wants your full read of this area, for the ${species.name} only. Cover the terrain, the wind and the thermal at this hour, and how a ${species.name} would use this ground now, then say what you'd do about it. Say nothing about any other animal.`,
   );
 
   return { species, system: buildSystemPrompt(species), report: lines.join("\n"), spot, conditions, phase, scores };

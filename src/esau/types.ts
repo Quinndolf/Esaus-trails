@@ -188,5 +188,5 @@ export interface EsauReply {
   /** Short list of what would change his read (e.g. "fresh rubs on that bench"). */
   wouldChangeMyMind: string[];
   /** Diagnostics for the app, not for display. */
-  meta: { model: string; servedBy: string; inputTokens: number; outputTokens: number; ms: number };
+  meta: { model: string; servedBy: string; inputTokens: number; outputTokens: number; ms: number; offlineWhy?: string };
 }
