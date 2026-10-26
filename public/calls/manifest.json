@@ -48,6 +48,34 @@
       "license": "Public domain (US government work)",
       "source": "https://www.nps.gov/romo/learn/photosmultimedia/sounds-wildturkey.htm",
       "gap": 1.0
+    },
+    "deer-grunt": {
+      "file": "deer-grunt.mp3",
+      "author": "DRAGON-STUDIO, via Pixabay",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/sound-effects/horror-deer-grunt-472371/",
+      "gap": 1.2
+    },
+    "deer-bleat": {
+      "file": "deer-bleat.mp3",
+      "author": "cryptRomancer (Freesound), via Pixabay",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/sound-effects/nature-fawn-bleats-98384/",
+      "gap": 1.0
+    },
+    "deer-snort-wheeze": {
+      "file": "deer-snort-wheeze.mp3",
+      "author": "DRAGON-STUDIO, via Pixabay",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/sound-effects/deer-snort-472365/",
+      "gap": 1.5
+    },
+    "squirrel-bark": {
+      "file": "squirrel-bark.mp3",
+      "author": "TRP (Freesound), via Pixabay; recorded in Toronto",
+      "license": "Pixabay Content License",
+      "source": "https://pixabay.com/sound-effects/nature-180606-squirrel-clucks-and-squaks-toronto-62409/",
+      "gap": 0.5
     }
   }
 }
