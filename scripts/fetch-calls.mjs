@@ -17,7 +17,6 @@ const IDS = [
   'deer-grunt',
   'deer-bleat',
   'deer-snort-wheeze',
-  'deer-rattle',
   'squirrel-bark',
   'squirrel-red-chatter',
   'squirrel-pine',

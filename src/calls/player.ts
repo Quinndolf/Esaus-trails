@@ -82,6 +82,18 @@ export class CallPlayer {
     await Promise.all(Object.keys(m.recordings).map((id) => this.buffer(id)));
   }
 
+  /**
+   * Start the audio context from inside a tap, so a press made a moment later (after a hold delay) can
+   * still play on iPhone, which only lets audio start from a user gesture.
+   */
+  unlock(): void {
+    try {
+      void this.ensureContext().resume?.();
+    } catch {
+      /* no audio on this device */
+    }
+  }
+
   /** Call from a pointerdown handler: the audio context must start inside a user gesture. */
   async press(id: string): Promise<'playing' | 'missing' | 'failed'> {
     if (!callById(id)) return 'missing';

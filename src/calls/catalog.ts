@@ -1,4 +1,4 @@
-/** The call pads. Order is the order they appear on the sheet. Every pad plays a real recording or nothing. */
+/** The calls. Order is the order the call button steps through them. Every pad plays a real recording or nothing. */
 
 import type { SpeciesId } from '../esau/types';
 
@@ -45,12 +45,6 @@ export const CALLS: CallDef[] = [
     species: 'deer',
     name: 'Snort-wheeze',
     blurb: 'A grunt, three snorts, then a long wheeze. The most aggressive buck call, a challenge during the rut (Atkeson et al. 1988).',
-  },
-  {
-    id: 'deer-rattle',
-    species: 'deer',
-    name: 'Rattle',
-    blurb: 'Antlers clacking and grinding, two bucks sparring. Pre-rut and rut.',
   },
   {
     id: 'squirrel-bark',
