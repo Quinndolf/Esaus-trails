@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { bboxAround } from './ground';
 import { useEsau } from '../esau/ui/store';
 import { activityFor, dayStrip, hourScope, nextFlip } from './scope';
+import { SEASON_LABEL } from '../model/food';
 import { useHour } from './store';
 import { useHourOverlays } from './useHourOverlays';
 import './hour.css';
@@ -62,7 +63,7 @@ export function HourButton({ map }: { map: MLMap | null }) {
  * hunter's scent and probable deer movement shift across the ground.
  */
 export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat | null }) {
-  const { open, status, error, hours, date, setDate, setOpen, grid, conditions } = useHour();
+  const { open, status, error, hours, date, setDate, setOpen, grid, conditions, showFood, setShowFood } = useHour();
   const species = useEsau((s) => s.species);
   const scope = hourScope(species);
   const frame = useHourOverlays(map, hunter);
@@ -136,6 +137,13 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
               {frame.m.line}
             </p>
           )}
+          {scope.movement && showFood && (
+            <p className="hour-msg" data-testid="hour-food-note">
+              Food ({SEASON_LABEL[frame.m.foodSeason]}): <b className="food-mast">acorn ground</b>, <b className="food-crop">crops</b>,{' '}
+              <b className="food-browse">browse</b>. Predicted from satellite land cover, crops and the lay of the ground; not a count
+              of acorns. Beds and trails come from it.
+            </p>
+          )}
           <p className="hour-msg" data-testid="hour-forecast-note">
             {k === 0 ? 'Now' : 'Forecast'}: the wind, temperature and cloud above are {k === 0 ? "this hour's" : "that hour's"}{' '}
             {grid?.weather.source.toUpperCase() ?? ''} reading, and the thermals are worked out from them.
@@ -172,6 +180,9 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
                   <i className="sw trail" />
                   Trail
                 </span>
+                <label data-testid="food-toggle">
+                  <input type="checkbox" checked={showFood} onChange={(e) => setShowFood(e.target.checked)} /> Predicted food
+                </label>
               </>
             )}
             {scope.scent && (

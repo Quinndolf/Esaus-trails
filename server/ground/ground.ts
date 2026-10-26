@@ -2,6 +2,7 @@ import { PNG } from "pngjs";
 import type { GroundGrid, WeatherHour } from "../../src/esau/types";
 import { getForecast, memoryCache } from "../../src/model/forecast";
 import type { WeatherHour as ModelHour } from "../../src/model/types";
+import { fetchCrops, fetchGreenness } from "./vegetation";
 
 /**
  * Builds the GroundGrid Esau reads, from public sources with no API key:
@@ -136,7 +137,7 @@ export function toWeatherHours(hours: ModelHour[], now: Date): WeatherHour[] {
 }
 
 // Terrain and cover don't change; weather does. Keep both, briefly, in memory.
-const terrainCache = new Map<string, { elevationM: number[]; cover: number[]; notes: string[] }>();
+const terrainCache = new Map<string, { elevationM: number[]; cover: number[]; crop: number[]; greenness?: number[]; notes: string[] }>();
 
 export function clearGroundCache() {
   terrainCache.clear();
@@ -163,15 +164,22 @@ export async function buildGroundBbox(b: Bbox, cols: number, rows: number, opts:
   let terrain = terrainCache.get(key);
   if (!terrain) {
     const notes: string[] = ["Elevation: Copernicus 90 m DEM via Open-Meteo, so small benches and creek banks can be smoothed out."];
-    const [elevationM, cover] = await Promise.all([
+    const [elevationM, cover, crop, greenness] = await Promise.all([
       fetchElevation(b, f, cols, rows),
       fetchCover(b, f, cols, rows).catch((err) => {
         notes.push(`Land cover unavailable (${err instanceof Error ? err.message : "error"}); cover is unknown.`);
         return new Array(cols * rows).fill(0);
       }),
+      fetchCrops(b, f, cols, rows).catch(() => {
+        notes.push("Crop map (CDL) unavailable; cultivated fields show as cultivated crops.");
+        return new Array(cols * rows).fill(0);
+      }),
+      fetchGreenness(b, f, cols, rows).catch(() => {
+        notes.push("Overhead greenness (NAIP) unavailable; food is predicted from land cover and topography only.");
+        return undefined;
+      }),
     ]);
-    notes.push("Crop types are not loaded yet; cultivated fields show as cultivated crops.");
-    terrain = { elevationM, cover, notes };
+    terrain = { elevationM, cover, crop, greenness, notes };
     if (terrainCache.size > 500) terrainCache.clear();
     terrainCache.set(key, terrain);
   }
@@ -189,7 +197,8 @@ export async function buildGroundBbox(b: Bbox, cols: number, rows: number, opts:
     rows,
     elevationM: terrain.elevationM,
     cover: terrain.cover,
-    crop: new Array(cols * rows).fill(0),
+    crop: terrain.crop,
+    ...(terrain.greenness ? { greenness: terrain.greenness } : {}),
     weather: { source: fc.source, hours },
     notes,
   };

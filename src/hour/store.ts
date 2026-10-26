@@ -18,6 +18,9 @@ interface HourState {
   /** The hour the slider points at. Esau's panel follows this. */
   date: Date;
   open: boolean;
+  /** Show the predicted food layer (deer only). */
+  showFood: boolean;
+  setShowFood(on: boolean): void;
   setDate(d: Date): void;
   setOpen(open: boolean): void;
   load(b: Bbox): Promise<void>;
@@ -40,6 +43,8 @@ export const useHour = create<HourState>((set, get) => ({
   hours: [],
   date: floorHour(new Date()),
   open: false,
+  showFood: true,
+  setShowFood: (showFood) => set({ showFood }),
   setDate: (date) => {
     set({ date });
     // One clock for the whole app: Esau's tap panel reads the same hour.
