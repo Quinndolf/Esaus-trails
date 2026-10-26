@@ -1,13 +1,14 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
-export type BasemapId = 'satellite' | 'topo' | 'hybrid';
+export type BasemapId = 'satellite' | 'topo' | 'hybrid' | 'streets';
 
-export const BASEMAP_ORDER: BasemapId[] = ['satellite', 'topo', 'hybrid'];
+export const BASEMAP_ORDER: BasemapId[] = ['satellite', 'topo', 'hybrid', 'streets'];
 
 export const BASEMAP_LABELS: Record<BasemapId, string> = {
   satellite: 'Satellite',
   topo: 'Topo',
   hybrid: 'Hybrid',
+  streets: 'Streets',
 };
 
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
@@ -24,6 +25,11 @@ export const RASTER_SOURCES = {
     tiles: [`${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`],
     maxzoom: 19,
     attribution: 'Topo © Esri, USGS, NOAA',
+  },
+  streets: {
+    tiles: [`${ESRI}/World_Street_Map/MapServer/tile/{z}/{y}/{x}`],
+    maxzoom: 19,
+    attribution: 'Streets © Esri, HERE, Garmin, OpenStreetMap contributors',
   },
   roads: {
     tiles: [`${ESRI}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`],
@@ -43,6 +49,7 @@ export const BASEMAP_LAYERS: Record<BasemapId, RasterSourceId[]> = {
   satellite: ['imagery'],
   topo: ['topo'],
   hybrid: ['imagery', 'roads', 'labels'],
+  streets: ['streets'],
 };
 
 export function nextBasemap(current: BasemapId): BasemapId {

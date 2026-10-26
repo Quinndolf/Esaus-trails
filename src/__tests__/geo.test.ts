@@ -30,7 +30,8 @@ describe('geo', () => {
   it('cycles satellite, topo, hybrid', () => {
     expect(nextBasemap('satellite')).toBe('topo');
     expect(nextBasemap('topo')).toBe('hybrid');
-    expect(nextBasemap('hybrid')).toBe('satellite');
+    expect(nextBasemap('hybrid')).toBe('streets');
+    expect(nextBasemap('streets')).toBe('satellite');
   });
 });
 
