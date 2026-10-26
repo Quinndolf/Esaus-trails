@@ -48,7 +48,6 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
     map.touchZoomRotate.disableRotation();
-    map.addControl(new maplibregl.ScaleControl({ unit: 'imperial', maxWidth: 90 }), 'top-left');
     mapRef.current = map;
 
     // Any drag or pinch by the hunter drops follow mode, like onX.
