@@ -38,8 +38,8 @@ function readHere(map: MLMap | null) {
 /** Button for the left control stack: opens the hour slider, reading the ground on first use. */
 export function HourButton({ map }: { map: MLMap | null }) {
   const { open, status, setOpen } = useHour();
-  const scope = useEsau((s) => hourScope(s.species));
-  if (!scope) return null; // nothing moves by the hour for ginseng, and no animal is chosen yet
+  const species = useEsau((s) => s.species);
+  if (!hourScope(species)) return null; // nothing moves by the hour for ginseng, and no animal is chosen yet
   return (
     <button
       className={`fab labeled ${open ? 'is-on' : ''}`}

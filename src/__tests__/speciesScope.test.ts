@@ -78,3 +78,9 @@ describe('hour slider scope', () => {
     expect(lines[0]).toMatch(/^Thermals (turn|settle)/);
   });
 });
+
+describe('hourScope', () => {
+  it('returns the same object every call so store selectors stay stable', () => {
+    for (const id of Object.keys(SPECIES) as Parameters<typeof hourScope>[0][]) expect(hourScope(id)).toBe(hourScope(id));
+  });
+});
