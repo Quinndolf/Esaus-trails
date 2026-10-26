@@ -20,9 +20,18 @@ export interface HourScope {
   noun: string;
 }
 
+const scopeCache = new Map<SpeciesId, HourScope | null>();
+
+/** Cached so the same animal always gets the same object: React store selectors loop forever on a fresh one each call. */
 export function hourScope(species: SpeciesId | null): HourScope | null {
-  const brain = species ? speciesBrain(species) : null;
-  if (!species || !brain || brain.plant) return null; // no animal chosen, or ginseng: nothing moves by the hour
+  if (!species) return null;
+  if (!scopeCache.has(species)) scopeCache.set(species, buildScope(species));
+  return scopeCache.get(species)!;
+}
+
+function buildScope(species: SpeciesId): HourScope | null {
+  const brain = speciesBrain(species);
+  if (!brain || brain.plant) return null; // ginseng: nothing moves by the hour
   if (species === 'whitetail') return { thermals: true, scent: true, movement: true, strip: 'thermal', noun: 'Deer' };
   if (brain.nose) return { thermals: true, scent: true, movement: false, strip: 'thermal', noun: brain.name };
   return { thermals: false, scent: false, movement: false, strip: 'activity', noun: brain.name };
