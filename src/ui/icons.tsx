@@ -9,7 +9,7 @@ export const OfflineIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...p}><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 7.9" /><path d="M12 12v8" /><path d="m8.5 16.5 3.5 3.5 3.5-3.5" /></svg>
 );
 export const ToolsIcon = (p: SVGProps<SVGSVGElement>) => (
-  <svg {...base} {...p}><rect x="3" y="9" width="18" height="7" rx="3.5" /><path d="M7 9V5.5l3 3.5" /><path d="M14 9l3-4.5V9" /><circle cx="17.5" cy="12.5" r="1" fill="currentColor" /></svg>
+  <svg {...base} {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
 );
 export const LocateIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base} {...p}><path d="M3 11 21 3l-8 18-2-8-8-2Z" /></svg>

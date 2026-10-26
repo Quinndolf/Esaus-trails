@@ -29,6 +29,9 @@ import { CallsSheet } from './calls/CallsSheet';
 import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
 import { HourButton, HourPanel } from './hour/HourPanel';
+import { hourScope } from './hour/scope';
+import { bboxAround } from './hour/ground';
+import { useHour } from './hour/store';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
@@ -93,6 +96,14 @@ export function App() {
     const c = map.getCenter();
     useGinseng.getState().enter([c.lng, c.lat]);
   }, [ginsengOn, map]);
+  // The hour slider is on the map from the start (like the Grok prototype): it opens itself once an animal is chosen.
+  const hourWanted = hourScope(species) != null;
+  const hourIdle = useHour((s) => s.status === 'idle');
+  useEffect(() => {
+    if (!map || !hourWanted || !hourIdle) return;
+    const c = start?.lngLat ?? [map.getCenter().lng, map.getCenter().lat];
+    void useHour.getState().load(bboxAround(c as LngLat));
+  }, [map, hourWanted, hourIdle, start]);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!notice) return;
