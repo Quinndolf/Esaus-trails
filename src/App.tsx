@@ -40,6 +40,9 @@ import { ToolsSheet } from './ui/ToolsSheet';
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
 
+// The offline-download button is parked for now (satellite coverage is fine where we hunt). Flip to bring it back.
+const SHOW_OFFLINE = false;
+
 /** Waypoint icons Esau treats as ground truth about the property. */
 const ESAU_PIN_KIND: Partial<Record<WaypointIcon, PinKind>> = {
   food: 'food',
@@ -231,10 +234,12 @@ export function App() {
           <LayersIcon />
           <span>Layers</span>
         </button>
-        <button className="fab labeled" onClick={() => setSheet('offline')} aria-label="Download maps for offline use">
-          <OfflineIcon />
-          <span>Save maps</span>
-        </button>
+        {SHOW_OFFLINE && (
+          <button className="fab labeled" onClick={() => setSheet('offline')} aria-label="Download maps for offline use">
+            <OfflineIcon />
+            <span>Save maps</span>
+          </button>
+        )}
         <HourButton map={map} />
       </div>
 
