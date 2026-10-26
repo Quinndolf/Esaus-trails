@@ -137,13 +137,13 @@ describe('press and hold', () => {
   });
 
   it('releaseAll silences everything and ignores unknown ids', async () => {
-    const { e, audio, timers } = env({ recordings: { 'deer-rattle': rec(), 'turkey-gobble': rec() } });
+    const { e, audio, timers } = env({ recordings: { 'deer-grunt': rec(), 'turkey-gobble': rec() } });
     const p = new CallPlayer(e);
-    await p.press('deer-rattle');
+    await p.press('deer-grunt');
     await p.press('turkey-gobble');
     await p.press('not-a-call');
     p.releaseAll();
-    expect(p.isHeld('deer-rattle') || p.isHeld('turkey-gobble') || p.isHeld('not-a-call')).toBe(false);
+    expect(p.isHeld('deer-grunt') || p.isHeld('turkey-gobble') || p.isHeld('not-a-call')).toBe(false);
     timers.splice(0).forEach((t) => t.fn());
     expect(audio.log.srcStops).toBe(2);
   });

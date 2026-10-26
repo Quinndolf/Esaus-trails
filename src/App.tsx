@@ -24,6 +24,7 @@ import {
 import type { PinKind } from './esau/types';
 import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
+import { CallButton } from './calls/CallButton';
 import { CallsSheet } from './calls/CallsSheet';
 import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
@@ -231,6 +232,7 @@ export function App() {
       </button>
 
       <div className="controls right">
+        <CallButton />
         <button className="fab labeled" onClick={() => setBasemap(nextBasemap(basemap))} aria-label={`Basemap: ${BASEMAP_LABELS[basemap]}`}>
           <BasemapIcon />
           <span data-testid="basemap-label">{BASEMAP_LABELS[basemap]}</span>
@@ -271,7 +273,7 @@ export function App() {
         onSaved={() => setSheet('saved')}
         onCalls={() => setSheet('calls')}
         hasCalls={callsFor(species).length > 0}
-        callsHint={callsFor(species).length ? `${CALL_GROUP_TITLE[callsFor(species)[0].species]} calls, hold to play` : ''}
+        callsHint={callsFor(species).length ? `${CALL_GROUP_TITLE[callsFor(species)[0].species]} calls: how to, credits` : ''}
         onMarkLocation={() => void markMyLocation()}
       />
       <GinsengRulesSheet />
