@@ -53,7 +53,7 @@ type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | nul
 function initialBasemap(): BasemapId {
   try {
     const v = localStorage.getItem(BASEMAP_KEY);
-    if (v === 'satellite' || v === 'topo' || v === 'hybrid') return v;
+    if (v === 'satellite' || v === 'topo' || v === 'hybrid' || v === 'streets') return v;
   } catch {
     /* ignore */
   }
