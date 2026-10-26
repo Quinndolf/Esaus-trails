@@ -231,9 +231,9 @@ export function App() {
           <LayersIcon />
           <span>Layers</span>
         </button>
-        <button className="fab labeled" onClick={() => setSheet('offline')} aria-label="Offline Maps">
+        <button className="fab labeled" onClick={() => setSheet('offline')} aria-label="Download maps for offline use">
           <OfflineIcon />
-          <span>Offline</span>
+          <span>Save maps</span>
         </button>
         <HourButton map={map} />
       </div>

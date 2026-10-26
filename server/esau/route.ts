@@ -81,15 +81,15 @@ export async function handleEsau(req: IncomingMessage, res: ServerResponse, cfg:
     }
     send(res, 200, await askClaude(q, cfg));
   } catch (err) {
-    if (err instanceof EsauInputError) send(res, 400, { error: err.message });
-    else if (err instanceof Anthropic.AuthenticationError) send(res, 503, { error: "Esau's API key is missing or wrong on the server" });
-    else if (err instanceof Anthropic.RateLimitError) send(res, 429, { error: "Esau's busy. Try again in a minute." });
-    else if (err instanceof Anthropic.APIConnectionError) send(res, 502, { error: "The server couldn't reach Claude" });
-    else if (err instanceof Anthropic.APIError) send(res, 502, { error: `Claude API error ${err.status}` });
-    else {
-      console.error("esau:", err);
-      send(res, 500, { error: "Esau hit a snag" });
-    }
+    if (err instanceof EsauInputError) return send(res, 400, { error: err.message }), true;
+    // Log the real cause for `journalctl`, and hand it to the app so "offline" never hides it.
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("esau:", err instanceof Anthropic.APIError ? `Claude API ${err.status}: ${detail}` : err);
+    if (err instanceof Anthropic.AuthenticationError) send(res, 503, { error: "Esau's API key is missing or wrong on the server", detail });
+    else if (err instanceof Anthropic.RateLimitError) send(res, 429, { error: "Esau's busy. Try again in a minute.", detail });
+    else if (err instanceof Anthropic.APIConnectionError) send(res, 502, { error: "The server couldn't reach Claude", detail });
+    else if (err instanceof Anthropic.APIError) send(res, 502, { error: `Claude API error ${err.status}`, detail });
+    else send(res, 500, { error: "Esau hit a snag", detail });
   }
   return true;
 }
