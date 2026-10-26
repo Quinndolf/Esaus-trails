@@ -84,3 +84,18 @@ describe('hourScope', () => {
     for (const id of Object.keys(SPECIES) as Parameters<typeof hourScope>[0][]) expect(hourScope(id)).toBe(hourScope(id));
   });
 });
+
+describe('hour slider uses each hour\'s forecast', () => {
+  it('gives each hour its own wind and lets a windy hour wash the thermals out', () => {
+    const grid = southFace();
+    const base = steadyForecast({ windMph: 2, windFrom: 270 });
+    const hours = base.hours.map((h, k) => (k >= 5 ? { ...h, windMph: 20, windFrom: 90, skyCoverPct: 100 } : h));
+    const model = createConditionsModel(grid, { ...base, hours });
+    const calm = model.at(new Date(hours[2].at));
+    const windy = model.at(new Date(hours[8].at));
+    expect(calm.weather.windMph).toBeLessThan(5);
+    expect(windy.weather.windMph).toBeGreaterThan(15);
+    expect(windy.weather.windFrom).toBe(90);
+    expect(windy.thermal.thermalWindow).toBeLessThan(calm.thermal.thermalWindow);
+  });
+});
