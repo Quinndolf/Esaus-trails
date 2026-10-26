@@ -4,7 +4,7 @@ import { CloseIcon } from '../ui/icons';
 import { useMemo } from 'react';
 import { bboxAround } from './ground';
 import { useEsau } from '../esau/ui/store';
-import { activityFor, dayStrip, hourScope, nextFlip, type StripCell } from './scope';
+import { activityFor, dayStrip, hourScope, nextFlip } from './scope';
 import { useHour } from './store';
 import { useHourOverlays } from './useHourOverlays';
 import './hour.css';
@@ -54,40 +54,6 @@ export function HourButton({ map }: { map: MLMap | null }) {
       <ClockIcon />
       <span>Hours</span>
     </button>
-  );
-}
-
-const THERMAL_RGB: Record<number, string> = { 1: '255,138,40', 2: '70,160,255', 3: '40,70,210' };
-
-function stripColor(c: StripCell, kind: 'thermal' | 'activity') {
-  if (kind === 'activity') return `rgba(52,199,89,${(0.1 + 0.8 * c.level).toFixed(2)})`;
-  const rgb = THERMAL_RGB[c.state];
-  return rgb ? `rgba(${rgb},${(0.3 + 0.65 * c.strength).toFixed(2)})` : 'rgba(255,255,255,0.1)';
-}
-
-/** The day at a glance, under the slider: when the air rises and sinks (or, for non-nose animals, when they move). */
-function DayStrip({ cells, k, kind, sunrise, sunset }: { cells: StripCell[]; k: number; kind: 'thermal' | 'activity'; sunrise: Date | null; sunset: Date | null }) {
-  const t0 = cells[0].date.getTime();
-  const span = cells.length * 3600e3;
-  const at = (d: Date | null) => (d && d.getTime() >= t0 && d.getTime() <= t0 + span ? ((d.getTime() - t0) / span) * 100 : null);
-  const marks = [
-    { id: 'rise', label: 'Sunrise', left: at(sunrise) },
-    { id: 'set', label: 'Sunset', left: at(sunset) },
-  ];
-  return (
-    <div className="day-strip" data-testid="day-strip" data-kind={kind} role="img" aria-label={kind === 'thermal' ? 'Thermals through the day' : 'Activity through the day'}>
-      <div className="day-cells">
-        {cells.map((c, i) => (
-          <i key={i} className={i === k ? 'is-now' : ''} data-state={c.state} style={{ background: stripColor(c, kind) }} />
-        ))}
-        {marks.map((m) => m.left != null && <b key={m.id} className={`day-mark ${m.id}`} style={{ left: `${m.left}%` }} title={m.label} />)}
-      </div>
-      <div className="day-labels">
-        {[0, 6, 12, 18].filter((i) => i < cells.length).map((i) => (
-          <span key={i}>{cells[i].date.toLocaleTimeString('en-US', { hour: 'numeric' })}</span>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -155,9 +121,6 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
             aria-valuetext={hourLabel(date, k === 0)}
             onChange={(e) => setDate(hours[Number(e.target.value)])}
           />
-          {cells.length > 0 && (
-            <DayStrip cells={cells} k={k} kind={scope.strip} sunrise={frame.hc.sunTimes.sunrise} sunset={frame.hc.sunTimes.sunset} />
-          )}
           {scope.thermals && (
             <p className="hour-line" data-testid="hour-summary">
               {frame.hc.summary} {cells.length > 0 && nextFlip(cells, k)}
@@ -193,10 +156,10 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
                 </span>
               </>
             )}
-            {scope.strip === 'activity' && (
+            {scope.likelihood && !scope.movement && (
               <span>
-                <i className="sw act" />
-                Active
+                <i className="sw deer" />
+                {cap(scope.noun)} likely
               </span>
             )}
             {scope.movement && (
@@ -230,3 +193,5 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
     </div>
   );
 }
+
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

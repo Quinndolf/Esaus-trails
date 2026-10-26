@@ -15,6 +15,8 @@ export interface HourScope {
   scent: boolean;
   /** Bedding, trails and "where deer are likely" from the whitetail model. */
   movement: boolean;
+  /** The animal's own likelihood shading (rest, feed, travel ground by the hour) when it has no movement model. */
+  likelihood: boolean;
   /** What the day-strip under the slider shows. */
   strip: 'thermal' | 'activity';
   noun: string;
@@ -32,9 +34,9 @@ export function hourScope(species: SpeciesId | null): HourScope | null {
 function buildScope(species: SpeciesId): HourScope | null {
   const brain = speciesBrain(species);
   if (!brain || brain.plant) return null; // ginseng: nothing moves by the hour
-  if (species === 'whitetail') return { thermals: true, scent: true, movement: true, strip: 'thermal', noun: 'Deer' };
-  if (brain.nose) return { thermals: true, scent: true, movement: false, strip: 'thermal', noun: brain.name };
-  return { thermals: false, scent: false, movement: false, strip: 'activity', noun: brain.name };
+  if (species === 'whitetail') return { thermals: true, scent: true, movement: true, likelihood: false, strip: 'thermal', noun: 'Deer' };
+  if (brain.nose) return { thermals: true, scent: true, movement: false, likelihood: true, strip: 'thermal', noun: brain.name };
+  return { thermals: false, scent: false, movement: false, likelihood: true, strip: 'activity', noun: brain.name };
 }
 
 export interface Activity {
