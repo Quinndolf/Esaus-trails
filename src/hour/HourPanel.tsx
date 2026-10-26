@@ -124,6 +124,7 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
               ↑
             </span>
             {Math.round(w.windMph)} mph {cardinal(w.windFrom)} · {Math.round(w.tempF)}°
+            {w.skyCoverPct != null && ` · ${Math.round(w.skyCoverPct)}% cloud`}
           </span>
         )}
         <button className="icon-btn" aria-label="Close hour slider" onClick={() => setOpen(false)}>
@@ -172,6 +173,10 @@ export function HourPanel({ map, hunter }: { map: MLMap | null; hunter: LngLat |
               {frame.m.line}
             </p>
           )}
+          <p className="hour-msg" data-testid="hour-forecast-note">
+            {k === 0 ? 'Now' : 'Forecast'}: the wind, temperature and cloud above are {k === 0 ? "this hour's" : "that hour's"}{' '}
+            {grid?.weather.source.toUpperCase() ?? ''} reading, and the thermals are worked out from them.
+          </p>
           <p className="hour-line" data-testid="hour-atmosphere">
             {frame.hc.atmosphere.line}
           </p>
