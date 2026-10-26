@@ -68,7 +68,7 @@ export function OfflineSheet({ open, onClose, map, basemap, overlays }: Props) {
   }
 
   return (
-    <BottomSheet title="Offline Maps" open={open} onClose={onClose}>
+    <BottomSheet title="Download map area" open={open} onClose={onClose}>
       <h3 className="sheet-section">Save what's on screen</h3>
       <p className="hint">
         Saves the {BASEMAP_LABELS[basemap].toLowerCase()} map for the area you're looking at, so it works with no service.
