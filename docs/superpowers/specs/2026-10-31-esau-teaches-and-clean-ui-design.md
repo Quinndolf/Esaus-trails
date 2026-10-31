@@ -27,6 +27,19 @@ Tests: schema validation, offline fallback also produces a lesson, persona never
 ### A4. Quality check (`npm run esau:eval`)
 Fixed set of test spots and beginner questions; each answer is checked by rules (cites only known sources, mentions wind when scent is the issue, includes a lesson, states legal block correctly, correct species only) and written to a transcript for Quinn to read. Extends the existing `esau:spots` script.
 
+### A5. Weapon-aware coaching (rifle or bow)
+The hunter picks a weapon (rifle, bow, crossbow, muzzleloader, shotgun) next to the animal. It travels with every Esau request and changes the advice:
+- **Range and setup:** a bow hunter is taught to get inside about 20 to 30 yards (stand or blind on the trail, downwind approach); a rifle hunter is taught to find a shooting lane and a safe backstop at longer range.
+- **Law:** the rules table is keyed by species and weapon (season dates, legal hours, legal equipment).
+- **Wind and thermals** matter more the closer the shot, so bow answers lean harder on scent and approach.
+- Esau names the backstop and what is beyond the target for every rifle setup.
+
+### A6. Find the trail, find the animal (every mode)
+Each species file gets a "how a beginner finds it" section Esau teaches from, in order: read the map for where it travels (saddles, benches, draw heads, field edges), walk to confirm with sign, pick a setup spot, plan the wind and the way in and out.
+- **Deer, turkey, squirrel:** uses the existing food, bed and trail prediction (owned by the deer-prediction thread) as the starting point; Esau teaches what to look for on the ground to confirm it (tracks, droppings, rubs and scrapes, scratchings, cuttings, dusting spots).
+- **Ginseng:** teaches the plant, the legal digging season and rules, and the habitat to search (north and east facing slopes, rich hardwood).
+- Every answer ends the same way: where to go first, what to look for when you get there, and the one rule of thumb.
+
 ## Part B: Cleaner interface
 Today the map screen carries 8 buttons plus pills: Layers, Hours, Tools, Call, Basemap, Compass, Locate, (Offline hidden), the animal pill, GPS pill and accuracy readout.
 
@@ -46,7 +59,12 @@ Other states than Kentucky; new species; offline Esau. Offline maps button stays
 
 ## Order of work (each is its own plan, PR, review)
 1. Clean interface (visible, low risk, independent of the brain).
-2. Kentucky rules table and legal-hours block.
-3. Teaching layer.
+2. Kentucky rules table (by species and weapon) and legal-hours block.
+3. Teaching layer, weapon choice and find-the-trail lessons.
 4. Source library (whitetail first).
 5. Quality check set.
+
+## Who builds what
+- Esau's brain and teaching (Part A): this thread.
+- Map-screen cleanup (Part B): the "Streamline the hunt by chosen species" thread, after Quinn approves.
+- Calls and ginseng content: the calls and ginseng thread. Deer food, bed and trail prediction: the deer prediction thread. This thread consumes their outputs and does not duplicate them.
