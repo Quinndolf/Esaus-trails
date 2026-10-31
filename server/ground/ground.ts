@@ -48,13 +48,17 @@ async function getJson(f: Fetch, url: string): Promise<any> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** GET JSON, waiting and retrying when the service says 429 (rate limited) or 5xx. */
-async function getJsonRetry(f: Fetch, url: string, retryDelayMs: number, tries = 4): Promise<any> {
+async function getJsonRetry(f: Fetch, url: string, retryDelayMs: number, deadline: number, tries = 4): Promise<any> {
   for (let i = 1; ; i++) {
-    const res = await f(url, { headers: { "user-agent": "esaus-trails (hunting map)" } });
+    const res = await f(url, { headers: { "user-agent": "esaus-trails (hunting map)" }, signal: AbortSignal.timeout(8000) });
     if (res.ok) return res.json();
     if ((res.status !== 429 && res.status < 500) || i >= tries) throw new Error(`${new URL(url).host} returned ${res.status}`);
-    const asked = Number(res.headers.get("retry-after"));
-    await sleep(Number.isFinite(asked) && res.headers.has("retry-after") ? Math.min(asked * 1000, 5000) : retryDelayMs * 2 ** (i - 1));
+    const header = res.headers.get("retry-after");
+    const asked = header ? Number(header) : NaN;
+    const wait = Number.isFinite(asked) ? Math.min(asked * 1000, 5000) : retryDelayMs * 2 ** (i - 1);
+    // A quota that won't clear inside the deadline isn't worth holding the tap for.
+    if (Date.now() + wait > deadline) throw new Error(`${new URL(url).host} returned ${res.status}`);
+    await sleep(wait);
   }
 }
 
@@ -62,11 +66,17 @@ async function getJsonRetry(f: Fetch, url: string, retryDelayMs: number, tries =
 async function pool<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
   const out: T[] = new Array(tasks.length);
   let next = 0;
+  let failed = false;
   await Promise.all(
     Array.from({ length: Math.min(limit, tasks.length) }, async () => {
-      while (next < tasks.length) {
+      while (!failed && next < tasks.length) {
         const i = next++;
-        out[i] = await tasks[i]!();
+        try {
+          out[i] = await tasks[i]!();
+        } catch (err) {
+          failed = true; // stop pulling work from a service that is already refusing us
+          throw err;
+        }
       }
     }),
   );
@@ -78,17 +88,19 @@ export interface ElevationOptions {
   retryDelayMs?: number;
 }
 
-async function elevationFrom(source: "open-meteo" | "opentopodata", chunks: { lat: number; lng: number }[][], f: Fetch, delay: number): Promise<number[]> {
-  const tasks = chunks.map((chunk) => async () => {
+async function elevationFrom(source: "open-meteo" | "opentopodata", chunks: { lat: number; lng: number }[][], f: Fetch, delay: number, deadline: number): Promise<number[]> {
+  const tasks = chunks.map((chunk, n) => async () => {
+    // Open Topo Data's public limit is about one call a second.
+    if (source === "opentopodata" && n > 0 && delay > 0) await sleep(1100);
     if (source === "open-meteo") {
       const lat = chunk.map((p) => p.lat.toFixed(5)).join(",");
       const lng = chunk.map((p) => p.lng.toFixed(5)).join(",");
-      const body = await getJsonRetry(f, `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`, delay);
-      if (!Array.isArray(body?.elevation) || body.elevation.length !== chunk.length) throw new Error("elevation reply was malformed");
+      const body = await getJsonRetry(f, `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`, delay, deadline);
+      if (!Array.isArray(body?.elevation) || body.elevation.length !== chunk.length || body.elevation.some((v: unknown) => typeof v !== "number")) throw new Error("elevation reply was malformed");
       return body.elevation as number[];
     }
     const locs = chunk.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join("|");
-    const body = await getJsonRetry(f, `https://api.opentopodata.org/v1/srtm30m?locations=${locs}`, delay);
+    const body = await getJsonRetry(f, `https://api.opentopodata.org/v1/srtm30m?locations=${locs}`, delay, deadline);
     const el = body?.results?.map((r: any) => r?.elevation);
     if (!Array.isArray(el) || el.length !== chunk.length || el.some((v: unknown) => typeof v !== "number")) throw new Error("elevation reply was malformed");
     return el as number[];
@@ -99,15 +111,20 @@ async function elevationFrom(source: "open-meteo" | "opentopodata", chunks: { la
 
 /** Elevation per cell: Open-Meteo (Copernicus DEM), retried on 429, then Open Topo Data (SRTM) as a second source. */
 export async function fetchElevation(b: Bbox, f: Fetch = fetch, cols = GRID_SIZE, rows = cols, opts: ElevationOptions = {}): Promise<number[]> {
+  return (await fetchElevationWithSource(b, f, cols, rows, opts)).values;
+}
+
+export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, rows: number, opts: ElevationOptions = {}): Promise<{ values: number[]; source: "open-meteo" | "opentopodata" }> {
   const pts = cellCenters(b, cols, rows);
   const chunks: (typeof pts)[] = [];
   for (let i = 0; i < pts.length; i += 100) chunks.push(pts.slice(i, i + 100));
   const delay = opts.retryDelayMs ?? 1000;
+  const deadline = Date.now() + (delay > 0 ? 20000 : 1e9);
   try {
-    return await elevationFrom("open-meteo", chunks, f, delay);
+    return { values: await elevationFrom("open-meteo", chunks, f, delay, deadline), source: "open-meteo" };
   } catch (first) {
     try {
-      return await elevationFrom("opentopodata", chunks, f, delay);
+      return { values: await elevationFrom("opentopodata", chunks, f, delay, Date.now() + (delay > 0 ? 20000 : 1e9)), source: "opentopodata" };
     } catch {
       throw first;
     }
@@ -220,7 +237,10 @@ async function buildTerrain(b: Bbox, cols: number, rows: number, f: Fetch, retry
   let demNote = "Elevation: Copernicus 90 m DEM via Open-Meteo, so small benches and creek banks can be smoothed out.";
   let cacheable = true;
   const [elevationM, cover, crop, greenness] = await Promise.all([
-    fetchElevation(b, f, cols, rows, { retryDelayMs }).catch((err) => {
+    fetchElevationWithSource(b, f, cols, rows, { retryDelayMs }).then((r) => {
+      if (r.source === "opentopodata") demNote = "Elevation: SRTM 30 m DEM via Open Topo Data (the main elevation service was busy), so small benches and creek banks can be smoothed out.";
+      return r.values;
+    }).catch((err) => {
       // Esau can still read land cover and weather; say plainly that the slopes are a guess. Don't cache it.
       cacheable = false;
       demNote = `Elevation unavailable (${err instanceof Error ? err.message : "error"}); the ground is treated as flat, so ridges, benches and bedding on slopes can't be read here right now. Try again in a minute.`;
@@ -252,7 +272,7 @@ export async function buildGroundBbox(b: Bbox, cols: number, rows: number, opts:
   if (!terrain) {
     let building = terrainInFlight.get(key);
     if (!building) {
-      building = buildTerrain(b, cols, rows, f, opts.retryDelayMs).finally(() => terrainInFlight.delete(key));
+      building = buildTerrain(b, cols, rows, f, opts.retryDelayMs).finally(() => { if (terrainInFlight.get(key) === building) terrainInFlight.delete(key); });
       terrainInFlight.set(key, building);
     }
     const built = await building;

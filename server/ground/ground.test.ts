@@ -128,6 +128,7 @@ describe("ground grid", () => {
       }) as typeof fetch;
       const g = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
       expect(g.elevationM.every((e) => e === 310)).toBe(true);
+      expect(g.notes!.join(" ")).toContain("Open Topo Data");
     });
 
     it("still reads the spot, flat and with a note, when every elevation source is down, and does not cache that", async () => {
