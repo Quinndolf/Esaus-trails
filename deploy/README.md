@@ -75,7 +75,7 @@ curl -fsSL https://raw.githubusercontent.com/Quinndolf/Esaus-trails/main/deploy/
 
 Removes only Esau's Trails: the API service, its nginx site, its certificate, `/opt/esaus-trails`,
 `/etc/esaus-trails` (including the saved Anthropic key), the sudoers line and the `esau` user.
-Other sites, nginx, certbot, swap and firewall rules stay. Add `DRY_RUN=1` before `bash` to see what it would remove first.
+Other sites, nginx, certbot, swap and firewall rules stay. To see what it would remove first, run `curl -fsSL <same address> | sudo DRY_RUN=1 bash` (`DRY_RUN=1` goes right before `bash`).
 It ends by listing what was removed and what is still on the server. Revoke the Anthropic key at console.anthropic.com yourself.
 
 ## Where things live
