@@ -53,6 +53,15 @@ Tests: flow direction flips between dawn, midday and dusk on a fixture; arrows f
 ### A8. Esau's character: the great hunter
 Esau is the hunter of the old story: the skilled man of the field, rough, quick, at home in the open country, who came in from the hunt. The persona keeps that spirit (a master hunter and a patient teacher), never preachy, no scripture quoting. He speaks as someone who has lived the hunt and wants the newcomer to get the same thing. This is voice and heart, not content: the facts still come only from the source shelves above.
 
+### A9. Hunt tracker and after-hunt review
+The route tracker already exists (Tools: records the path with distance and duration, saved on the device). Quinn wants it to be a hunt journal. Additions:
+- **Track saves with the hunt's context:** animal, weapon, start and end time, wind and thermal at each hour, and the pins and photos made along the way. Also records stops (standing still over about 5 minutes) as "sits".
+- **Review at home:** open a saved track, draw it on the map, scrub it with the hour slider to replay it, with the wind arrow at each moment.
+- **Planned route vs. walked route:** the hunter can draw a plan (draw tool) before the hunt. Esau suggests an approach route from the map (downwind, quiet, off the trails animals use). After the hunt the three lines show together: Esau's suggested route, the plan, the walked track.
+- **Esau's debrief:** "You came in from the southwest with the wind at your back, so anything on that bench smelled you at about 6:50. Next time come up the creek from the east." Teaching tone, tied to the lesson rules. He flags where scent crossed likely beds or trails, and where the hunter walked the animals' travel line.
+- **Privacy:** tracks stay on the device by default, like photos.
+Build split: tracker recording and storage belong to the tools code already there (map-screen thread); this thread adds the review view, route suggestion and debrief. Tests: scent-crossing detector on a fixture track, stop detection, planned-vs-walked distance.
+
 ## Part B: Cleaner interface
 Today the map screen carries 8 buttons plus pills: Layers, Hours, Tools, Call, Basemap, Compass, Locate, (Offline hidden), the animal pill, GPS pill and accuracy readout.
 
