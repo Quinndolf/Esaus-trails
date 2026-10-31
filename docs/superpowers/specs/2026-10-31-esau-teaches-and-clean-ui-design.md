@@ -40,6 +40,18 @@ Each species file gets a "how a beginner finds it" section Esau teaches from, in
 - **Ginseng:** teaches the plant, the legal digging season and rules, and the habitat to search (north and east facing slopes, rich hardwood).
 - Every answer ends the same way: where to go first, what to look for when you get there, and the one rule of thumb.
 
+### A7. Analyze Area: Esau predicts where the animal is and where it's headed
+Both ways to ask stay (Quinn, 2026-10-31): **tap a spot** for Esau's exact read of that point, and a permanent **Analyze area** button for the whole view. It sits in the Tools-adjacent bottom row (a labeled pill, not another round button) and also replaces the "Read this area" pill.
+Analyze Area reads the ground around the map view for the chosen animal, weapon, hour and weather, then:
+- Marks the most likely **bedding, feeding, trails/travel routes, and wind-covered ground** (wind and thermal cover: where the hunter's scent will not reach).
+- Predicts the **direction of travel and destination** at the chosen hour: for example "at 6:40 AM they leave the bedding bench heading southwest down the draw toward the soybean field". Shown as flow arrows on the trails that change as the slider moves.
+- Esau narrates it as a lesson: the one best spot to set up for this hour and weapon, why, how to walk in, and when to expect movement.
+Build split: the prediction maps and flow (food, bed, trail layers) come from the existing movement model and the deer-prediction thread's work; this thread adds a per-hour **direction-of-travel** step on top (bed to food in the morning, food to bed at dawn, travel along trail edges by hour and phase) and Esau's narration of the result. Other animals use the same pipeline with their own rules (turkey roost to strut zone, squirrel nut trees, ginseng habitat).
+Tests: flow direction flips between dawn, midday and dusk on a fixture; arrows follow trail cells; wind-cover cells are downwind-safe for the hunter's position.
+
+### A8. Esau's character: the great hunter
+Esau is the hunter of the old story: the skilled man of the field, rough, quick, at home in the open country, who came in from the hunt. The persona keeps that spirit (a master hunter and a patient teacher), never preachy, no scripture quoting. He speaks as someone who has lived the hunt and wants the newcomer to get the same thing. This is voice and heart, not content: the facts still come only from the source shelves above.
+
 ## Part B: Cleaner interface
 Today the map screen carries 8 buttons plus pills: Layers, Hours, Tools, Call, Basemap, Compass, Locate, (Offline hidden), the animal pill, GPS pill and accuracy readout.
 
@@ -47,7 +59,7 @@ Proposed (3 buttons plus one chip):
 - **Top-left chip**: the animal ("Whitetail"). Tap to switch species. The chip shows the chosen hour beside it.
 - **Hour slider bar, always on screen** (Quinn's request): a thin bar above the Tools button, always visible once an animal is chosen, never hidden behind a button. Dragging it moves the whole app to that hour: the movement overlay, Esau's read, and a live strip above the bar showing that hour's wind arrow and speed, temperature, and thermal state (rising, sinking, settled, pooling). The bar itself is tinted by thermal state across the day and marks sunrise, sunset and legal shooting light, so a beginner sees at a glance when air rises, when it sinks, and when it is legal to shoot. It reuses the existing hour store and thermal model. The bar is slim (about 40 px tall when idle) and see-through (about 55% opaque, blurred behind), growing to the full readout line only while the finger is on it.
 - **Animal chip dropdown**: a small list under the chip (eight animals, current one highlighted) with a Weapon row (rifle, bow, crossbow, muzzleloader). Replaces the full-screen picker.
-- **Read this area**: there is no analyze button today; the app reads the ground (about 1.6 by 1.5 miles) automatically around the hunter when an animal is picked. When the hunter pans away, a small "Read this area" pill appears at the top and re-reads the ground where the map is centered; otherwise it stays hidden. Tapping any spot still gives Esau's read of that spot.
+- **Analyze area**: a permanent labeled pill (see A7), and tapping any spot still gives Esau's read of that spot. The app still reads the ground automatically when an animal is picked.
 - **Right, one stack of two**: **Layers** (basemap choice moves inside the Layers sheet as a row at the top) and **My location**. Tapping My location centers; tapping again turns on the compass cone and bearing. No separate compass button.
 - **Bottom center**: **Tools** (Swiss-army icon). Calls, photos, saved, mark my location, measure, draw, tracker all live in it. The Call button goes inside Tools.
 - Status (GPS accuracy, elevation, "finding you") shows only as a thin line when something is wrong, and in the spot sheet otherwise.
