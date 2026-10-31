@@ -44,7 +44,8 @@ Each species file gets a "how a beginner finds it" section Esau teaches from, in
 Today the map screen carries 8 buttons plus pills: Layers, Hours, Tools, Call, Basemap, Compass, Locate, (Offline hidden), the animal pill, GPS pill and accuracy readout.
 
 Proposed (3 buttons plus one chip):
-- **Top-left chip**: animal and hour in one: "Whitetail · 6:40 AM". Tap the animal part to switch species; tap the time to open the hour slider as a thin strip at the bottom. This absorbs the Hours button and the HuntPill.
+- **Top-left chip**: the animal ("Whitetail"). Tap to switch species. The chip shows the chosen hour beside it.
+- **Hour slider bar, always on screen** (Quinn's request): a thin bar above the Tools button, always visible once an animal is chosen, never hidden behind a button. Dragging it moves the whole app to that hour: the movement overlay, Esau's read, and a live strip above the bar showing that hour's wind arrow and speed, temperature, and thermal state (rising, sinking, settled, pooling). The bar itself is tinted by thermal state across the day and marks sunrise, sunset and legal shooting light, so a beginner sees at a glance when air rises, when it sinks, and when it is legal to shoot. It reuses the existing hour store and thermal model.
 - **Right, one stack of two**: **Layers** (basemap choice moves inside the Layers sheet as a row at the top) and **My location**. Tapping My location centers; tapping again turns on the compass cone and bearing. No separate compass button.
 - **Bottom center**: **Tools** (Swiss-army icon). Calls, photos, saved, mark my location, measure, draw, tracker all live in it. The Call button goes inside Tools.
 - Status (GPS accuracy, elevation, "finding you") shows only as a thin line when something is wrong, and in the spot sheet otherwise.
@@ -52,7 +53,7 @@ Proposed (3 buttons plus one chip):
 - Visual: one corner radius, one shadow, white at 90% opacity, no text labels on buttons (icons plus accessible names), 44 px touch targets, same spacing everywhere.
 Result: from 8 buttons to 3 plus a chip; the map shows roughly the whole screen when nothing is open.
 
-Tests: existing UI tests updated; a screenshot test at phone size for the idle screen; check every removed control is reachable (Basemap in Layers, Calls in Tools, Hours via chip, Compass via My location).
+Tests: existing UI tests updated; a screenshot test at phone size for the idle screen; check every removed control is reachable (Basemap in Layers, Calls in Tools, Hours via the always-on slider bar, Compass via My location).
 
 ## Not in scope
 Other states than Kentucky; new species; offline Esau. Offline maps button stays parked as today.
