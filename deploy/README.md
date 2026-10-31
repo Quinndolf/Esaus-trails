@@ -67,6 +67,17 @@ curl -s http://127.0.0.1:8787/api/health      # {"ok":true,"esau":true} means th
 
 If HTTPS fails, check that the droplet's **Networking → Firewalls** page allows ports 80 and 443.
 
+## Taking it off the server
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Quinndolf/Esaus-trails/main/deploy/uninstall.sh | sudo bash
+```
+
+Removes only Esau's Trails: the API service, its nginx site, its certificate, `/opt/esaus-trails`,
+`/etc/esaus-trails` (including the saved Anthropic key), the sudoers line and the `esau` user.
+Other sites, nginx, certbot, swap and firewall rules stay. To see what it would remove first, run `curl -fsSL <same address> | sudo DRY_RUN=1 bash` (`DRY_RUN=1` goes right before `bash`).
+It ends by listing what was removed and what is still on the server. Revoke the Anthropic key at console.anthropic.com yourself.
+
 ## Where things live
 
 | Path | What |
