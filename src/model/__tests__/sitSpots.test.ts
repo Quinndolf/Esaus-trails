@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellCenter, yardsBetween, stepYards, bearingBetween, angleDiff, type LngLat } from '../geo';
 import type { Bed, Trail } from '../movement';
-import { topSitSpots } from '../sitSpots';
+import { SCENT_CONE_DEG, topSitSpots, UNSURE_BELOW } from '../sitSpots';
 import { BOX, makeGrid } from './fixtures';
 
 const grid = makeGrid(() => 250);
@@ -26,9 +26,10 @@ describe('top sit spots', () => {
     const bed: Bed = { lngLat: stepYards(mid(16, 16), 0, 130), score: 0.8, elevationFt: 800 };
     for (const wind of [0, 90, 180, 270]) {
       const { spots } = run({ beds: [bed], windFromDeg: () => wind });
+      expect(spots.length).toBeGreaterThan(0);
       for (const s of spots) {
         const toward = (wind + 180) % 360;
-        const inCone = angleDiff(bearingBetween(s.lngLat, bed.lngLat), toward) <= 42 && yardsBetween(s.lngLat, bed.lngLat) <= 150;
+        const inCone = angleDiff(bearingBetween(s.lngLat, bed.lngLat), toward) <= SCENT_CONE_DEG && yardsBetween(s.lngLat, bed.lngLat) <= 150;
         expect(inCone).toBe(false);
       }
     }
@@ -61,5 +62,38 @@ describe('top sit spots', () => {
     const toTrail = Math.min(...trail.coordinates.map((p) => angleDiff(bearingBetween(s.lngLat, p), s.watchBearingDeg)));
     expect(toTrail).toBeLessThan(25);
     expect(s.reason.length).toBeGreaterThan(10);
+  });
+
+  it('says it is not sure when the only traffic is faint', () => {
+    const faint: Trail = { ...trail, weight: 0.05 };
+    const r = topSitSpots({ grid, trails: [faint], beds: [], windFromDeg: () => 0, weapon: 'bow' });
+    expect(r.spots.length).toBeGreaterThan(0);
+    expect(r.unsure).toBe(true);
+    expect(run().unsure).toBe(false);
+    expect(UNSURE_BELOW).toBeGreaterThan(0);
+  });
+
+  it('honors max, including zero', () => {
+    expect(run({ max: 1 }).spots).toHaveLength(1);
+    expect(run({ max: 0 }).spots).toEqual([]);
+  });
+
+  it('prefers a seat beside the trail to one in line with it', () => {
+    const s = run().spots[0]!;
+    const nearest = trail.coordinates.reduce((m, p) => (yardsBetween(s.lngLat, p) < yardsBetween(s.lngLat, m) ? p : m));
+    const off = bearingBetween(nearest, s.lngLat);
+    const alongTrail = Math.min(angleDiff(off, 90), angleDiff(off, 270));
+    expect(alongTrail).toBeGreaterThan(30); // trail runs east-west
+  });
+
+  it('marks down an approach that blows scent over a bed', () => {
+    const bed: Bed = { lngLat: stepYards(mid(16, 16), 90, 400), score: 0.8, elevationFt: 800 };
+    const base = run({ beds: [bed], windFromDeg: () => 270 });
+    const withWalk = run({ beds: [bed], windFromDeg: () => 270, hunter: stepYards(bed.lngLat, 270, 100) });
+    expect(withWalk.spots[0]!.score).toBeLessThanOrEqual(base.spots[0]!.score);
+  });
+
+  it('keeps every bearing under 360', () => {
+    for (const s of run().spots) expect(s.watchBearingDeg).toBeLessThan(360);
   });
 });

@@ -10,7 +10,11 @@ import type { ElevationGrid } from './types';
 
 export type Weapon = 'bow' | 'crossbow' | 'pellet' | 'shotgun' | 'muzzleloader' | 'rifle';
 
-/** Where the weapon is best used, and the farthest it is worth trusting, in yards. */
+/**
+ * Where the weapon is best used, and the farthest it is worth trusting, in yards.
+ * Spots are placed at `ideal` from a trail point; `max` only limits which traffic counts
+ * (the pellet gun's working range is 40 yd, the squirrel rule, so that is its `max`).
+ */
 const RANGE: Record<Weapon, { ideal: number; max: number }> = {
   bow: { ideal: 20, max: 35 },
   crossbow: { ideal: 25, max: 45 },
@@ -25,6 +29,20 @@ export const SCENT_CONE_DEG = 62;
 /** A bed this close and downwind of the hunter is ruled out. */
 export const BED_BUST_YD = 150;
 const MIN_SPACING_YD = 100;
+/** Animals this close to the hunter are on top of the stand, not in range. */
+const TOO_CLOSE_YD = 8;
+/** Trail points closer than this are the same point for ranking; keeps the work small. */
+const THIN_YD = 25;
+/** Deer smelling the hunter still count a little, never a lot. */
+const SMELLED_FACTOR = 0.1;
+/** A bed within this distance is busted by a hunter even with the wind right. */
+const NEAR_BED_YD = 60;
+const NEAR_BED_FACTOR = 0.4;
+const ON_AXIS_FACTOR = 0.5;
+const ON_AXIS_DEG = 30;
+const APPROACH_FACTOR = 0.6;
+/** Best total traffic below this is "not sure": under half of one trail point at ideal range and full weight. */
+export const UNSURE_BELOW = 0.5;
 const BEARINGS = [0, 45, 90, 135, 180, 225, 270, 315];
 
 export interface SitSpot {
@@ -56,13 +74,13 @@ export interface SitSpotResult {
   unsure: boolean;
 }
 
-const WORD = (b: number) => cardinal(b);
-
 export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const { grid, trails, beds, weapon } = input;
   const { ideal, max: reach } = RANGE[weapon];
-  const points = trails.flatMap((t) => t.coordinates.map((p) => ({ p, w: t.weight })));
-  if (!points.length) return { spots: [], unsure: true };
+  const points = thin(trails);
+  const flat = trails.flatMap((t) => t.coordinates);
+  const limit = Math.max(0, Math.floor(input.max ?? 3));
+  if (!points.length || !limit) return { spots: [], unsure: true };
 
   const towardOf = (at: LngLat) => {
     const i = cellAt(grid, at);
@@ -87,19 +105,19 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
       for (const q of points) {
         const d = yardsBetween(at, q.p);
         if (d > reach) continue;
-        const quality = Math.max(0, 1 - Math.abs(d - ideal) / reach);
+        const quality = d < TOO_CLOSE_YD ? 0 : Math.max(0, 1 - Math.abs(d - ideal) / reach);
         // Deer whose nose is in your scent are not coming past.
         const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
-        const gain = q.w * quality * (smelled ? 0.1 : 1);
+        const gain = q.w * quality * (smelled ? SMELLED_FACTOR : 1);
         traffic += gain;
         if (gain > best.gain) best = { p: q.p, gain };
       }
       if (traffic <= 0) continue;
       // Too close to a bed busts it even with the wind right.
-      if (beds.some((bd) => yardsBetween(at, bd.lngLat) < 60)) traffic *= 0.4;
+      if (beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)) traffic *= NEAR_BED_FACTOR;
       // Straight down the trail's line is where deer walk at you; off to the side is a sit.
-      if (onTrailAxis(at, trails)) traffic *= 0.5;
-      if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= 0.6;
+      if (onTrailAxis(at, trails, flat)) traffic *= ON_AXIS_FACTOR;
+      if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= APPROACH_FACTOR;
       cands.push({ at, traffic, best, wind: (toward + 180) % 360 });
     }
   }
@@ -111,7 +129,7 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
   for (const c of cands) {
     if (picked.some((q) => yardsBetween(q.at, c.at) < MIN_SPACING_YD)) continue;
     picked.push(c);
-    if (picked.length === (input.max ?? 3)) break;
+    if (picked.length >= limit) break;
   }
   const spots = picked.map((c, k): SitSpot => {
     const watch = bearingBetween(c.at, c.best.p);
@@ -119,16 +137,33 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
     return {
       rank: k + 1,
       lngLat: c.at,
-      watchBearingDeg: Math.round(watch),
+      watchBearingDeg: Math.round(watch) % 360,
       score: c.traffic / top,
       yardsToTrail: yards,
-      reason: `Predicted trail ${yards} yd ${WORD(watch)}; wind from the ${WORD(c.wind)} carries your scent away from it.`,
+      reason: `Predicted trail ${yards} yd ${cardinal(watch)}; wind from the ${cardinal(c.wind)} carries your scent away from it.`,
     };
   });
-  return { spots, unsure: top < 0.5 };
+  return { spots, unsure: top < UNSURE_BELOW };
 }
 
-/** Walking in from `from`, does scent blow over a bed at any step? */
+/** Keep one point per THIN_YD of trail, so a dense line does not cost more than a sparse one. */
+function thin(trails: Trail[]): { p: LngLat; w: number }[] {
+  const out: { p: LngLat; w: number }[] = [];
+  for (const t of trails) {
+    let last: LngLat | null = null;
+    for (const p of t.coordinates) {
+      if (last && yardsBetween(last, p) < THIN_YD) continue;
+      out.push({ p, w: t.weight });
+      last = p;
+    }
+  }
+  return out;
+}
+
+/**
+ * Walking in from `from`, does scent blow over a bed at any step? An approximation: it uses the
+ * wind at the spot for the whole walk and samples every 25 yd, so a bed just off the path can slip by.
+ */
 function approachCrossesBed(from: LngLat, to: LngLat, toward: number, beds: Bed[]): boolean {
   const total = yardsBetween(from, to);
   const bearing = bearingBetween(from, to);
@@ -141,7 +176,7 @@ function approachCrossesBed(from: LngLat, to: LngLat, toward: number, beds: Bed[
 }
 
 /** True when `at` sits in line with the nearest stretch of trail, ahead of or behind it. */
-function onTrailAxis(at: LngLat, trails: Trail[]): boolean {
+function onTrailAxis(at: LngLat, trails: Trail[], flat: LngLat[]): boolean {
   let best: { d: number; axis: number } | null = null;
   for (const t of trails) {
     const c = t.coordinates;
@@ -155,7 +190,7 @@ function onTrailAxis(at: LngLat, trails: Trail[]): boolean {
     }
   }
   if (!best) return false;
-  const nearest = trails.flatMap((t) => t.coordinates).reduce((m, p) => (yardsBetween(at, p) < yardsBetween(at, m) ? p : m));
+  const nearest = flat.reduce((m, p) => (yardsBetween(at, p) < yardsBetween(at, m) ? p : m));
   const off = bearingBetween(nearest, at);
-  return Math.min(angleDiff(off, best.axis), angleDiff(off, (best.axis + 180) % 360)) <= 30;
+  return Math.min(angleDiff(off, best.axis), angleDiff(off, (best.axis + 180) % 360)) <= ON_AXIS_DEG;
 }
