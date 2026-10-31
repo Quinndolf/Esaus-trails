@@ -35,7 +35,7 @@ describe("vegetation from overhead data", () => {
     let url = "";
     const f = (async (u: string) => {
       url = u;
-      return new Response(png(8, 8, () => [200, 50, 60, 255]), { headers: { "content-type": "image/png" } });
+      return new Response(png(8, 8, () => [200, 50, 60, 255]) as unknown as BodyInit, { headers: { "content-type": "image/png" } });
     }) as unknown as typeof fetch;
     const g = await fetchGreenness({ west: -85.5, south: 37.5, east: -85.49, north: 37.51 }, f, 2, 2);
     expect(url).toMatch(/bandIds=3,0,1/);
