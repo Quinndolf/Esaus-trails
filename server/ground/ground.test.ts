@@ -118,6 +118,41 @@ describe("ground grid", () => {
       expect(g.elevationM.every((e) => e === 250)).toBe(true);
     });
 
+    const dep3 = (url: string, v: number | string) => {
+      const geom = JSON.parse(new URL(url).searchParams.get("geometry")!);
+      return new Response(JSON.stringify({ samples: geom.points.map((_: unknown, k: number) => ({ locationId: k, value: String(v) })) }));
+    };
+
+    it("prefers USGS 3DEP (10 m) when it answers, and says so", async () => {
+      clearGroundCache();
+      const urls: string[] = [];
+      const f = (async (input: string) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes("3DEPElevation")) return dep3(url, 301.5);
+        return other(url);
+      }) as typeof fetch;
+      const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g.elevationM.every((e) => e === 301.5)).toBe(true);
+      expect(g.notes!.join(" ")).toContain("3DEP");
+      expect(urls.some((u) => u.includes("open-meteo.com/v1/elevation"))).toBe(false);
+    });
+
+    it("falls back to the 90 m service when 3DEP is down or has no data", async () => {
+      for (const bad of ["down", "nodata"]) {
+        clearGroundCache();
+        const f = (async (input: string) => {
+          const url = String(input);
+          if (url.includes("3DEPElevation")) return bad === "down" ? new Response("down", { status: 503 }) : dep3(url, "NoData");
+          if (url.includes("/v1/elevation")) return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(260) }));
+          return other(url);
+        }) as typeof fetch;
+        const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(g.elevationM.every((e) => e === 260)).toBe(true);
+        expect(g.notes!.join(" ")).not.toContain("3DEP");
+      }
+    });
+
     it("falls back to a second elevation service when Open-Meteo keeps saying 429", async () => {
       clearGroundCache();
       const f = (async (input: string) => {

@@ -88,10 +88,22 @@ export interface ElevationOptions {
   retryDelayMs?: number;
 }
 
-async function elevationFrom(source: "open-meteo" | "opentopodata", chunks: { lat: number; lng: number }[][], f: Fetch, delay: number, deadline: number): Promise<number[]> {
+type ElevationSource = "3dep" | "open-meteo" | "opentopodata";
+
+async function elevationFrom(source: ElevationSource, chunks: { lat: number; lng: number }[][], f: Fetch, delay: number, deadline: number): Promise<number[]> {
   const tasks = chunks.map((chunk, n) => async () => {
     // Open Topo Data's public limit is about one call a second.
     if (source === "opentopodata" && n > 0 && delay > 0) await sleep(1100);
+    if (source === "3dep") {
+      // USGS 3DEP, 1/3 arc-second (about 10 m): sees the benches, saddles and draws a 90 m DEM smooths away. US only.
+      const geometry = JSON.stringify({ points: chunk.map((p) => [Number(p.lng.toFixed(6)), Number(p.lat.toFixed(6))]), spatialReference: { wkid: 4326 } });
+      const q = new URLSearchParams({ geometry, geometryType: "esriGeometryMultipoint", returnFirstValueOnly: "true", interpolation: "RSP_BilinearInterpolation", f: "json" });
+      const body = await getJsonRetry(f, `https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples?${q}`, delay, deadline);
+      const el = Array.isArray(body?.samples) ? body.samples.map((x: any) => Number(x?.value)) : null;
+      // "NoData" comes back as a string; any gap means the box is outside coverage, so the whole box falls back.
+      if (!el || el.length !== chunk.length || el.some((v: number) => !Number.isFinite(v))) throw new Error("3DEP elevation reply was malformed or had no data");
+      return el as number[];
+    }
     if (source === "open-meteo") {
       const lat = chunk.map((p) => p.lat.toFixed(5)).join(",");
       const lng = chunk.map((p) => p.lng.toFixed(5)).join(",");
@@ -105,21 +117,27 @@ async function elevationFrom(source: "open-meteo" | "opentopodata", chunks: { la
     if (!Array.isArray(el) || el.length !== chunk.length || el.some((v: unknown) => typeof v !== "number")) throw new Error("elevation reply was malformed");
     return el as number[];
   });
-  // Open-Meteo is per IP and shared by every hunter on this server: go gently.
-  return (await pool(tasks, source === "open-meteo" ? 3 : 1)).flat();
+  // Open-Meteo is per IP and shared by every hunter on this server: go gently. Open Topo Data allows one call a second.
+  return (await pool(tasks, source === "opentopodata" ? 1 : 3)).flat();
 }
 
-/** Elevation per cell: Open-Meteo (Copernicus DEM), retried on 429, then Open Topo Data (SRTM) as a second source. */
+/** Elevation per cell: USGS 3DEP (10 m) first, then Open-Meteo (Copernicus DEM), retried on 429, then Open Topo Data (SRTM) as a second source. */
 export async function fetchElevation(b: Bbox, f: Fetch = fetch, cols = GRID_SIZE, rows = cols, opts: ElevationOptions = {}): Promise<number[]> {
   return (await fetchElevationWithSource(b, f, cols, rows, opts)).values;
 }
 
-export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, rows: number, opts: ElevationOptions = {}): Promise<{ values: number[]; source: "open-meteo" | "opentopodata" }> {
+export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, rows: number, opts: ElevationOptions = {}): Promise<{ values: number[]; source: ElevationSource }> {
   const pts = cellCenters(b, cols, rows);
   const chunks: (typeof pts)[] = [];
   for (let i = 0; i < pts.length; i += 100) chunks.push(pts.slice(i, i + 100));
   const delay = opts.retryDelayMs ?? 1000;
   const deadline = Date.now() + (delay > 0 ? 20000 : 1e9);
+  try {
+    // One quick try, no long retries: if 3DEP is slow or has no data here, the 90 m services answer instead.
+    return { values: await elevationFrom("3dep", chunks, f, 0, Date.now() + 8000), source: "3dep" };
+  } catch {
+    // fall through to the global services
+  }
   try {
     return { values: await elevationFrom("open-meteo", chunks, f, delay, deadline), source: "open-meteo" };
   } catch (first) {
@@ -238,6 +256,7 @@ async function buildTerrain(b: Bbox, cols: number, rows: number, f: Fetch, retry
   let cacheable = true;
   const [elevationM, cover, crop, greenness] = await Promise.all([
     fetchElevationWithSource(b, f, cols, rows, { retryDelayMs }).then((r) => {
+      if (r.source === "3dep") demNote = "Elevation: USGS 3DEP, about 10 m, so benches, saddles and draws show.";
       if (r.source === "opentopodata") demNote = "Elevation: SRTM 30 m DEM via Open Topo Data (the main elevation service was busy), so small benches and creek banks can be smoothed out.";
       return r.values;
     }).catch((err) => {
