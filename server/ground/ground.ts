@@ -88,22 +88,66 @@ export interface ElevationOptions {
   retryDelayMs?: number;
 }
 
+
+/** Thrown when 3DEP could not be reached or errored (as opposed to answering "no data here"). */
+class DepUnavailable extends Error {}
+const DEP_TIMEOUT_MS = 4000;
+const DEP_BREAKER_MS = 60_000;
+let depDownUntil = 0;
+export function resetDepBreaker() {
+  depDownUntil = 0;
+}
+
+/**
+ * USGS 3DEP, 1/3 arc-second (about 10 m in the lower 48): sees the benches, saddles and draws a 90 m
+ * DEM smooths away. One quick POST per chunk (long point lists don't fit a GET), no retries.
+ */
+async function fetch3dep(f: Fetch, chunk: { lat: number; lng: number }[]): Promise<number[]> {
+  if (Date.now() < depDownUntil) throw new DepUnavailable("3DEP skipped: it failed a moment ago");
+  const body = new URLSearchParams({
+    geometry: JSON.stringify({ points: chunk.map((p) => [Number(p.lng.toFixed(6)), Number(p.lat.toFixed(6))]), spatialReference: { wkid: 4326 } }),
+    geometryType: "esriGeometryMultipoint",
+    returnFirstValueOnly: "true",
+    interpolation: "RSP_BilinearInterpolation",
+    f: "json",
+  });
+  let json: any;
+  try {
+    const res = await f("https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples", {
+      method: "POST",
+      headers: { "user-agent": "esaus-trails (hunting map)", "content-type": "application/x-www-form-urlencoded" },
+      body,
+      signal: AbortSignal.timeout(DEP_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`elevation.nationalmap.gov returned ${res.status}`);
+    json = await res.json();
+  } catch (err) {
+    depDownUntil = Date.now() + DEP_BREAKER_MS; // an outage costs one probe a minute, not a wait on every tap
+    throw new DepUnavailable(err instanceof Error ? err.message : "3DEP unreachable");
+  }
+  const out: number[] = new Array(chunk.length);
+  const seen = new Set<number>();
+  for (const sample of Array.isArray(json?.samples) ? json.samples : []) {
+    const id = Number(sample?.locationId);
+    const raw = sample?.value;
+    const v = typeof raw === "number" ? raw : typeof raw === "string" && raw.trim() !== "" ? Number(raw) : NaN;
+    // "NoData", blanks and fill values like -9999 all mean this box isn't covered: fall back as a whole.
+    if (!Number.isInteger(id) || id < 0 || id >= chunk.length || seen.has(id) || !Number.isFinite(v) || v < -100 || v > 6000)
+      throw new Error("3DEP elevation reply was malformed or had no data");
+    seen.add(id);
+    out[id] = v;
+  }
+  if (seen.size !== chunk.length) throw new Error("3DEP elevation reply was malformed or had no data");
+  return out;
+}
+
 type ElevationSource = "3dep" | "open-meteo" | "opentopodata";
 
 async function elevationFrom(source: ElevationSource, chunks: { lat: number; lng: number }[][], f: Fetch, delay: number, deadline: number): Promise<number[]> {
   const tasks = chunks.map((chunk, n) => async () => {
     // Open Topo Data's public limit is about one call a second.
     if (source === "opentopodata" && n > 0 && delay > 0) await sleep(1100);
-    if (source === "3dep") {
-      // USGS 3DEP, 1/3 arc-second (about 10 m): sees the benches, saddles and draws a 90 m DEM smooths away. US only.
-      const geometry = JSON.stringify({ points: chunk.map((p) => [Number(p.lng.toFixed(6)), Number(p.lat.toFixed(6))]), spatialReference: { wkid: 4326 } });
-      const q = new URLSearchParams({ geometry, geometryType: "esriGeometryMultipoint", returnFirstValueOnly: "true", interpolation: "RSP_BilinearInterpolation", f: "json" });
-      const body = await getJsonRetry(f, `https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples?${q}`, delay, deadline);
-      const el = Array.isArray(body?.samples) ? body.samples.map((x: any) => Number(x?.value)) : null;
-      // "NoData" comes back as a string; any gap means the box is outside coverage, so the whole box falls back.
-      if (!el || el.length !== chunk.length || el.some((v: number) => !Number.isFinite(v))) throw new Error("3DEP elevation reply was malformed or had no data");
-      return el as number[];
-    }
+    if (source === "3dep") return fetch3dep(f, chunk);
     if (source === "open-meteo") {
       const lat = chunk.map((p) => p.lat.toFixed(5)).join(",");
       const lng = chunk.map((p) => p.lng.toFixed(5)).join(",");
@@ -126,23 +170,24 @@ export async function fetchElevation(b: Bbox, f: Fetch = fetch, cols = GRID_SIZE
   return (await fetchElevationWithSource(b, f, cols, rows, opts)).values;
 }
 
-export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, rows: number, opts: ElevationOptions = {}): Promise<{ values: number[]; source: ElevationSource }> {
+export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, rows: number, opts: ElevationOptions = {}): Promise<{ values: number[]; source: ElevationSource; retryLater?: boolean }> {
   const pts = cellCenters(b, cols, rows);
   const chunks: (typeof pts)[] = [];
   for (let i = 0; i < pts.length; i += 100) chunks.push(pts.slice(i, i + 100));
   const delay = opts.retryDelayMs ?? 1000;
   const deadline = Date.now() + (delay > 0 ? 20000 : 1e9);
+  let retryLater = false;
   try {
-    // One quick try, no long retries: if 3DEP is slow or has no data here, the 90 m services answer instead.
     return { values: await elevationFrom("3dep", chunks, f, 0, Date.now() + 8000), source: "3dep" };
-  } catch {
-    // fall through to the global services
+  } catch (err) {
+    // A blip is worth retrying soon; genuine "no data here" can stay cached with the coarser DEM.
+    retryLater = err instanceof DepUnavailable;
   }
   try {
-    return { values: await elevationFrom("open-meteo", chunks, f, delay, deadline), source: "open-meteo" };
+    return { values: await elevationFrom("open-meteo", chunks, f, delay, deadline), source: "open-meteo", retryLater };
   } catch (first) {
     try {
-      return { values: await elevationFrom("opentopodata", chunks, f, delay, Date.now() + (delay > 0 ? 20000 : 1e9)), source: "opentopodata" };
+      return { values: await elevationFrom("opentopodata", chunks, f, delay, Date.now() + (delay > 0 ? 20000 : 1e9)), source: "opentopodata", retryLater };
     } catch {
       throw first;
     }
@@ -246,7 +291,7 @@ export interface GroundOptions {
   retryDelayMs?: number;
 }
 
-type Terrain = { elevationM: number[]; cover: number[]; crop: number[]; greenness?: number[]; notes: string[] };
+type Terrain = { elevationM: number[]; cover: number[]; crop: number[]; greenness?: number[]; notes: string[]; /** Set when the 10 m DEM was down: serve this coarser one only briefly. */ expiresAt?: number };
 // Simultaneous taps (and slider scrubs) on the same ground share one set of upstream calls.
 const terrainInFlight = new Map<string, Promise<{ terrain: Terrain; cacheable: boolean }>>();
 
@@ -254,8 +299,10 @@ async function buildTerrain(b: Bbox, cols: number, rows: number, f: Fetch, retry
   const notes: string[] = [];
   let demNote = "Elevation: Copernicus 90 m DEM via Open-Meteo, so small benches and creek banks can be smoothed out.";
   let cacheable = true;
+  let retryLater = false;
   const [elevationM, cover, crop, greenness] = await Promise.all([
     fetchElevationWithSource(b, f, cols, rows, { retryDelayMs }).then((r) => {
+      if (r.retryLater) retryLater = true;
       if (r.source === "3dep") demNote = "Elevation: USGS 3DEP, about 10 m, so benches, saddles and draws show.";
       if (r.source === "opentopodata") demNote = "Elevation: SRTM 30 m DEM via Open Topo Data (the main elevation service was busy), so small benches and creek banks can be smoothed out.";
       return r.values;
@@ -278,7 +325,8 @@ async function buildTerrain(b: Bbox, cols: number, rows: number, f: Fetch, retry
       return undefined;
     }),
   ]);
-  return { terrain: { elevationM, cover, crop, greenness, notes: [demNote, ...notes] }, cacheable };
+  // A 3DEP blip is not pinned for the life of the process; the coarser DEM is kept for a minute so a quiet Open-Meteo isn't hit on every tap.
+  return { terrain: { elevationM, cover, crop, greenness, notes: [demNote, ...notes], ...(retryLater && cacheable ? { expiresAt: Date.now() + DEP_BREAKER_MS } : {}) }, cacheable };
 }
 
 /** Grid over an exact box (the hour slider asks for the visible map). */
@@ -288,6 +336,10 @@ export async function buildGroundBbox(b: Bbox, cols: number, rows: number, opts:
   const key = [b.west, b.south, b.east, b.north].map((x) => x.toFixed(4)).join(",") + `/${cols}x${rows}`;
 
   let terrain = terrainCache.get(key);
+  if (terrain?.expiresAt && Date.now() > terrain.expiresAt) {
+    terrainCache.delete(key);
+    terrain = undefined;
+  }
   if (!terrain) {
     let building = terrainInFlight.get(key);
     if (!building) {
