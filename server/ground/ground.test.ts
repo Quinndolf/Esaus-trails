@@ -95,4 +95,68 @@ describe("ground grid", () => {
     expect(g.notes!.join(" ")).toContain("Land cover unavailable");
     expect(g.notes!.join(" ")).toContain("older cached forecast");
   });
+
+  describe("elevation rate limits", () => {
+    const times = Array.from({ length: 48 }, (_, i) => new Date(Date.UTC(2026, 10, 8) + i * 36e5).toISOString().slice(0, 16));
+    const forecast = async () => ({ source: "nws", hours: times.map((t) => ({ at: `${t}:00.000Z`, tempF: 40, windMph: 5, windFrom: 180 })) });
+    const now = new Date("2026-11-08T01:00:00Z");
+    const nCoords = (url: string) => new URL(url).searchParams.get("latitude")?.split(",").length ?? new URL(url).searchParams.get("locations")!.split("|").length;
+    const other = (url: string) => (url.includes("mrlc.gov") || url.includes("arcgis") || url.includes("usda") ? new Response("down", { status: 503 }) : new Response("nope", { status: 404 }));
+
+    it("retries a 429 from the elevation API instead of failing the tap", async () => {
+      clearGroundCache();
+      let hits = 0;
+      const f = (async (input: string) => {
+        const url = String(input);
+        if (url.includes("/v1/elevation")) {
+          if (++hits <= 3) return new Response("limit", { status: 429, headers: { "retry-after": "0" } });
+          return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(250) }));
+        }
+        return other(url);
+      }) as typeof fetch;
+      const g = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g.elevationM.every((e) => e === 250)).toBe(true);
+    });
+
+    it("falls back to a second elevation service when Open-Meteo keeps saying 429", async () => {
+      clearGroundCache();
+      const f = (async (input: string) => {
+        const url = String(input);
+        if (url.includes("open-meteo.com/v1/elevation")) return new Response("limit", { status: 429 });
+        if (url.includes("opentopodata")) return new Response(JSON.stringify({ status: "OK", results: Array.from({ length: nCoords(url) }, () => ({ elevation: 310 })) }));
+        return other(url);
+      }) as typeof fetch;
+      const g = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g.elevationM.every((e) => e === 310)).toBe(true);
+    });
+
+    it("still reads the spot, flat and with a note, when every elevation source is down, and does not cache that", async () => {
+      clearGroundCache();
+      let up = false;
+      const f = (async (input: string) => {
+        const url = String(input);
+        if (url.includes("/v1/elevation") && up) return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(222) }));
+        if (url.includes("/v1/elevation") || url.includes("opentopodata")) return new Response("limit", { status: 429 });
+        return other(url);
+      }) as typeof fetch;
+      const g = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g.elevationM).toHaveLength(1024);
+      expect(g.notes!.join(" ")).toContain("Elevation unavailable");
+      up = true;
+      const g2 = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g2.elevationM[0]).toBe(222);
+    });
+
+    it("shares one set of elevation calls between simultaneous taps on the same ground", async () => {
+      clearGroundCache();
+      let calls = 0;
+      const f = (async (input: string) => {
+        const url = String(input);
+        if (url.includes("/v1/elevation")) { calls++; return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(100) })); }
+        return other(url);
+      }) as typeof fetch;
+      await Promise.all([1, 2, 3].map(() => buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 })));
+      expect(calls).toBe(11);
+    });
+  });
 });
