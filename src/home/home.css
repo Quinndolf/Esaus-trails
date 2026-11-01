@@ -68,3 +68,5 @@
 .tool-call { display: flex; margin: 4px 0 12px; }
 .top-bar { top: calc(var(--safe-t) + 58px); }
 .hour-bar-head { flex-wrap: wrap; }
+.tutorial-actions .link-btn { min-width: 48px; min-height: 40px; padding: 8px 12px; }
+.mark-chip, .chip-item { min-height: 40px; }
