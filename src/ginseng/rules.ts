@@ -8,6 +8,7 @@
 export const GINSENG_SOURCES = {
   kar: '302 KAR 45:010, Kentucky Administrative Regulations. https://apps.legislature.ky.gov/law/kar/titles/302/045/010/',
   kda: 'Kentucky Department of Agriculture, Ginseng Program FAQ. https://www.kyagr.com/Content.aspx?PageId=410',
+  uk: 'University of Kentucky Cooperative Extension, FOR91 (habitat clues for medicinal forest plants). https://publications.ca.uky.edu/sites/publications.ca.uky.edu/files/FOR91.pdf',
   dbnf: 'WMKY, "Ginseng harvesting prohibited in Daniel Boone National Forest," 12 Oct 2023. https://www.wmky.org/2023-10-12/ginseng-harvesting-prohibited-in-daniel-boone-national-forest',
 } as const;
 

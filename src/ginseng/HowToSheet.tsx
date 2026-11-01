@@ -102,7 +102,7 @@ export function HowToSheet({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <p className="gs-foot">
-          Pictures are drawings unless a photo is shown with its credit. "Law" steps come from Kentucky's regulation; "field practice" is common digger habit, not law. Not legal
+          Pictures are drawings unless a photo is shown with its credit. "Law" steps come from Kentucky's regulation; "field practice" is common digger habit, not law; "habitat" steps are clues from University of Kentucky Extension, not proof a plant is there. Not legal
           advice: check the Department of Agriculture before you dig.
         </p>
       </div>

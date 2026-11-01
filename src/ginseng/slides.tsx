@@ -3,13 +3,15 @@ import type { ReactNode } from 'react';
 /**
  * "How to harvest ginseng": drawn, animated slides. They are illustrations, not photos, and the
  * steps marked "law" come from 302 KAR 45:010 and the Kentucky Department of Agriculture page
- * (see rules.ts). Steps marked "field practice" are common digger practice, not law.
+ * (see rules.ts). Steps marked "field practice" are common digger practice, not law. Steps marked
+ * "habitat" are where-to-look clues from University of Kentucky Extension FOR91 (see rules.ts); they are
+ * clues, never proof that a plant is there.
  */
 
 export interface Slide {
   id: string;
   title: string;
-  kind: 'law' | 'field practice';
+  kind: 'law' | 'field practice' | 'habitat';
   caption: string[];
   art: ReactNode;
 }
@@ -84,6 +86,108 @@ function Card({ x, title, line, children, delay }: { x: number; title: string; l
 }
 
 export const SLIDES: Slide[] = [
+  {
+    id: 'slope',
+    title: 'Look on the right slope',
+    kind: 'habitat',
+    caption: [
+      'Mid-slope and the base of a slope beat hilltops and ridges.',
+      'North- and east-facing slopes are cooler and moister, which is what ginseng likes.',
+      'Clue, not proof: good ground still has to hold a plant.',
+    ],
+    art: (
+      <svg viewBox="0 0 320 200" role="img" aria-label="A hillside: ridge top poor, mid-slope and base good, north face cooler">
+        <rect width="320" height="200" fill="var(--gs-card)" />
+        <path d="M0 170 L70 70 L130 60 L250 150 L320 170 L320 200 L0 200Z" fill="var(--gs-soil)" opacity="0.35" />
+        <path d="M70 70 L130 60" stroke="var(--gs-no)" strokeWidth="5" strokeLinecap="round" />
+        <path d="M150 85 L250 150" stroke={GREEN} strokeWidth="6" strokeLinecap="round" className="gs-rise" />
+        <Label x={100} y={50} size={11}>
+          Ridge: skip
+        </Label>
+        <Label x={235} y={176} size={11}>
+          Mid-slope and base
+        </Label>
+        <Label x={90} y={190} size={11}>
+          Face north or east
+        </Label>
+      </svg>
+    ),
+  },
+  {
+    id: 'shade',
+    title: 'Heavy shade, the right trees',
+    kind: 'habitat',
+    caption: [
+      'Ginseng likes deep shade, often close to 90 percent.',
+      'Dense tulip-poplar or black walnut shade works well.',
+      'It does well near sugar maple, which can supply calcium.',
+    ],
+    art: (
+      <svg viewBox="0 0 320 200" role="img" aria-label="Tall trees casting dense shade over the forest floor">
+        <rect width="320" height="200" fill="var(--gs-card)" />
+        <rect y="150" width="320" height="50" fill="var(--gs-soil)" opacity="0.35" />
+        {[60, 130, 200, 270].map((x, i) => (
+          <g key={x} className="gs-rise" style={{ ['--d' as string]: `${i * 0.25}s` }}>
+            <rect x={x - 4} y="80" width="8" height="75" fill="var(--gs-stem)" />
+            <circle cx={x} cy="62" r="34" fill={GREEN} opacity="0.85" />
+          </g>
+        ))}
+        <Label x={160} y={188} size={11}>
+          About 90 percent shade
+        </Label>
+      </svg>
+    ),
+  },
+  {
+    id: 'soil',
+    title: 'Moist but well-drained',
+    kind: 'habitat',
+    caption: [
+      'Look for moist, well-drained ground with plenty of leaf litter and organic matter.',
+      'Heavy clay and sandy soils do worse.',
+      'Ginseng also needs calcium, one reason sugar maple is a good neighbor.',
+    ],
+    art: (
+      <svg viewBox="0 0 320 200" role="img" aria-label="Dark leafy soil that drains, with water draining downhill">
+        <rect width="320" height="200" fill="var(--gs-card)" />
+        <rect y="110" width="320" height="90" fill="var(--gs-soil)" />
+        <rect y="100" width="320" height="14" fill="#5b4a2a" opacity="0.8" />
+        {[40, 100, 160, 220, 280].map((x, i) => (
+          <path key={x} className="gs-air" style={{ ['--d' as string]: `${i * 0.4}s` }} d={`M${x} 40v40`} stroke="var(--gs-hint)" strokeWidth="3" strokeLinecap="round" />
+        ))}
+        <Label x={160} y={30} size={11}>
+          Water moves through, it does not pool
+        </Label>
+        <Label x={160} y={160} size={11}>
+          Dark, crumbly, leafy
+        </Label>
+      </svg>
+    ),
+  },
+  {
+    id: 'companions',
+    title: 'Plants that grow with it',
+    kind: 'habitat',
+    caption: [
+      'If you see goldenseal, ginseng may be nearby. Mayapple and wild ginger grow in the same kind of woods.',
+      'These are neighbors worth a closer look, not proof. Count the prongs before you decide anything.',
+      'Remember the season and the land rules before you dig.',
+    ],
+    art: (
+      <svg viewBox="0 0 320 200" role="img" aria-label="Three woodland plants that often grow with ginseng">
+        <Card x={10} title="Goldenseal" line="May be near" delay={0}>
+          <g fill={GREEN}>{LEAF}</g>
+        </Card>
+        <Card x={114} title="Mayapple" line="Same woods" delay={0.3}>
+          <circle cy="-4" r="24" fill={GREEN} opacity="0.85" />
+          <rect x="-2" y="-4" width="4" height="30" fill="var(--gs-stem)" />
+        </Card>
+        <Card x={218} title="Wild ginger" line="Same woods" delay={0.6}>
+          <path d="M0 22c-30-6-30-40 0-40 30 0 30 34 0 40z" fill={GREEN} />
+        </Card>
+      </svg>
+    ),
+  },
   {
     id: 'legal',
     title: 'Check three things before you dig',
