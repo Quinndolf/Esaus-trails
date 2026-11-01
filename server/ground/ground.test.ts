@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PNG } from "pngjs";
-import { bboxAround, buildGround, cellCenters, clearGroundCache, coverFromPng, nlcdFromRgb, NLCD_COLORS } from "./ground";
+import { bboxAround, buildGround, resetDepBreaker, cellCenters, clearGroundCache, coverFromPng, nlcdFromRgb, NLCD_COLORS } from "./ground";
 
 function png(w: number, h: number, colorAt: (x: number, y: number) => [number, number, number, number]): Buffer {
   const img = new PNG({ width: w, height: h });
@@ -116,6 +116,101 @@ describe("ground grid", () => {
       }) as typeof fetch;
       const g = await buildGround(38, -85, { fetch: f, now, forecast, retryDelayMs: 0 });
       expect(g.elevationM.every((e) => e === 250)).toBe(true);
+    });
+
+    const geomOf = (init?: RequestInit) => JSON.parse(new URLSearchParams(String(init?.body)).get("geometry")!);
+    const dep3 = (init: RequestInit | undefined, v: number | string | ((k: number) => number | string)) =>
+      new Response(JSON.stringify({ samples: geomOf(init).points.map((_: unknown, k: number) => ({ locationId: k, value: String(typeof v === "function" ? v(k) : v) })) }));
+
+    it("prefers USGS 3DEP (10 m) when it answers, and says so", async () => {
+      clearGroundCache();
+      const urls: string[] = [];
+      const f = (async (input: string, init?: RequestInit) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes("3DEPElevation")) return dep3(init, 301.5);
+        return other(url);
+      }) as typeof fetch;
+      resetDepBreaker();
+      const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(g.elevationM.every((e) => e === 301.5)).toBe(true);
+      expect(g.notes!.join(" ")).toContain("3DEP");
+      expect(urls.some((u) => u.includes("open-meteo.com/v1/elevation"))).toBe(false);
+    });
+
+    it("sends points as lng,lat, keyed back by locationId even if the reply is shuffled", async () => {
+      clearGroundCache();
+      resetDepBreaker();
+      let first: number[] | null = null;
+      const f = (async (input: string, init?: RequestInit) => {
+        const url = String(input);
+        if (!url.includes("3DEPElevation")) return other(url);
+        const pts = geomOf(init).points as number[][];
+        first ??= pts[0]!;
+        const samples = pts.map((_, k) => ({ locationId: k, value: String(100 + k) })).reverse();
+        return new Response(JSON.stringify({ samples }));
+      }) as typeof fetch;
+      const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+      expect(first![0]).toBeLessThan(-80); // longitude first
+      expect(first![1]).toBeGreaterThan(30);
+      expect(g.elevationM[0]).toBe(100);
+      expect(g.elevationM[5]).toBe(105);
+    });
+
+    for (const [name, reply] of [
+      ["NoData", (init?: RequestInit) => dep3(init, "NoData")],
+      ["a blank value", (init?: RequestInit) => dep3(init, "")],
+      ["a fill value", (init?: RequestInit) => dep3(init, -9999)],
+      ["a gap in one sample", (init?: RequestInit) => dep3(init, (k) => (k === 7 ? "NoData" : 250))],
+    ] as const) {
+      it(`falls back to the 90 m service on ${name}, and keeps that answer cached`, async () => {
+        clearGroundCache();
+        resetDepBreaker();
+        let depCalls = 0;
+        const f = (async (input: string, init?: RequestInit) => {
+          const url = String(input);
+          if (url.includes("3DEPElevation")) { depCalls++; return reply(init); }
+          if (url.includes("/v1/elevation")) return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(260) }));
+          return other(url);
+        }) as typeof fetch;
+        const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(g.elevationM.every((e) => e === 260)).toBe(true);
+        expect(g.notes!.join(" ")).not.toContain("3DEP");
+        const calls = depCalls;
+        await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(depCalls).toBe(calls); // genuine no-data is cached, not re-asked
+      });
+    }
+
+    it("when 3DEP is down, falls back, does not hammer it, and retries 3DEP after a minute", async () => {
+      clearGroundCache();
+      resetDepBreaker();
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        vi.setSystemTime(new Date("2026-11-08T01:00:00Z"));
+        let depCalls = 0, meteoCalls = 0, depUp = false;
+        const f = (async (input: string, init?: RequestInit) => {
+          const url = String(input);
+          if (url.includes("3DEPElevation")) {
+            depCalls++;
+            return depUp ? dep3(init, 301) : new Response("down", { status: 503 });
+          }
+          if (url.includes("/v1/elevation")) { meteoCalls++; return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(260) })); }
+          return other(url);
+        }) as typeof fetch;
+        const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(g.elevationM.every((e) => e === 260)).toBe(true);
+        expect(depCalls).toBeLessThanOrEqual(3); // one failed round, no retries
+        await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(depCalls).toBeLessThanOrEqual(3);
+        expect(meteoCalls).toBe(11); // the coarse answer was kept briefly, not refetched
+        depUp = true;
+        vi.setSystemTime(new Date("2026-11-08T01:01:30Z"));
+        const again = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
+        expect(again.elevationM.every((e) => e === 301)).toBe(true); // 3DEP is back and wins
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("falls back to a second elevation service when Open-Meteo keeps saying 429", async () => {
