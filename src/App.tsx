@@ -9,7 +9,7 @@ import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
-import { EsauPanel, useEsau, useEsauMap } from './esau/ui';
+import { EsauPanel, registerAnalyzer, useEsau, useEsauMap } from './esau/ui';
 import { callsFor, CALL_GROUP_TITLE } from './calls/catalog';
 import {
   isAwaitingPinDrop,
@@ -75,6 +75,7 @@ export function App() {
 
   const heading = compass.heading ?? fix?.heading ?? null;
 
+  useEffect(() => registerAnalyzer(), []);
   useEffect(() => void usePhotoPins.getState().load(), []);
   usePhotoPinMarkers(map);
   useManualPinDrop(map);

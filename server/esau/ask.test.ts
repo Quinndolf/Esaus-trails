@@ -16,6 +16,7 @@ function fakeClient(reply: Record<string, unknown>) {
             usage: { input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 3000 },
             parsed_output: {
               say: "That bench is where I'd look for him.",
+              more: "Bucks bed with the wind at their back. That is why.",
               headline: "Bench bed",
               confidence: "fair",
               spotRole: "bedding",
@@ -48,13 +49,21 @@ describe("askClaude", () => {
     expect(r.wouldChangeMyMind).toHaveLength(3);
     expect(r.meta.inputTokens).toBe(3900);
   });
-  it("thinks harder when the hunter asks a question or sends a photo", async () => {
+  it("thinks harder when the hunter asks a question", async () => {
     const { client, calls } = fakeClient({});
     await askClaude(SAMPLE_SPOTS[5]!.query, { client });
-    await askClaude({ ...SAMPLE_SPOTS[0]!.query, photo: { image: { mediaType: "image/jpeg", base64: "AAAA" } } }, { client });
+    await askClaude({ ...SAMPLE_SPOTS[0]!.query, question: "Where do I sit?" }, { client });
     expect(calls[0].output_config.effort).toBe("medium");
     expect(calls[1].output_config.effort).toBe("medium");
-    expect(calls[1].messages[0].content[0].type).toBe("image");
+    expect(calls[1].messages[0].content[0].type).toBe("text");
+  });
+  it("moves sentences past the fourth behind Teach me more", async () => {
+    const { client } = fakeClient({
+      parsed_output: { say: "One. Two. Three. Four. Five.", more: "Six.", headline: "h", confidence: "fair", spotRole: "bedding", marks: [], wouldChangeMyMind: [] },
+    });
+    const r = await askClaude(SAMPLE_SPOTS[0]!.query, { client });
+    expect(r.say).toBe("One. Two. Three. Four.");
+    expect(r.more).toBe("Five. Six.");
   });
   it("answers a refusal in Esau's voice instead of throwing", async () => {
     const { client } = fakeClient({ stop_reason: "refusal", parsed_output: null });

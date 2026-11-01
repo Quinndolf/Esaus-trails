@@ -2,7 +2,6 @@ export * from './types';
 export { readPhotoMeta } from './exif';
 export { usePhotoPins, type AddPhotoOptions, type AddPhotoResult, type PinPatch } from './store';
 export { setPhotoUploader, httpUploader, type PhotoUploader } from './upload';
-export { buildEsauPhotoInput, type EsauPhotoInput } from './esauPhotoInput';
 export { usePhotoPinMarkers, useManualPinDrop, isAwaitingPinDrop, flyToPin } from './mapIntegration';
 export { usePhotoUrl } from './usePhotoUrl';
 export { AddPhotoButton, CameraIcon } from './components/AddPhotoButton';

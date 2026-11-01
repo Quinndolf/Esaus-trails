@@ -44,6 +44,8 @@ export interface GroundGrid {
   notes?: string[];
 }
 
+import type { Weapon } from "../model/sitSpots";
+
 export type PinKind = "food" | "water" | "bed" | "sign" | "stand" | "photo";
 
 /** A hunter-dropped pin. Food/water/bed pins override what the grid infers. */
@@ -67,6 +69,16 @@ export interface LatLng {
   lng: number;
 }
 
+export interface SitSpotQuery {
+  rank: number;
+  lat: number;
+  lng: number;
+  /** Which way to face: toward the predicted traffic. */
+  watchBearingDeg: number;
+  yardsToTrail: number;
+  reason: string;
+}
+
 /** What the app sends when the hunter taps a spot (or asks a follow-up). */
 export interface SpotQuery {
   species: SpeciesId;
@@ -77,31 +89,20 @@ export interface SpotQuery {
   grid: GroundGrid;
   /** Index into grid.weather.hours the hour slider points at. Defaults to 0. */
   hourIndex?: number;
-  pins?: Pin[];
   /** Names of map layers covering the spot ("Public access: Daniel Boone NF", "Private: J. Smith"). */
   layersHere?: string[];
+  /** What the hunter carries; drives range and the legal read. */
+  weapon?: Weapon;
+  /** Ranked sit spots predicted from the trail model, wind and the weapon's range. Predictions, not sign. */
+  sitSpots?: SitSpotQuery[];
+  /** True when the ground gave nothing strong to go on for sit spots. */
+  sitUnsure?: boolean;
   /** IANA zone for talking about clock time. Defaults to the device's zone. */
   timeZone?: string;
   /** The hunter's own words, if they asked something. */
   question?: string;
   /** Prior turns about this same spot, oldest first. */
   history?: { role: "hunter" | "esau"; text: string }[];
-  /** A photo the hunter attached (photo pins). Build it with `photoQuery` from the photo module's EsauPhotoInput. */
-  photo?: SpotPhoto;
-}
-
-export interface SpotPhoto {
-  /** Null when the image could not be read on this device (a HEIC on a non-Apple browser). */
-  image: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; base64: string } | null;
-  name?: string;
-  notes?: string;
-  tags?: string[];
-  takenAt?: string | null;
-  /** Compass heading the camera faced. */
-  headingDeg?: number | null;
-  altitudeM?: number | null;
-  /** "manual" means the hunter dropped the pin by hand, so the spot may be off. */
-  locationSource?: "exif" | "device-gps" | "manual";
 }
 
 /** Terrain read for one spot, all in hunter units (feet, yards, degrees). */
@@ -181,6 +182,8 @@ export interface EsauMark {
 export interface EsauReply {
   /** What Esau says, in his voice. */
   say: string;
+  /** The fuller lesson. The app shows it only after the hunter taps "Teach me more". */
+  more: string;
   /** One line for a map bubble or notification. */
   headline: string;
   confidence: "low" | "fair" | "good";

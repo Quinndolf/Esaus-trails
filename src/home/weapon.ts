@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { SpeciesId } from '../esau/types';
+import { useEsau } from '../esau/ui/store';
 
 export type Weapon = 'bow' | 'crossbow' | 'rifle' | 'muzzleloader' | 'shotgun' | 'pellet';
 
@@ -62,13 +63,15 @@ interface WeaponState {
 }
 
 /**
- * Bridge until the Esau brain's own `weapon` lands on useEsau; swap the reads here, not at the call sites.
+ * The picker's weapon. Mirrors into `useEsau.weapon`, which Esau's brain and the legal read use.
  */
 export const useWeapon = create<WeaponState>((set, get) => ({
   weapon: saved(),
   setWeapon(weapon) {
     persist(weapon);
     set({ weapon });
+    // Esau's brain reads the weapon from its own store; keep them in step.
+    if (useEsau.getState().weapon !== weapon) useEsau.getState().setWeapon(weapon);
   },
   ensureFor(species) {
     const ok = weaponsFor(species);
