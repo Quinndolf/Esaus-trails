@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEsau } from '../esau/ui/store';
 import { ANIMAL_ORDER, SHORT_NAME, WEAPON_NAME, chipLabel, useWeapon, weaponsFor } from './weapon';
 import type { SpeciesId } from '../esau/types';
@@ -15,6 +15,20 @@ export function AnimalChip() {
   const [step, setStep] = useState<'closed' | 'animal' | 'weapon'>('closed');
   const [pending, setPending] = useState<SpeciesId | null>(null);
 
+  const wrap = useRef<HTMLDivElement>(null);
+  // Tapping anywhere else (Tools, a sheet, the map) puts the list away.
+  useEffect(() => {
+    if (step === 'closed') return;
+    const away = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) {
+        setStep('closed');
+        setPending(null);
+      }
+    };
+    document.addEventListener('pointerdown', away, true);
+    return () => document.removeEventListener('pointerdown', away, true);
+  }, [step]);
+
   const close = () => {
     setStep('closed');
     setPending(null);
@@ -30,7 +44,7 @@ export function AnimalChip() {
   };
 
   return (
-    <div className="animal-chip-wrap">
+    <div className="animal-chip-wrap" ref={wrap}>
       <button
         className="chip"
         data-testid="animal-chip"
