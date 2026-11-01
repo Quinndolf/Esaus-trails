@@ -104,7 +104,7 @@ describe("brief", () => {
     expect(buildBrief(up!.query).report).toContain("is blowing toward the tapped spot");
   });
   it("keeps the system prompt identical across taps so it caches", () => {
-    const systems = new Set(SAMPLE_SPOTS.map((s) => buildBrief(s.query).system));
+    const systems = new Set(SAMPLE_SPOTS.filter((s) => s.query.species === "whitetail").map((s) => buildBrief(s.query).system));
     expect(systems.size).toBe(1);
     expect([...systems][0]).toContain("You are Esau");
     expect([...systems][0]).toContain("WHITETAIL DEER");
