@@ -12,7 +12,8 @@
     "esau:spots": "tsx --env-file-if-exists=.env server/esau/sample-spots.ts",
     "typecheck:server": "tsc -p server/esau/tsconfig.json",
     "calls:fetch": "node scripts/fetch-calls.mjs",
-    "ginseng:photos": "node scripts/fetch-ginseng-photos.mjs"
+    "ginseng:photos": "node scripts/fetch-ginseng-photos.mjs",
+    "preview:shots": "node scripts/preview/shoot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
