@@ -118,9 +118,16 @@ describe("ground grid", () => {
       expect(g.elevationM.every((e) => e === 250)).toBe(true);
     });
 
-    const geomOf = (init?: RequestInit) => JSON.parse(new URLSearchParams(String(init?.body)).get("geometry")!);
-    const dep3 = (init: RequestInit | undefined, v: number | string | ((k: number) => number | string)) =>
-      new Response(JSON.stringify({ samples: geomOf(init).points.map((_: unknown, k: number) => ({ locationId: k, value: String(typeof v === "function" ? v(k) : v) })) }));
+    // A tiled float32 GeoTIFF like 3DEP's exportImage returns: 128-pixel tiles, row-major, north-west first.
+    const tiff = (v: number | ((r: number, c: number) => number), cols = 128, rows = 102) => {
+      const tile = 128, data = 8 + 12 * 12 + 4;
+      const buf = Buffer.alloc(data + tile * tile * 4);
+      buf.write("II", 0, "latin1"); buf.writeUInt16LE(42, 2); buf.writeUInt32LE(8, 4); buf.writeUInt16LE(12, 8);
+      const tags: [number, number, number][] = [[256, 3, cols], [257, 3, rows], [258, 3, 32], [259, 3, 1], [262, 3, 1], [277, 3, 1], [322, 3, tile], [323, 3, tile], [324, 4, data], [325, 4, tile * tile * 4], [339, 3, 3], [284, 3, 1]];
+      tags.forEach(([t, ty, val], i) => { const e = 10 + i * 12; buf.writeUInt16LE(t, e); buf.writeUInt16LE(ty, e + 2); buf.writeUInt32LE(1, e + 4); buf.writeUInt32LE(val, e + 8); });
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) buf.writeFloatLE(typeof v === "function" ? v(r, c) : v, data + (r * tile + c) * 4);
+      return new Response(buf, { headers: { "content-type": "image/tiff" } });
+    };
 
     it("prefers USGS 3DEP (10 m) when it answers, and says so", async () => {
       clearGroundCache();
@@ -128,7 +135,7 @@ describe("ground grid", () => {
       const f = (async (input: string, init?: RequestInit) => {
         const url = String(input);
         urls.push(url);
-        if (url.includes("3DEPElevation")) return dep3(init, 301.5);
+        if (url.includes("3DEPElevation")) return tiff(301.5);
         return other(url);
       }) as typeof fetch;
       resetDepBreaker();
@@ -138,30 +145,37 @@ describe("ground grid", () => {
       expect(urls.some((u) => u.includes("open-meteo.com/v1/elevation"))).toBe(false);
     });
 
-    it("sends points as lng,lat, keyed back by locationId even if the reply is shuffled", async () => {
+    it("asks for the grid's own box and size, and reads rows north to south", async () => {
       clearGroundCache();
       resetDepBreaker();
-      let first: number[] | null = null;
-      const f = (async (input: string, init?: RequestInit) => {
+      let asked: URL | null = null;
+      const f = (async (input: string) => {
         const url = String(input);
         if (!url.includes("3DEPElevation")) return other(url);
-        const pts = geomOf(init).points as number[][];
-        first ??= pts[0]!;
-        const samples = pts.map((_, k) => ({ locationId: k, value: String(100 + k) })).reverse();
-        return new Response(JSON.stringify({ samples }));
+        asked = new URL(url);
+        const [w, h] = asked!.searchParams.get("size")!.split(",").map(Number);
+        return tiff((r, c) => 100 + Math.floor((r * 32) / h) * 10 + Math.floor((c * 32) / w), w, h);
       }) as typeof fetch;
       const g = await buildGround(37.1, -85.7, { fetch: f, now, forecast, retryDelayMs: 0 });
-      expect(first![0]).toBeLessThan(-80); // longitude first
-      expect(first![1]).toBeGreaterThan(30);
-      expect(g.elevationM[0]).toBe(100);
-      expect(g.elevationM[5]).toBe(105);
+      const [w, s, e, n] = asked!.searchParams.get("bbox")!.split(",").map(Number);
+      expect(w).toBeLessThan(-85.7);
+      expect(e).toBeGreaterThan(-85.7);
+      expect(s).toBeLessThan(37.1);
+      expect(n).toBeGreaterThan(37.1);
+      // ArcGIS widens the extent unless the pixels keep the box's shape, so the size must follow the box, not 32 x 32.
+      const [sw, sh] = asked!.searchParams.get("size")!.split(",").map(Number);
+      expect(sw / sh).toBeCloseTo((e! - w!) / (n! - s!), 1);
+      expect(asked!.searchParams.get("pixelType")).toBe("F32");
+      expect(g.elevationM[0]).toBeCloseTo(100, 0);
+      expect(g.elevationM[5]).toBeCloseTo(105, 0);
+      expect(g.elevationM[32]).toBeGreaterThan(g.elevationM[0]! + 5); // second row is one step south, not shuffled
     });
 
     for (const [name, reply] of [
-      ["NoData", (init?: RequestInit) => dep3(init, "NoData")],
-      ["a blank value", (init?: RequestInit) => dep3(init, "")],
-      ["a fill value", (init?: RequestInit) => dep3(init, -9999)],
-      ["a gap in one sample", (init?: RequestInit) => dep3(init, (k) => (k === 7 ? "NoData" : 250))],
+      ["NaN", () => tiff(NaN)],
+      ["a fill value", () => tiff(-9999)],
+      ["a gap in one cell", () => tiff((r, c) => (r === 3 && c === 7 ? -9999 : 250))],
+      ["a JSON error body", () => new Response(JSON.stringify({ error: { code: 400 } }))],
     ] as const) {
       it(`falls back to the 90 m service on ${name}, and keeps that answer cached`, async () => {
         clearGroundCache();
@@ -169,7 +183,7 @@ describe("ground grid", () => {
         let depCalls = 0;
         const f = (async (input: string, init?: RequestInit) => {
           const url = String(input);
-          if (url.includes("3DEPElevation")) { depCalls++; return reply(init); }
+          if (url.includes("3DEPElevation")) { depCalls++; return reply(); }
           if (url.includes("/v1/elevation")) return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(260) }));
           return other(url);
         }) as typeof fetch;
@@ -193,7 +207,7 @@ describe("ground grid", () => {
           const url = String(input);
           if (url.includes("3DEPElevation")) {
             depCalls++;
-            return depUp ? dep3(init, 301) : new Response("down", { status: 503 });
+            return depUp ? tiff(301) : new Response("down", { status: 503 });
           }
           if (url.includes("/v1/elevation")) { meteoCalls++; return new Response(JSON.stringify({ elevation: Array(nCoords(url)).fill(260) })); }
           return other(url);
