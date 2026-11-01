@@ -3,6 +3,7 @@ import type { HourConditions } from '../model/conditions';
 import type { MovementHour } from '../model/movement';
 import type { Plume } from '../model/scent';
 import { ThermalState, type ElevationGrid } from '../model/types';
+import { thermalRgba } from '../home/shade';
 
 /**
  * Turns one hour of the model into things MapLibre can draw: small RGBA images
@@ -12,21 +13,11 @@ import { ThermalState, type ElevationGrid } from '../model/types';
 
 export type Rgba = [number, number, number];
 
-// Rising is warm, sinking cool, pooling deep blue: the prototype's palette.
-const THERMAL_RGB: Record<ThermalState, Rgba> = {
-  [ThermalState.Settled]: [0, 0, 0],
-  [ThermalState.Rising]: [255, 138, 40],
-  [ThermalState.Sinking]: [70, 160, 255],
-  [ThermalState.Pooling]: [40, 70, 210],
-};
-
 export function thermalPixels(hc: HourConditions): Uint8ClampedArray {
   const n = hc.thermal.state.length;
   const px = new Uint8ClampedArray(n * 4);
   for (let i = 0; i < n; i++) {
-    const st = hc.thermal.state[i] as ThermalState;
-    const [r, g, b] = THERMAL_RGB[st];
-    px.set([r, g, b, st === ThermalState.Settled ? 0 : Math.round(70 + 170 * hc.thermal.strength[i])], i * 4);
+    px.set(thermalRgba(hc.thermal.state[i] as ThermalState, hc.thermal.strength[i], hc.weather.windMph), i * 4);
   }
   return px;
 }

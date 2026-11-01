@@ -1,0 +1,70 @@
+/* Clean map screen: light, frosted, 40px controls. */
+:root {
+  --frost: rgba(255, 255, 255, 0.86);
+  --frost-ink: #1c2a1f;
+  --frost-muted: #5b6b5f;
+  --frost-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+}
+.frost-btn, .chip, .pill-btn {
+  background: var(--frost);
+  color: var(--frost-ink);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--frost-shadow);
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.frost-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
+.frost-btn svg { width: 22px; height: 22px; }
+.frost-btn.is-on { color: var(--blue); }
+.frost-btn:active { transform: scale(0.95); }
+
+.home-stack { position: absolute; right: 12px; bottom: calc(var(--safe-b) + 84px); display: flex; flex-direction: column; gap: 10px; z-index: 4; }
+.tools-btn { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-b) + 84px); width: 48px; height: 48px; z-index: 4; }
+.tools-btn:active { transform: translateX(-50%) scale(0.95); }
+.analyze-pill { position: absolute; left: 12px; bottom: calc(var(--safe-b) + 88px); height: 40px; padding: 0 16px; border-radius: 20px; font-weight: 600; font-size: 14px; z-index: 4; }
+.analyze-pill:disabled { opacity: 0.6; }
+
+.animal-chip-wrap { position: absolute; top: calc(var(--safe-t) + 10px); left: 12px; z-index: 5; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.chip { height: 40px; padding: 0 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+.chip-list { background: var(--frost); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: var(--frost-ink); border-radius: 16px;
+  box-shadow: var(--frost-shadow); max-height: 46vh; overflow-y: auto; min-width: 190px; padding: 6px; }
+.chip-q { margin: 6px 10px; font-size: 13px; color: var(--frost-muted); }
+.chip-item { display: block; width: 100%; text-align: left; height: 40px; padding: 0 12px; border: none; background: transparent; border-radius: 10px;
+  font: inherit; font-size: 15px; color: var(--frost-ink); cursor: pointer; }
+.chip-item.is-active { background: rgba(47, 140, 255, 0.14); font-weight: 700; }
+
+.pill-btn { height: 40px; padding: 0 18px; border-radius: 20px; font-weight: 700; }
+
+.hour-bar { position: absolute; left: 10px; right: 10px; bottom: calc(var(--safe-b) + 8px); z-index: 10; max-width: 560px; margin: 0 auto;
+  background: rgba(255, 255, 255, 0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--frost-ink);
+  border-radius: 14px; padding: 6px 10px 4px; box-shadow: var(--frost-shadow); }
+.hour-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; min-height: 18px; }
+.hour-bar-head > span { flex: 1; min-width: 0; }
+.hour-bar-head strong { font-variant-numeric: tabular-nums; }
+.hour-bar-head span { color: var(--frost-muted); font-variant-numeric: tabular-nums; text-align: right; }
+.hour-bar-head .link-btn { color: var(--blue); padding: 0; }
+.hour-bar-track { position: relative; height: 26px; margin-top: 2px; }
+.hour-bar-track .seg { position: absolute; top: 9px; height: 8px; border-radius: 2px; }
+.hour-bar-track .legal { position: absolute; top: 20px; height: 3px; background: rgba(40, 140, 70, 0.8); border-radius: 2px; }
+.hour-bar-track .mark { position: absolute; top: 5px; width: 2px; height: 16px; background: #e0a020; }
+.hour-bar-slider { position: absolute; inset: 0; width: 100%; height: 26px; margin: 0; background: transparent; accent-color: #1c2a1f; touch-action: pan-x; }
+
+.app.has-hour-bar .esau-panel { bottom: calc(var(--safe-b) + 66px); }
+
+.status-line { background: var(--frost); color: #b3361a; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; box-shadow: var(--frost-shadow); }
+
+.tutorial { position: fixed; inset: 0; z-index: 40; background: rgba(10, 13, 8, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.tutorial-card { background: #fff; color: var(--frost-ink); border-radius: 18px; padding: 20px; max-width: 360px; width: 100%; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+.tutorial-card h2 { margin: 4px 0 6px; font-size: 20px; }
+.tutorial-card p { margin: 0 0 14px; color: var(--frost-muted); line-height: 1.4; }
+.tutorial-card small { color: var(--frost-muted); }
+.tutorial-card .text-input { background: #f1f4ef; color: var(--frost-ink); border-color: #d5dcd2; margin-bottom: 8px; }
+.tutorial-card .hint { color: var(--frost-muted); }
+.tutorial-actions { display: flex; justify-content: space-between; align-items: center; }
+.tutorial-actions .link-btn { color: var(--frost-muted); padding: 8px 0; }
+.tutorial-actions .pill-btn { background: #1c2a1f; color: #fff; box-shadow: none; }
+.tool-call { display: flex; margin: 4px 0 12px; }
+.top-bar { top: calc(var(--safe-t) + 58px); }
+.hour-bar-head { flex-wrap: wrap; }

@@ -1,4 +1,5 @@
 import { useTools } from '../tools/store';
+import { CallButton } from '../calls/CallButton';
 import { BottomSheet } from './BottomSheet';
 
 interface Props {
@@ -11,10 +12,12 @@ interface Props {
   /** Animal-specific tiles show only when the hunted animal has them (calls). */
   hasCalls: boolean;
   callsHint: string;
+  /** Opens the "Did you snag anything?" question. */
+  onDone: () => void;
 }
 
 /** The Swiss-army knife: every map tool in one sheet. */
-export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, hasCalls, callsHint }: Props) {
+export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, hasCalls, callsHint, onDone }: Props) {
   const setMode = useTools((s) => s.setMode);
   const recording = useTools((s) => s.recording);
   const startTrack = useTools((s) => s.startTrack);
@@ -38,10 +41,16 @@ export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, o
     recording
       ? { id: 'track', name: 'Stop tracker', hint: 'Save the route', run: pick(() => void stopTrack()), live: true }
       : { id: 'track', name: 'Tracker', hint: 'Record your route', run: pick(startTrack) },
+    { id: 'done', name: 'Done hunting', hint: 'Did you snag anything?', run: pick(onDone) },
   ];
 
   return (
     <BottomSheet title="Tools" open={open} onClose={onClose}>
+      {hasCalls && (
+        <div className="tool-call">
+          <CallButton />
+        </div>
+      )}
       <div className="tool-grid">
         {tools.map((t) => (
           <button

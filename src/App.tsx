@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
-import { BASEMAP_LABELS, nextBasemap, type BasemapId } from './map/basemaps';
-import { cardinal, metersToFeet, type LngLat } from './map/geo';
+import type { BasemapId } from './map/basemaps';
+import { cardinal, type LngLat } from './map/geo';
 import { ALL_LAYERS, foldersFor, scopeLayerState } from './layers/registry';
 import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
@@ -9,7 +9,7 @@ import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
 import { lastKnownFix, useGeolocation } from './map/useGeolocation';
 import { useHeading } from './map/useHeading';
-import { EsauPanel, HuntPill, SpeciesPicker, registerAnalyzer, useEsau, useEsauMap } from './esau/ui';
+import { EsauPanel, registerAnalyzer, useEsau, useEsauMap } from './esau/ui';
 import { callsFor, CALL_GROUP_TITLE } from './calls/catalog';
 import {
   isAwaitingPinDrop,
@@ -21,26 +21,29 @@ import {
   usePhotoPinMarkers,
   usePhotoPins,
 } from './photos';
-import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
-import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
-import { CallButton } from './calls/CallButton';
+import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools } from './tools';
+import { CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, ToolsIcon } from './ui/icons';
 import { CallsSheet } from './calls/CallsSheet';
 import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
-import { HourButton, HourPanel } from './hour/HourPanel';
 import { hourScope } from './hour/scope';
 import { bboxAround } from './hour/ground';
 import { useHour } from './hour/store';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
+import { AnalyzePill } from './home/AnalyzePill';
+import { AnimalChip } from './home/AnimalChip';
+import { ExitPrompt } from './home/ExitPrompt';
+import { HourBar } from './home/HourBar';
+import { nextLocation } from './home/location';
+import { Tutorial } from './home/Tutorial';
+import { useWeapon } from './home/weapon';
+import './home/home.css';
 
 // Opens on the hunter's last fix; first launch falls back to central Kentucky, where the prototype started.
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
-
-// The offline-download button is parked for now (satellite coverage is fine where we hunt). Flip to bring it back.
-const SHOW_OFFLINE = false;
 
 type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null;
 
@@ -159,19 +162,49 @@ export function App() {
     }
   }, []);
 
-  async function toggleCompass() {
-    if (mode === 'compass') {
-      setMode('follow');
-      return;
-    }
-    await compass.start();
-    setMode('compass');
+  async function onLocation() {
+    const next = nextLocation(mode);
+    if (next === 'compass') await compass.start();
+    setMode(next);
   }
 
   const onUserMove = useCallback(() => setMode((m) => (m === 'follow' ? 'free' : m)), []);
 
+  // Ask "Did you snag anything?" when the hunter comes back after leaving the app, or stops the tracker.
+  const [exitOpen, setExitOpen] = useState(false);
+  const recording = useTools((s) => s.recording != null);
+  const wasRecording = useRef(false);
+  useEffect(() => {
+    if (wasRecording.current && !recording) setExitOpen(true);
+    wasRecording.current = recording;
+  }, [recording]);
+  useEffect(() => {
+    const opened = Date.now();
+    let left = false;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') left = Date.now() - opened > 10 * 60e3 && useEsau.getState().species != null;
+      else if (left) {
+        left = false;
+        setExitOpen(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Keep the weapon legal for the animal.
+  useEffect(() => useWeapon.getState().ensureFor(species), [species]);
+
+  const hasHourBar = hourWanted;
+  const problems = [
+    gps === 'denied' && 'Location is off. Allow it in your browser settings.',
+    gps === 'unavailable' && "Can't get a GPS fix.",
+    mode === 'compass' && compass.status === 'denied' && 'Compass access was denied.',
+    notice,
+  ].filter((m): m is string => !!m);
+
   return (
-    <div className="app">
+    <div className={`app ${hasHourBar ? 'has-hour-bar' : ''}`}>
       <MapView
         basemap={basemap}
         fix={fix}
@@ -183,69 +216,43 @@ export function App() {
         onUserMove={onUserMove}
       />
 
+      <AnimalChip />
+
       <div className="top-bar">
         {mode === 'compass' && (
           <div className="bearing-pill" data-testid="bearing">
             {heading == null ? 'Finding heading…' : `${Math.round(heading)}° ${cardinal(heading)}`}
           </div>
         )}
-        <HuntPill />
         <GinsengPill map={map} />
-        {notice && <div className="status-pill warn">{notice}</div>}
-        {gps === 'denied' && <div className="status-pill warn">Location is off. Allow it in your browser settings.</div>}
-        {gps === 'unavailable' && <div className="status-pill warn">Can't get a GPS fix.</div>}
-        {gps === 'waiting' && <div className="status-pill">Finding you…</div>}
-        {mode === 'compass' && compass.status === 'denied' && <div className="status-pill warn">Compass access was denied.</div>}
-        {fix && gps === 'tracking' && (
-          <div className="status-pill subtle" data-testid="gps-readout">
-            ±{Math.round(metersToFeet(fix.accuracy))} ft
-            {fix.altitude != null && ` · ${Math.round(metersToFeet(fix.altitude)).toLocaleString()} ft elev`}
+        {problems.map((m) => (
+          <div key={m} className="status-line" data-testid="status-line">
+            {m}
           </div>
-        )}
+        ))}
       </div>
 
-      <div className="controls left">
-        <button className="fab labeled" onClick={() => setSheet('layers')} aria-label="Map Layers">
-          <LayersIcon />
-          <span>Layers</span>
-        </button>
-        {SHOW_OFFLINE && (
-          <button className="fab labeled" onClick={() => setSheet('offline')} aria-label="Download maps for offline use">
-            <OfflineIcon />
-            <span>Save maps</span>
-          </button>
-        )}
-        <HourButton map={map} />
-      </div>
+      <AnalyzePill map={map} />
 
-      <button className="fab tools-fab" onClick={() => setSheet('tools')} aria-label="Tools">
+      <button className="frost-btn tools-btn" onClick={() => setSheet('tools')} aria-label="Tools">
         <ToolsIcon />
       </button>
 
-      <div className="controls right">
-        <CallButton />
-        <button className="fab labeled" onClick={() => setBasemap(nextBasemap(basemap))} aria-label={`Basemap: ${BASEMAP_LABELS[basemap]}`}>
-          <BasemapIcon />
-          <span data-testid="basemap-label">{BASEMAP_LABELS[basemap]}</span>
+      <div className="home-stack">
+        <button className="frost-btn" onClick={() => setSheet('layers')} aria-label="Map Layers">
+          <LayersIcon />
         </button>
         <button
-          className={`fab ${mode === 'compass' ? 'is-on' : ''}`}
-          onClick={toggleCompass}
-          aria-label="Compass mode"
-          aria-pressed={mode === 'compass'}
+          className={`frost-btn ${mode !== 'free' ? 'is-on' : ''}`}
+          onClick={() => void onLocation()}
+          aria-label={mode === 'follow' ? 'My location. Tap for compass' : mode === 'compass' ? 'Compass on. Tap to turn off' : 'My location'}
+          aria-pressed={mode !== 'free'}
         >
-          <CompassIcon />
-        </button>
-        <button
-          className={`fab ${mode !== 'free' ? 'is-on' : ''}`}
-          onClick={() => setMode((m) => (m === 'free' ? 'follow' : m))}
-          aria-label="Center on me"
-        >
-          {mode === 'free' ? <LocateIcon /> : <LocateFilledIcon />}
+          {mode === 'compass' ? <CompassIcon /> : mode === 'free' ? <LocateIcon /> : <LocateFilledIcon />}
         </button>
       </div>
 
-      <HourPanel map={map} hunter={fix?.lngLat ?? null} />
+      <HourBar map={map} hunter={fix?.lngLat ?? null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}
@@ -255,6 +262,7 @@ export function App() {
         state={layers.state}
         onToggle={layers.toggle}
         onOptions={layers.setOptions}
+        onDownload={() => setSheet('offline')}
       />
       <OfflineSheet open={sheet === 'offline'} onClose={() => setSheet(null)} map={map} basemap={basemap} overlays={offlineLayers} />
       <ToolsSheet
@@ -266,6 +274,7 @@ export function App() {
         hasCalls={callsFor(species).length > 0}
         callsHint={callsFor(species).length ? `${CALL_GROUP_TITLE[callsFor(species)[0].species]} calls: how to, credits` : ''}
         onMarkLocation={() => void markMyLocation()}
+        onDone={() => setExitOpen(true)}
       />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
@@ -278,7 +287,8 @@ export function App() {
       <PhotoPinSheet />
       <EsauPanel />
       <ManualPinPrompt />
-      <SpeciesPicker />
+      <Tutorial />
+      <ExitPrompt open={exitOpen} onClose={() => setExitOpen(false)} />
     </div>
   );
 }
