@@ -21,7 +21,11 @@ function addGeoJSON(map: MLMap, id: string, layer: LayerDef, picked: string[] | 
   if (layer.source.kind !== 'geojson') return;
   const { load, property, colors, dashed } = layer.source;
   map.addSource(id, { type: 'geojson', data: EMPTY, attribution: layer.attribution });
-  load().then((data) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data));
+  load()
+    .then((data) => (map.getSource(id) as GeoJSONSource | undefined)?.setData(data))
+    .catch(() => {
+      /* the layer's data did not load; it stays empty rather than throwing */
+    });
 
   const ids = new Set(activeOptionIds(layer, picked));
   const values = layer.options?.filter((o) => ids.has(o.id) && o.value != null).map((o) => o.value as string | number);

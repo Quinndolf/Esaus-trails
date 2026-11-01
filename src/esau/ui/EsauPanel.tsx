@@ -141,8 +141,7 @@ export function EsauPanel() {
               </p>
             )}
             <p className="esau-meta">
-              {offline ? 'Short read without service' : `Esau's read for ${replyHourLabel}`}
-              {offline && s.reply.meta.offlineWhy ? ` (${s.reply.meta.offlineWhy})` : ''}
+              {offline ? "Short read from the map alone. Esau couldn't be reached, so try again with service." : `Esau's read for ${replyHourLabel}`}
             </p>
           </article>
         )}
