@@ -1,9 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { safetyLines } from '../safety';
 import { localTime } from '../conditions';
 import type { EsauReply } from '../types';
 import { CloseIcon } from '../../ui/icons';
 import { quickBrief, useEsau } from './store';
 import './esau.css';
+
+/** Battery percent, or null where the browser can't say (iOS Safari). Never throws. */
+function useBatteryPct(): number | null {
+  const [pct, setPct] = useState<number | null>(null);
+  useEffect(() => {
+    let off = false;
+    const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
+    nav.getBattery?.().then((b) => !off && setPct(Math.round(b.level * 100))).catch(() => {});
+    return () => {
+      off = true;
+    };
+  }, []);
+  return pct;
+}
 
 const ROLE_LABEL: Record<EsauReply['spotRole'], string> = {
   bedding: 'Bedding',
@@ -23,12 +38,23 @@ export function EsauPanel() {
   const s = useEsau();
   const [expanded, setExpanded] = useState(false);
   const [teach, setTeach] = useState<string | null>(null);
+  const [safetyShown, setSafetyShown] = useState<Set<string>>(new Set());
+  const battery = useBatteryPct();
 
   const brief = useMemo(
     () => quickBrief(s),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.species, s.spot, s.grid, s.hourIndex, s.hunter],
   );
+
+  const sun = brief?.conditions.sun.phase ?? 'midday';
+  const safety = s.analysis && s.species
+    ? safetyLines({ species: s.species, weapon: s.weapon, legal: s.analysis.legal, sunPhase: sun, batteryPct: battery, saddle: false, alreadyShown: safetyShown })
+    : { lines: [], shown: [] };
+  useEffect(() => {
+    if (safety.shown.length) setSafetyShown((prev) => new Set([...prev, ...safety.shown]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safety.shown.join()]);
 
   if (!s.open || !s.spot) return null;
 
@@ -67,6 +93,18 @@ export function EsauPanel() {
       </header>
 
       <div className="esau-body">
+        {s.analysis?.advisories.map((a) => (
+          <div key={a.kind} className={`esau-advisory is-${a.kind}`} role="alert" data-testid={`advisory-${a.kind}`}>
+            <strong>{a.title}</strong>
+            <span>{a.detail}</span>
+          </div>
+        ))}
+        {safety.lines.map((l) => (
+          <p key={l} className="esau-safety">
+            {l}
+          </p>
+        ))}
+
         {brief && (
           <p className="esau-air">
             {hourLabel} · wind {brief.conditions.windMph} mph {brief.conditions.windFromCompass} · scent to {brief.conditions.scentTowardCompass} ·
