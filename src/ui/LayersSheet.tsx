@@ -15,13 +15,15 @@ interface Props {
   state: LayerState;
   onToggle: (layerId: string, on: boolean) => void;
   onOptions: (layerId: string, optionIds: string[]) => void;
+  /** Opens the offline-download sheet. */
+  onDownload?: () => void;
 }
 
 type View = { kind: 'home' } | { kind: 'folder'; folderId: string } | { kind: 'options'; folderId: string; layerId: string };
 
 const STATE_NAMES: Record<string, string> = { KY: 'Kentucky' };
 
-export function LayersSheet({ open, onClose, basemap, onBasemap, folders, state, onToggle, onOptions }: Props) {
+export function LayersSheet({ open, onClose, basemap, onBasemap, folders, state, onToggle, onOptions, onDownload }: Props) {
   const [view, setView] = useState<View>({ kind: 'home' });
   const folder = view.kind !== 'home' ? folders.find((f) => f.id === view.folderId) : undefined;
   const layer = view.kind === 'options' ? folder?.layers.find((l) => l.id === view.layerId) : undefined;
@@ -76,6 +78,11 @@ export function LayersSheet({ open, onClose, basemap, onBasemap, folders, state,
               </button>
             ))}
           </div>
+          {onDownload && (
+            <button className="primary-btn" data-testid="download-area" onClick={onDownload}>
+              Download this area
+            </button>
+          )}
           {states.map((s) => (
             <div key={s}>
               <h3 className="sheet-section">{STATE_NAMES[s] ?? s}</h3>
