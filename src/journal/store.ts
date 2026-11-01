@@ -23,7 +23,10 @@ const KEY = "esau-journal";
 const read = (): JournalEntry[] => {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "[]");
-    return Array.isArray(v) ? (v as JournalEntry[]) : [];
+    if (!Array.isArray(v)) return [];
+    return v
+      .filter((e): e is Record<string, unknown> => !!e && typeof e === "object" && typeof (e as { id?: unknown }).id === "string")
+      .map((e) => ({ ...e, beds: Array.isArray(e.beds) ? e.beds : [], trails: Array.isArray(e.trails) ? e.trails : [], windFromDeg: typeof e.windFromDeg === "number" ? e.windFromDeg : null }) as unknown as JournalEntry);
   } catch {
     return [];
   }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { saveSnag } from './snag';
 import { useJournal } from '../journal/store';
 import { useTools } from '../tools/store';
+import { distance } from '../map/geo';
 import { useEsau } from '../esau/ui/store';
 import './home.css';
 
@@ -15,17 +16,21 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
     const tools = useTools.getState();
     const esau = useEsau.getState();
     const hour = esau.grid?.weather.hours[esau.hourIndex];
+    // Only link a route that was just recorded; an old track is not today's hunt.
+    const latest = tools.tracks[0];
+    const track = latest && Date.now() - latest.endedAt < 6 * 3600e3 ? latest : null;
+    const near = (p: [number, number]) => !!track && track.points.some((t) => distance(t.lngLat, p) < 300);
     useJournal.getState().add({
-      id: `j-${Date.now()}`,
-      trackId: tools.tracks[0]?.id ?? null,
+      id: `j-${crypto.randomUUID()}`,
+      trackId: track?.id ?? null,
       date: new Date().toLocaleDateString('en-CA'),
       species: esau.species,
       weapon: esau.weapon,
       snagged,
       what,
       windFromDeg: hour?.windFrom ?? null,
-      beds: tools.waypoints.filter((w) => w.icon === 'bed').map((w) => w.position),
-      trails: tools.waypoints.filter((w) => w.icon === 'trail').map((w) => w.position),
+      beds: tools.waypoints.filter((w) => w.icon === 'bed' && near(w.position)).map((w) => w.position),
+      trails: tools.waypoints.filter((w) => w.icon === 'trail' && near(w.position)).map((w) => w.position),
     });
   };
   const finish = () => {

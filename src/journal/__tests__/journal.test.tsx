@@ -7,7 +7,6 @@ import { useTools } from "../../tools/store";
 import type { Track } from "../../tools/types";
 import { ExitPrompt } from "../../home/ExitPrompt";
 import { useEsau } from "../../esau/ui/store";
-import { useWeapon } from "../../home/weapon";
 import { JournalSheet } from "../JournalSheet";
 import { useJournal } from "../store";
 
@@ -17,7 +16,7 @@ const track: Track = {
   id: "t1",
   name: "Morning",
   startedAt: 0,
-  endedAt: 600_000,
+  endedAt: Date.now(),
   distance: 0,
   points: Array.from({ length: 11 }, (_, i) => ({ lngLat: destination(START, 90, i * 10), time: i * 60_000, altitude: null })),
 };
@@ -56,11 +55,30 @@ describe("hunt journal", () => {
     expect(JSON.parse(localStorage.getItem("esau-journal")!)).toHaveLength(1);
   });
 
+  it("does not link an old track, and keeps only marks near the route", async () => {
+    useTools.setState({ tracks: [{ ...track, endedAt: Date.now() - 48 * 3600e3 }] });
+    const host = await mount(createElement(ExitPrompt, { open: true, onClose: () => {} }));
+    await click(host, '[data-testid="snag-no"]');
+    expect(useJournal.getState().entries[0]).toMatchObject({ trackId: null, snagged: "no", beds: [] });
+  });
+  it("shows no-scent-check wording when there is no wind or marks", async () => {
+    useTools.setState({ tracks: [track] });
+    useJournal.setState({ entries: [{ id: "j3", trackId: "t1", date: "2026-11-01", species: "whitetail", weapon: "bow", snagged: null, windFromDeg: null, beds: [], trails: [] }] });
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {} }));
+    expect(host.textContent).toContain("No scent check");
+    expect(host.textContent).not.toContain("Clean walk");
+  });
+  it("drops wrong-shape saved rows instead of crashing", () => {
+    localStorage.setItem("esau-journal", JSON.stringify([null, { id: "x" }, 5]));
+    useJournal.getState().load();
+    expect(useJournal.getState().entries).toHaveLength(1);
+    expect(useJournal.getState().entries[0]!.beds).toEqual([]);
+  });
   it("shows distance, duration, sits and debrief lines for a track, and never calls fetch", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     useTools.setState({ tracks: [track] });
-    useJournal.setState({ entries: [{ id: "j1", trackId: "t1", date: "2026-11-01", species: "whitetail", weapon: "bow", snagged: "no", windFromDeg: null, beds: [], trails: [] }] });
+    useJournal.setState({ entries: [{ id: "j1", trackId: "t1", date: "2026-11-01", species: "whitetail", weapon: "bow", snagged: "no", windFromDeg: 270, beds: [destination(START, 0, 2000)], trails: [] }] });
     const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {} }));
     expect(host.textContent).toContain("yd");
     expect(host.textContent).toContain("Clean walk");

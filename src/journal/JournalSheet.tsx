@@ -24,8 +24,9 @@ function Entry({ e, track }: { e: JournalEntry; track: ReturnType<typeof useTool
   const lines = useMemo(() => {
     if (!track) return [];
     const a = analyzeTrack(track);
-    const crossings = e.windFromDeg == null ? [] : scentCrossings(track, { windFromDeg: () => e.windFromDeg!, beds: e.beds, trails: e.trails });
-    return debriefLines(a, { species: e.species ?? "whitetail", weapon: e.weapon }, crossings);
+    const checked = e.windFromDeg != null && e.beds.length + e.trails.length > 0;
+    const crossings = !checked ? [] : scentCrossings(track, { windFromDeg: () => e.windFromDeg!, beds: e.beds, trails: e.trails });
+    return debriefLines(a, { species: e.species ?? "whitetail", weapon: e.weapon }, crossings, checked);
   }, [e, track]);
   return (
     <article className="journal-entry">
@@ -34,7 +35,7 @@ function Entry({ e, track }: { e: JournalEntry; track: ReturnType<typeof useTool
         {e.species ? ` · ${e.species.replace("_", " ")}` : ""}
       </strong>
       <p>{e.snagged === "yes" ? `Snagged: ${e.what || "yes"}` : e.snagged === "no" ? "Nothing this time" : "Didn't say"}</p>
-      {track ? lines.map((l) => <p key={l}>{l}</p>) : <p className="hint">This hunt has no route saved.</p>}
+      {track ? lines.map((l, i) => <p key={i}>{l}</p>) : <p className="hint">This hunt has no route saved.</p>}
     </article>
   );
 }
