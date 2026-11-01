@@ -6,7 +6,7 @@ Status: proposed, for review. No code yet.
 The ginseng mode today covers the rules (`src/ginseng/rules.ts`) and seven how-to slides about digging and selling. It does not teach a beginner where to look. Quinn is a brand-new hunter, so the missing lesson is "what ground and what plants say sang might be here."
 
 ## What it adds
-A new "Where to look" group of 4 slides at the front of the ginseng how-to, in Esau's plain voice, plus a "Habitat" row in ginseng mode that scores the tapped spot. Slides:
+A new "Where to look" group of 4 slides at the front of the ginseng how-to. Slides:
 
 1. **Slope and aspect:** mid-slope and base of slope beat ridge tops; north- and east-facing slopes are cooler and moister.
 2. **Shade and trees:** heavy shade, about 90 percent; tulip-poplar and black walnut give dense shade; sugar maple is a good neighbor because it supplies calcium.
@@ -15,8 +15,8 @@ A new "Where to look" group of 4 slides at the front of the ginseng how-to, in E
 
 All facts come from University of Kentucky Cooperative Extension publication FOR91 (https://publications.ca.uky.edu/sites/publications.ca.uky.edu/files/FOR91.pdf), which is cited on the slides. The publication does not cover plant identification, so the existing "Know a mature plant" slide stays the source for that.
 
-## Habitat score (small, honest)
-The ginseng model already reads elevation and tree cover. Add a "habitat read" from terrain only: slope position (mid or base vs ridge) and aspect (north or east vs south or west). Output is "good", "fair" or "poor ground to scout", with the reason. It never says ginseng is present, and it says the season status from `seasonStatus` alongside.
+## Habitat score: not added
+On reading the code, ginseng mode already has a sourced habitat model (`src/ginseng/model.ts`: aspect, slope, position, moisture, canopy, with citations) and a map shading. A second score would duplicate it, so this change adds only the four teaching slides and the FOR91 citation.
 
 ## Rules kept
 - Free sources only, no new services.
@@ -27,7 +27,4 @@ The ginseng model already reads elevation and tree cover. Add a "habitat read" f
 Plant identification photos, selling and dealer details (already covered), other medicinals.
 
 ## Testing
-Unit tests for the habitat read (ridge vs base, aspect cases, unknown terrain returns "no read"); a render test that the 4 new slides appear first and cite FOR91.
-
-## Open choice
-Whether the habitat read appears on the map tap panel or only inside ginseng mode. Default: only inside ginseng mode.
+A test that the four habitat slides come first, carry the key facts and say they are clues not proof, that the sources list includes FOR91, and that the sheet now steps through 11 slides.
