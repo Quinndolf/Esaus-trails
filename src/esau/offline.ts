@@ -29,8 +29,16 @@ export function offlineRead(b: EsauBrief): EsauReply {
     species.nose && spot.fromHunter && c.windMph >= 2 &&
     Math.abs(((spot.fromHunter.bearingDeg - c.scentToward + 540) % 360) - 180) <= 42;
 
+  const more = [
+    `No signal, so this is the short version from the saved ground.`,
+    thermal.trim(),
+    c.windMph >= 2 ? "The wind is the last forecast I got, so it may be out of date." : "",
+    "I'll give you the full read when you're back in service.",
+  ].filter(Boolean).join(" ");
+
   return {
-    say: `No signal, so this is the short version. That ${ground} ${what}. ${wind}${thermal}${scentOnIt ? " You're upwind of it right now; anything there will smell you." : ""} I'll give you the full read when you're back in service.`,
+    say: `That ${ground} ${what}. ${wind}${scentOnIt ? " You're upwind of it right now; anything there will smell you." : ""}`,
+    more,
     headline: scentOnIt ? "Your wind's on it" : role === "unlikely" || role === "open ground" ? "Not much here" : `Likely ${role === "bedding" ? w.bedding : role === "feeding" ? w.feeding : w.travel}`,
     confidence: "low",
     spotRole: role,
@@ -51,7 +59,8 @@ function ginsengOfflineRead(b: EsauBrief): EsauReply {
     ? "Season's open through December 1, but only five-year plants with three prongs, seed back in the ground, and only with the landowner's say-so. Nothing on state or federal land."
     : "Season's closed until September 1, so scout it and leave it be.";
   return {
-    say: `No signal, so this is the short version. That ${ground} is ${CLASS_WORDS[cls]}. The map can't see the understory or the soil, so look for tulip-poplar, bloodroot, wild ginger and damp black leaf litter before you believe it. ${law} I'll give you the full read when you're back in service.`,
+    say: `That ${ground} is ${CLASS_WORDS[cls]}. ${law}`,
+    more: "No signal, so this is the short version. The map can't see the understory or the soil, so look for tulip-poplar, bloodroot, wild ginger and damp black leaf litter before you believe it. I'll give you the full read when you're back in service.",
     headline: cls === "poor" ? "Not ginseng ground" : cls === "fair" ? "Possible, not the best" : "Worth a look",
     confidence: "low",
     spotRole: role,

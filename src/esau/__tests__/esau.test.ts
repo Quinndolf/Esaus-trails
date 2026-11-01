@@ -126,7 +126,7 @@ describe("brief", () => {
 describe("offline read", () => {
   it("gives a short, honest answer with no signal", () => {
     const r = offlineRead(buildBrief(SAMPLE_SPOTS[1]!.query));
-    expect(r.say).toMatch(/^No signal/);
+    expect(r.more).toMatch(/^No signal/);
     expect(r.say).toContain("smell you");
     expect(r.confidence).toBe("low");
     expect(r.meta.servedBy).toBe("offline-rules");

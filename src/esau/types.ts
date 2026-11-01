@@ -164,6 +164,8 @@ export interface EsauMark {
 export interface EsauReply {
   /** What Esau says, in his voice. */
   say: string;
+  /** The fuller lesson. The app shows it only after the hunter taps "Teach me more". */
+  more: string;
   /** One line for a map bubble or notification. */
   headline: string;
   confidence: "low" | "fair" | "good";

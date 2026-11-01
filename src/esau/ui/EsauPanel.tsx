@@ -22,6 +22,7 @@ const ROLE_LABEL: Record<EsauReply['spotRole'], string> = {
 export function EsauPanel() {
   const s = useEsau();
   const [expanded, setExpanded] = useState(false);
+  const [teach, setTeach] = useState<string | null>(null);
 
   const brief = useMemo(
     () => quickBrief(s),
@@ -84,6 +85,12 @@ export function EsauPanel() {
               <span className={`badge conf-${s.reply.confidence}`}>{ROLE_LABEL[s.reply.spotRole]} · {s.reply.confidence}</span>
             </div>
             <p>{s.reply.say}</p>
+            {s.reply.more && teach !== s.reply.say && (
+              <button className="link-btn" data-testid="teach-more" onClick={() => setTeach(s.reply!.say)}>
+                Teach me more
+              </button>
+            )}
+            {s.reply.more && teach === s.reply.say && <p data-testid="more-body">{s.reply.more}</p>}
             {s.reply.wouldChangeMyMind.length > 0 && (
               <p className="esau-mind">
                 <span>Would change my mind:</span> {s.reply.wouldChangeMyMind.join(' · ')}
