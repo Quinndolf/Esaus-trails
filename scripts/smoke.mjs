@@ -8,6 +8,7 @@ if (!/^https?:\/\//.test(base)) {
 const checks = [
   ['/api/health', 200, (t) => t.includes('"ok":true')],
   ['/api/ground?lat=36.75&lng=-85.7', 200, (t) => t.includes('elevation')],
+  ['/api/nws/points/36.75,-85.7', 200, (t) => t.includes('properties')],
   ['/', 200, (t) => t.includes('<div id="root"')],
   ['/api/nope', 404, () => true],
 ];

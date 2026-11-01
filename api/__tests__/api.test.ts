@@ -40,7 +40,28 @@ describe("vercel function wrappers", () => {
     const r = await fetch(`${base}/api/nws?path=/alerts/active`);
     expect(r.status).toBe(404);
   });
+  it("nws refuses dot-segment and encoded tricks", async () => {
+    for (const p of ["/points/../alerts/active", "/points/%2e%2e/alerts", "/points//x", "/points/a%2Fb"]) {
+      expect((await fetch(`${base}/api/nws?path=${encodeURIComponent(p)}`)).status).toBe(404);
+    }
+  });
   it("nws with no path is 404 too", async () => {
     expect((await fetch(`${base}/api/nws`)).status).toBe(404);
+  });
+});
+
+describe("handleNws forwarding", () => {
+  it("forwards the path and extra query params to weather.gov", async () => {
+    const { handleNws } = await import("../../server/nws");
+    const seen: string[] = [];
+    const f = (async (u: string) => (seen.push(u), new Response(JSON.stringify({ ok: 1 }), { status: 200 }))) as unknown as typeof fetch;
+    const s = createServer((req, res) => void handleNws(req, res, f));
+    await new Promise<void>((r) => s.listen(0, "127.0.0.1", r));
+    const b = `http://127.0.0.1:${(s.address() as AddressInfo).port}`;
+    expect((await fetch(`${b}/api/nws?units=si&path=/gridpoints/X/1,2/forecast`)).status).toBe(200);
+    expect((await fetch(`${b}/api/nws/points/36.75,-85.7`)).status).toBe(200);
+    s.close();
+    expect(seen[0]).toBe("https://api.weather.gov/gridpoints/X/1,2/forecast?units=si");
+    expect(seen[1]).toBe("https://api.weather.gov/points/36.75,-85.7");
   });
 });

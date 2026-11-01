@@ -19,3 +19,4 @@ On a computer with Node: `node scripts/smoke.mjs https://your-app.vercel.app`. F
 - If the ground lookup times out, wait a minute and tap again. The free plan limits each request to 30 seconds.
 - Free plan is for personal, non-commercial use. A paid app later would need a paid plan.
 - Revoke an API key at console.anthropic.com if it ever leaks.
+- Set a monthly spend limit in the Anthropic console. The per-minute limit on Esau is per server instance on Vercel, so treat it as a soft limit.

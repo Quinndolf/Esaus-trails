@@ -22,9 +22,20 @@ export async function handleNws(req: IncomingMessage, res: ServerResponse, f: ty
   const viaPath = url.pathname === "/api/nws";
   if (!viaPath && !url.pathname.startsWith("/api/nws/")) return false;
   if (req.method !== "GET") return send(res, 405, { error: "GET only" }), true;
-  let path = viaPath ? url.searchParams.get("path") || "" : url.pathname.slice("/api/nws".length) + url.search;
-  if (viaPath && path && !path.startsWith("/")) path = "/" + path;
-  if (!ALLOWED.test(path)) return send(res, 404, { error: "not found" }), true;
+  let path: string;
+  if (viaPath) {
+    // The Vercel rewrite moves the real path into ?path=; keep any other query params (e.g. units).
+    const rest = new URLSearchParams(url.searchParams);
+    path = rest.get("path") || "";
+    rest.delete("path");
+    if (path && !path.startsWith("/")) path = "/" + path;
+    const q = rest.toString();
+    if (q) path += (path.includes("?") ? "&" : "?") + q;
+  } else {
+    path = url.pathname.slice("/api/nws".length) + url.search;
+  }
+  // No dot segments, doubled slashes, backslashes or encoded slashes/dots: the path must stay under the three allowed roots.
+  if (!ALLOWED.test(path) || /\.\.|\/\/|\\|%2e|%2f|%5c/i.test(path.split("?")[0]!)) return send(res, 404, { error: "not found" }), true;
   const hit = cache.get(path);
   if (hit && Date.now() - hit.at < NWS_TTL_MS) return send(res, 200, hit.body), true;
   try {
