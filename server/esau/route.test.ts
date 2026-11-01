@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { SAMPLE_SPOTS } from "./sample-spots";
+import { SAMPLE_SPOTS } from "../../src/esau/fixtures/spots";
 import { handleEsau } from "./route";
 
 function call(body: unknown) {
