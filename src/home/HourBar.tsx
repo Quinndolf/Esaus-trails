@@ -5,6 +5,7 @@ import { THERMAL_WORDS } from '../model/describe';
 import { useEsau } from '../esau/ui/store';
 import { bboxAround } from '../hour/ground';
 import { dayStrip, hourScope } from '../hour/scope';
+import { ageLabel } from '../hour/groundCache';
 import { useHour } from '../hour/store';
 import { useHourOverlays } from '../hour/useHourOverlays';
 import { barSegments, lightMarks, readoutLine } from './hourBar';
@@ -28,7 +29,7 @@ function clock(d: Date, first: boolean) {
  * bottom, tinted by thermal state across the day, marking sunrise, sunset and legal light.
  */
 export function HourBar({ map, hunter }: { map: MLMap | null; hunter: LngLat | null }) {
-  const { status, error, hours, date, setDate, grid, conditions } = useHour();
+  const { status, error, hours, date, setDate, grid, conditions, staleSince } = useHour();
   const species = useEsau((s) => s.species);
   const scope = hourScope(species);
   const frame = useHourOverlays(map, hunter);
@@ -56,6 +57,7 @@ export function HourBar({ map, hunter }: { map: MLMap | null; hunter: LngLat | n
   else if (status === 'error') line = error ?? "Couldn't read the ground.";
   else if (w) line = readoutLine({ stateWord: windRules ? 'Wind rules' : (word ?? 'Light'), windMph: w.windMph, windFrom: w.windFrom, tempF: w.tempF });
   else line = '';
+  if (status === 'ready' && staleSince) line = `Saved weather from ${ageLabel(staleSince)} · ${line}`;
 
   return (
     <div className="hour-bar" role="region" aria-label="Hour slider" data-testid="hour-bar">

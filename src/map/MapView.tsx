@@ -61,6 +61,14 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
 
     map.on('zoomend', () => setZoomTick((n) => n + 1));
 
+    // With no service, tiles and layers fail to load. That is expected in the woods: stay quiet and show
+    // what is saved. Anything else still reaches the console.
+    map.on('error', (e) => {
+      const err = e.error as { name?: string; status?: number } | undefined;
+      if (err?.name === 'AJAXError' || err?.status === 0 || typeof err?.status === 'number') return;
+      console.warn('Map error:', e.error);
+    });
+
     // MapLibre pops the credits open whenever a layer adds new ones. Keep them collapsed so they
     // never cover the bearing pill; the (i) button still opens them.
     const collapseCredits = () =>

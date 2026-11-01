@@ -18,3 +18,4 @@ jobs:
       - run: npm run typecheck:server
       - run: npm run build
       - run: for f in deploy/*.sh; do bash -n "$f"; done
+      - run: node --check scripts/smoke.mjs

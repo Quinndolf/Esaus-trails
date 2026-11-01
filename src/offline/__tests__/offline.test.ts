@@ -63,4 +63,20 @@ describe('saveArea', () => {
     expect([...stored.keys()].some((u) => u.includes('/export?bbox=') && !u.includes('{'))).toBe(true);
     expect(listAreas()[0]).toMatchObject({ name: 'Back forty', overlays: [hunting[0].name] });
   });
+
+  it('asks the browser to keep the saved tiles, so it will not clear them to free space', async () => {
+    const persist = vi.fn(async () => true);
+    vi.stubGlobal('navigator', { storage: { persist } });
+    await saveArea({ name: 'a', basemap: 'satellite', bounds: B, minZoom: 14, maxZoom: 14 }, () => {}, new AbortController().signal);
+    expect(persist).toHaveBeenCalledOnce();
+  });
+
+  it('records how many tiles failed so the hunter knows the area has gaps', async () => {
+    let n = 0;
+    vi.stubGlobal('fetch', async () => (n++ % 4 === 0 ? new Response('no', { status: 500 }) : new Response('png', { status: 200 })));
+    const area = await saveArea({ name: 'gappy', basemap: 'satellite', bounds: B, minZoom: 14, maxZoom: 15 }, () => {}, new AbortController().signal);
+    expect(area.failed).toBeGreaterThan(0);
+    expect(area.tiles + (area.failed ?? 0)).toBe(estimate('satellite', B, 14, 15));
+    expect(listAreas()[0].failed).toBe(area.failed);
+  });
 });

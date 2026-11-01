@@ -10,6 +10,8 @@ export interface SavedArea {
   maxZoom: number;
   tiles: number;
   savedAt: string;
+  /** Tiles that would not download. The area works but has gaps. */
+  failed?: number;
   /** Names of the map layers saved with it (missing on areas saved before layers could go offline). */
   overlays?: string[];
 }
@@ -84,6 +86,13 @@ export async function saveArea(
   const total = estimate(opts.basemap, opts.bounds, opts.minZoom, opts.maxZoom, overlays);
   if (total > MAX_TILES) throw new Error(`That area is too big (${total} tiles). Zoom in or lower the detail.`);
 
+  // Ask the browser not to clear the saved tiles when the phone runs low on space.
+  try {
+    await navigator.storage?.persist?.();
+  } catch {
+    /* best effort */
+  }
+
   const id = `${Date.now().toString(36)}`;
   const cache = await caches.open(`esau-area-${id}`);
   const urls: string[] = [];
@@ -122,6 +131,7 @@ export async function saveArea(
     id,
     ...rest,
     tiles: progress.done - progress.failed,
+    failed: progress.failed,
     savedAt: new Date().toISOString(),
     overlays: overlays.map((o) => o.name),
   };

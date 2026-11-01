@@ -5,6 +5,8 @@ import { MAX_TILES, deleteArea, estimate, listAreas, saveArea, type DownloadProg
 import type { Bounds } from '../offline/tiles';
 import { BottomSheet } from './BottomSheet';
 import { TrashIcon } from './icons';
+import { bboxAround, fetchGround } from '../hour/ground';
+import { saveGround } from '../hour/groundCache';
 
 const DETAIL = [
   { id: 'low', label: 'Low', maxZoom: 14 },
@@ -58,7 +60,12 @@ export function OfflineSheet({ open, onClose, map, basemap, overlays }: Props) {
       );
       setAreas(listAreas());
       setName('');
+      // Also keep the ground and weather here, so the hour bar and thermals still work with no service.
+      void fetchGround(bboxAround([(bounds.west + bounds.east) / 2, (bounds.south + bounds.north) / 2]))
+        .then((g) => saveGround(g))
+        .catch(() => {});
       if (area.tiles === 0) setError('No tiles came down. Check your signal and try again.');
+      else if (area.failed) setError(`Saved, but ${area.failed.toLocaleString()} tiles would not download, so the map may have gaps. Download again with a better signal to fill them.`);
     } catch (e) {
       if ((e as Error).name !== 'AbortError') setError((e as Error).message);
     } finally {
@@ -71,7 +78,7 @@ export function OfflineSheet({ open, onClose, map, basemap, overlays }: Props) {
     <BottomSheet title="Download maps for offline use" open={open} onClose={onClose}>
       <h3 className="sheet-section">Save what's on screen</h3>
       <p className="hint">
-        Saves the {BASEMAP_LABELS[basemap].toLowerCase()} map for the area you're looking at, so it works with no service.
+        Saves the {BASEMAP_LABELS[basemap].toLowerCase()} map for the area you're looking at, plus its ground and the latest weather, so it works with no service. Weather is only as fresh as the download.
       </p>
       <p className="hint" data-testid="offline-overlays">
         {overlays.length
@@ -134,6 +141,7 @@ export function OfflineSheet({ open, onClose, map, basemap, overlays }: Props) {
                   {BASEMAP_LABELS[a.basemap]}
                   {a.overlays?.length ? ` + ${a.overlays.length} layer${a.overlays.length > 1 ? 's' : ''}` : ''} · {a.tiles.toLocaleString()} tiles ·{' '}
                   {new Date(a.savedAt).toLocaleDateString()}
+                  {a.failed ? ` · ${a.failed.toLocaleString()} missing` : ''}
                 </span>
               </button>
               <button
