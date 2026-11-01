@@ -31,6 +31,16 @@ export function cdlFromRgb(r: number, g: number, b: number): number {
   return bestD > 30 ** 2 ? 0 : best;
 }
 
+/**
+ * Image size for an ArcGIS exportImage over `b`: `scale` pixels per cell across, and the height that keeps the
+ * pixels the shape of the box in degrees. ArcGIS silently widens the extent if the size doesn't match the box's
+ * aspect, which shifts every cell (a 32 x 32 request for a 1.2:1 box read ground 15 m off on a ridge).
+ */
+export function exportSize(b: Box, cols: number, scale = 4): [number, number] {
+  const w = cols * scale;
+  return [w, Math.max(1, Math.round((w * (b.north - b.south)) / (b.east - b.west)))];
+}
+
 /** Per-cell reduce of a PNG that is `scale` times the grid size. */
 function reduce<T>(png: Buffer, cols: number, rows: number, scale: number, cell: (px: [number, number, number][]) => T): T[] {
   const img = PNG.sync.read(png);
@@ -91,9 +101,10 @@ export async function fetchCrops(b: Box, f: Fetch = fetch, cols = 32, rows = col
 }
 
 export async function fetchGreenness(b: Box, f: Fetch = fetch, cols = 32, rows = cols): Promise<number[]> {
+  const [w, h] = exportSize(b, cols);
   const url =
     `https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?f=image` +
-    `&bbox=${b.west},${b.south},${b.east},${b.north}&bboxSR=4326&imageSR=4326&size=${cols * 4},${rows * 4}` +
+    `&bbox=${b.west},${b.south},${b.east},${b.north}&bboxSR=4326&imageSR=4326&size=${w},${h}` +
     `&format=png&bandIds=3,0,1&interpolation=RSP_NearestNeighbor`;
   return greennessFromPng(await image(f, url, "imagery.nationalmap.gov"), cols, rows);
 }

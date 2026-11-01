@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
-import { CDL_COLORS, cdlFromRgb, cropsFromPng, fetchGreenness, greennessFromPng } from "./vegetation";
+import { CDL_COLORS, cdlFromRgb, cropsFromPng, exportSize, fetchGreenness, greennessFromPng } from "./vegetation";
 
 function png(w: number, h: number, f: (x: number, y: number) => [number, number, number, number]): Buffer {
   const img = new PNG({ width: w, height: h });
@@ -40,5 +40,19 @@ describe("vegetation from overhead data", () => {
     const g = await fetchGreenness({ west: -85.5, south: 37.5, east: -85.49, north: 37.51 }, f, 2, 2);
     expect(url).toMatch(/bandIds=3,0,1/);
     expect(g).toHaveLength(4);
+  });
+
+  it("asks ArcGIS for pixels the shape of the box, because it widens the extent otherwise", async () => {
+    const box = { west: -85.7, south: 36.69, east: -85.678, north: 36.708 }; // 1.2 : 1 in degrees, like a real tap
+    const [w, h] = exportSize(box, 32);
+    expect(w).toBe(128);
+    expect(w / h).toBeCloseTo((box.east - box.west) / (box.north - box.south), 1);
+    let url = "";
+    const f = (async (u: string) => {
+      url = u;
+      return new Response(png(8, 8, () => [200, 50, 60, 255]) as unknown as BodyInit, { headers: { "content-type": "image/png" } });
+    }) as unknown as typeof fetch;
+    await fetchGreenness(box, f, 32, 32);
+    expect(url).toContain(`size=${w},${h}`);
   });
 });
