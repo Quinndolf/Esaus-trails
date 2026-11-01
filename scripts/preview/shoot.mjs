@@ -35,23 +35,21 @@ const click = (sel) => page.locator(sel).first().click({ timeout: 4000 });
 const close = () => page.getByLabel('Close', { exact: true }).first().click({ timeout: 2000 }).catch(() => {});
 
 await page.goto(BASE); await page.waitForTimeout(2500);
-await snap('pick-animal');
-await click('[data-testid=pick-whitetail]');
+await page.locator('[data-testid=tutorial-skip]').click({ timeout: 2000 }).catch(() => {});
+await snap('first-open');
+const pickAnimal = async (id, weapon) => { await click('[data-testid=animal-chip]'); await click(`[data-testid=animal-${id}]`); if (weapon) await click(`[data-testid=weapon-${weapon}]`); };
+await pickAnimal('whitetail', 'crossbow');
 await page.waitForTimeout(2500);
 await snap('home-with-hour-slider');
-await step('hour-slider-evening', () => page.locator('[data-testid=hour-panel] input[type=range]').first().fill('9'));
-await page.getByLabel('Close hour slider').click({ timeout: 2000 }).catch(() => {});
+await step('hour-slider-evening', () => page.locator('[data-testid=hour-bar] input[type=range]').first().fill('9'));
 await snap('home-clean-map');
-await step('basemap-topo', () => click('[aria-label^="Basemap"]'));
-await step('basemap-hybrid', () => click('[aria-label^="Basemap"]'));
-await click('[aria-label^="Basemap"]'); await click('[aria-label^="Basemap"]').catch(() => {}); // back around to satellite
-await step('compass-mode', () => click('[aria-label="Compass mode"]'));
-await click('[aria-label="Compass mode"]').catch(() => {});
+await step('compass-mode', () => click('[aria-label^="My location"]'));
+await click('[aria-label^="Compass on"]').catch(() => {});
 await step('map-layers', () => click('[aria-label="Map Layers"]'));
 await step('layer-view-options', () => page.getByText('Government Lands').first().click({ timeout: 3000 }));
 await close(); await page.getByLabel('Back').first().click({ timeout: 800 }).catch(() => {}); await close();
 await step('tools-menu', () => click('[aria-label="Tools"]'));
-await step('waypoints-list', () => page.getByText('Waypoints', { exact: false }).first().click({ timeout: 3000 })); await close();
+await step('waypoints-list', () => page.getByText('My Marks', { exact: false }).first().click({ timeout: 3000 })); await close();
 await click('[aria-label="Tools"]'); await step('photos', () => page.getByText('Photos').first().click({ timeout: 3000 })); await close();
 await click('[aria-label="Tools"]'); await step('calls', () => page.getByText('Calls').first().click({ timeout: 3000 })); await close();
 await click('[aria-label="Tools"]'); await step('measure-tool', () => page.getByText('Measure distance').click({ timeout: 3000 }));
@@ -60,14 +58,14 @@ await page.getByLabel('Close', { exact: false }).first().click({ timeout: 800 })
 await click('[aria-label="Tools"]').catch(() => {}); await step('mark-my-location', () => page.getByText('Mark my location').click({ timeout: 3000 }));
 // Start fresh so no tool or sheet is left open, then tap the ground for Esau's read.
 await page.reload(); await page.waitForTimeout(2500);
-await page.locator('[data-testid=pick-whitetail]').click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(2500);
-await page.getByLabel('Close hour slider').click({ timeout: 2000 }).catch(() => {});
+await page.locator('[data-testid=tutorial-skip]').click({ timeout: 2000 }).catch(() => {});
+await pickAnimal('whitetail', 'crossbow').catch(() => {}); await page.waitForTimeout(2500);
 await page.mouse.click(150, 560);
 await step('esau-reads-spot', () => page.locator('[aria-label="Esau\'s read of this spot"]').waitFor({ timeout: 8000 }));
 await step('esau-expanded', () => page.getByLabel('Expand').first().click({ timeout: 3000 }));
 await close();
-await step('change-animal', () => click('[data-testid=hunt-pill]'));
-await click('[data-testid=pick-ginseng]').catch(() => {});
+await step('change-animal', () => click('[data-testid=animal-chip]'));
+await click('[data-testid=animal-ginseng]').catch(() => {});
 await step('ginseng-mode', async () => { await page.waitForTimeout(1500); });
 
 await browser.close();

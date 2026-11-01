@@ -21,7 +21,7 @@ import {
   usePhotoPinMarkers,
   usePhotoPins,
 } from './photos';
-import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools } from './tools';
+import { ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools } from './tools';
 import { CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, ToolsIcon } from './ui/icons';
 import { CallsSheet } from './calls/CallsSheet';
 import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
@@ -38,6 +38,7 @@ import { ExitPrompt } from './home/ExitPrompt';
 import { HourBar } from './home/HourBar';
 import { nextLocation } from './home/location';
 import { Tutorial } from './home/Tutorial';
+import { MarksSheet, UndoToast } from './marks/MarksSheet';
 import { useWeapon } from './home/weapon';
 import './home/home.css';
 
@@ -278,7 +279,8 @@ export function App() {
       <GinsengRulesSheet />
       <GinsengHowToSheet />
       <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} species={species} />
-      <SavedSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
+      <MarksSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
+      <UndoToast />
       <WaypointSheet />
       <ToolBar />
       <TrackerChip />
