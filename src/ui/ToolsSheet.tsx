@@ -1,3 +1,4 @@
+import { usePhotoPins } from '../photos/store';
 import { useTools } from '../tools/store';
 import { CallButton } from '../calls/CallButton';
 import { BottomSheet } from './BottomSheet';
@@ -22,7 +23,7 @@ export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, o
   const recording = useTools((s) => s.recording);
   const startTrack = useTools((s) => s.startTrack);
   const stopTrack = useTools((s) => s.stopTrack);
-  const counts = useTools((s) => s.waypoints.length + s.shapes.length + s.tracks.length);
+  const counts = useTools((s) => s.waypoints.length + s.shapes.length + s.tracks.length) + usePhotoPins((s) => s.pins.length);
 
   const pick = (fn: () => void) => () => {
     fn();
@@ -32,7 +33,7 @@ export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, o
   const tools = [
     { id: 'mark', name: 'Mark my location', hint: 'Red X where you stand', run: pick(onMarkLocation), primary: true },
     { id: 'drop', name: 'Drop waypoint', hint: 'Tap the map to place it', run: pick(() => setMode('drop-waypoint')) },
-    { id: 'saved', name: 'Waypoints', hint: counts ? `${counts} saved` : 'Waypoints, shapes, tracks', run: onSaved },
+    { id: 'saved', name: 'My Marks', hint: counts ? `${counts} saved` : 'Waypoints, photos, tracks', run: onSaved },
     { id: 'photos', name: 'Photos', hint: 'Take or add a photo', run: onPhotos },
     ...(hasCalls ? [{ id: 'calls', name: 'Calls', hint: callsHint, run: onCalls }] : []),
     { id: 'measure', name: 'Measure distance', hint: 'Tap points on the map', run: pick(() => setMode('measure')) },
