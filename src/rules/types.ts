@@ -1,6 +1,7 @@
 import type { SpeciesId } from "../esau/types";
+import type { Weapon } from "../model/sitSpots";
 
-export type Weapon = "bow" | "crossbow" | "rifle" | "muzzleloader" | "shotgun" | "pellet";
+export type { Weapon };
 export const WEAPONS: Weapon[] = ["bow", "crossbow", "rifle", "muzzleloader", "shotgun", "pellet"];
 
 export interface Legal {

@@ -6,6 +6,8 @@ import { atmosphereForGrid, modelThermal } from "../model/esau";
 import { speciesBrain } from "./species";
 import type { SeasonPhase, SpeciesBrain, SpotScores } from "./species/types";
 import { readSpot } from "./terrain";
+import { legalToday } from "../rules/kentucky";
+import type { Legal } from "../rules/types";
 import type { ConditionsReading, SpotQuery, SpotReading } from "./types";
 
 export interface EsauBrief {
@@ -18,6 +20,8 @@ export interface EsauBrief {
   conditions: ConditionsReading;
   phase: SeasonPhase;
   scores: SpotScores;
+  /** What the Kentucky rules table says about this animal and weapon today. */
+  legal: Legal;
 }
 
 export class EsauInputError extends Error {}
@@ -41,6 +45,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
   const scores = species.scores(spot, conditions, phase);
+
+  const legal = legalToday({ species: q.species, weapon: q.weapon ?? null, at: new Date(conditions.at) });
 
   const lines: string[] = [];
   lines.push(`FIELD REPORT — ${species.name}`);
@@ -116,6 +122,36 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   else lines.push(`ROUGH SCORES (simple rules, weigh them, don't trust them): bedding ${pct(scores.bedding)}, feeding ${pct(scores.feeding)}, travel ${pct(scores.travel)}.`);
   if (g.notes?.length) lines.push(`Data notes: ${g.notes.join(" ")}`);
 
+  lines.push("");
+  lines.push("LEGAL (Kentucky, Monroe County, from the rules table)");
+  lines.push(
+    legal.status === "unknown"
+      ? `I do not have this in the rules table. ${legal.note} Tell the hunter you don't have the dates and to check the KDFWR guide; state no dates or limits yourself.`
+      : legal.status === "closed"
+        ? `OUT OF SEASON: ${legal.note} A big "Out of season" banner is already on the hunter's screen. Do not lecture. Still say what the animal is doing and where it would be.`
+        : `In season: ${legal.note}${legal.unconfirmed ? " (The season's end date is not confirmed; say to verify with KDFWR.)" : ""} State only what is written here, and say to verify with KDFWR.`,
+  );
+
+  if (q.weapon) {
+    lines.push("");
+    lines.push(`TOP SIT SPOTS (predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground)`);
+    if (q.sitSpots?.length) {
+      for (const s of q.sitSpots) {
+        lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. Predicted trail ${s.yardsToTrail} yd away. ${s.reason}`);
+      }
+      lines.push("Name the best one or two as places to sit and which way to look, as predictions.");
+    } else {
+      lines.push(
+        q.sitUnsure
+          ? "The ground gave nothing strong to go on for sit spots here. Say so plainly and do not invent any."
+          : "No sit spots were worked out. Do not invent any.",
+      );
+    }
+  } else {
+    lines.push("");
+    lines.push("The hunter has not picked a weapon yet, so give no range or sit-spot advice.");
+  }
+
   if (q.history?.length) {
     lines.push("");
     lines.push("EARLIER ABOUT THIS SPOT:");
@@ -129,5 +165,5 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
       : `The hunter tapped this spot and wants your full read of this area, for the ${species.name} only. Cover the terrain, the wind and the thermal at this hour, and how a ${species.name} would use this ground now, then say what you'd do about it. Say nothing about any other animal.`,
   );
 
-  return { species, system: buildSystemPrompt(species), report: lines.join("\n"), spot, conditions, phase, scores };
+  return { species, system: buildSystemPrompt(species), report: lines.join("\n"), spot, conditions, phase, scores, legal };
 }

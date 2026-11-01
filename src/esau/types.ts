@@ -44,6 +44,8 @@ export interface GroundGrid {
   notes?: string[];
 }
 
+import type { Weapon } from "../model/sitSpots";
+
 export type PinKind = "food" | "water" | "bed" | "sign" | "stand" | "photo";
 
 /** A hunter-dropped pin. Food/water/bed pins override what the grid infers. */
@@ -67,6 +69,16 @@ export interface LatLng {
   lng: number;
 }
 
+export interface SitSpotQuery {
+  rank: number;
+  lat: number;
+  lng: number;
+  /** Which way to face: toward the predicted traffic. */
+  watchBearingDeg: number;
+  yardsToTrail: number;
+  reason: string;
+}
+
 /** What the app sends when the hunter taps a spot (or asks a follow-up). */
 export interface SpotQuery {
   species: SpeciesId;
@@ -79,6 +91,12 @@ export interface SpotQuery {
   hourIndex?: number;
   /** Names of map layers covering the spot ("Public access: Daniel Boone NF", "Private: J. Smith"). */
   layersHere?: string[];
+  /** What the hunter carries; drives range and the legal read. */
+  weapon?: Weapon;
+  /** Ranked sit spots predicted from the trail model, wind and the weapon's range. Predictions, not sign. */
+  sitSpots?: SitSpotQuery[];
+  /** True when the ground gave nothing strong to go on for sit spots. */
+  sitUnsure?: boolean;
   /** IANA zone for talking about clock time. Defaults to the device's zone. */
   timeZone?: string;
   /** The hunter's own words, if they asked something. */
