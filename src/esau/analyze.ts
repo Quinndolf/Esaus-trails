@@ -2,13 +2,14 @@ import { cellAt, type LngLat } from "../model/geo";
 import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
 import { topSitSpots, type SitSpot, type Weapon } from "../model/sitSpots";
+import { squirrelSitSpots } from "../model/squirrelSpots";
 import type { ElevationGrid } from "../model/types";
 import { legalToday } from "../rules/kentucky";
 import type { Legal } from "../rules/types";
 import { advisories, type Advisory } from "./advisory";
 import type { SitSpotQuery, SpeciesId } from "./types";
 
-/** Animals the movement model's trails and beds describe. Others get no sit spots until they have a model. */
+/** Animals the movement model's trails and beds describe. Squirrel has its own food-tree model; others get no sit spots yet. */
 const TRAIL_MODEL_SPECIES: SpeciesId[] = ["whitetail", "mule_deer"];
 
 export interface Analysis {
@@ -19,7 +20,8 @@ export interface Analysis {
 }
 
 export interface AnalyzeInput {
-  grid: ElevationGrid;
+  /** Pass the ground grid (with `cover`, and `forestType` when known) so squirrels can be read. */
+  grid: ElevationGrid & { cover?: ArrayLike<number>; forestType?: ArrayLike<number> };
   movement: Pick<MovementHour, "trails" | "beds">;
   wind: WindField;
   species: SpeciesId;
@@ -38,7 +40,13 @@ export interface AnalyzeInput {
 export function analyzeHour(i: AnalyzeInput): Analysis {
   const legal = legalToday({ species: i.species, weapon: i.weapon, at: i.at, timeZone: i.timeZone });
   const canRank = i.weapon != null && TRAIL_MODEL_SPECIES.includes(i.species);
-  const ranked = canRank
+  const squirrel =
+    i.weapon != null && i.species === "squirrel" && i.grid.cover
+      ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon })
+      : null;
+  const ranked = squirrel
+    ? squirrel
+    : canRank
     ? topSitSpots({
         grid: i.grid,
         trails: i.movement.trails,
@@ -74,4 +82,5 @@ export const toSitSpotQuery = (s: SitSpot): SitSpotQuery => ({
   watchBearingDeg: s.watchBearingDeg,
   yardsToTrail: s.yardsToTrail,
   reason: s.reason,
+  kind: s.kind,
 });

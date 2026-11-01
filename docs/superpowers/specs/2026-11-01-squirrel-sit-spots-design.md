@@ -1,6 +1,6 @@
 # Squirrel sit spots: design
 
-Status: proposed, for review. No code yet.
+Status: implemented in this PR.
 
 ## Why
 Esau gives deer ranked sit spots from trail and bed predictions (`src/model/sitSpots.ts`) but gives squirrel none. Squirrel is Quinn's second species, and a beginner needs "where do I sit and what time" most for the animal they are most likely to hunt first.
