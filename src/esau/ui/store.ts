@@ -2,8 +2,7 @@ import { create } from 'zustand';
 import { buildBrief, type EsauBrief } from '../brief';
 import { askEsau, EsauApiError } from '../client';
 import { offlineRead } from '../offline';
-import { photoQuery, type PhotoInputLike } from '../photo';
-import type { EsauReply, GroundGrid, LatLng, Pin, SpeciesId, SpotQuery } from '../types';
+import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
 import { groundFor } from './ground';
 
 export interface Hunter {
@@ -36,12 +35,8 @@ interface EsauState {
   status: Status;
   error: string | null;
   hunter: Hunter | null;
-  /** Pins on the map Esau should know about (photo pins, waypoints). */
-  pins: Pin[];
-  photo: PhotoInputLike | null;
 
   setHunter(h: Hunter | null): void;
-  setPins(p: Pin[]): void;
   setSpecies(s: SpeciesId | null): void;
   setChoosing(open: boolean): void;
   setHour(i: number): void;
@@ -50,7 +45,6 @@ interface EsauState {
   /** Last time the slider asked for, kept so a newly loaded grid starts on it. */
   time: Date | null;
   tapSpot(spot: LatLng): Promise<void>;
-  askPhoto(input: PhotoInputLike): Promise<void>;
   ask(question?: string): Promise<void>;
   close(): void;
 }
@@ -93,12 +87,9 @@ export const useEsau = create<EsauState>((set, get) => ({
   status: 'idle',
   error: null,
   hunter: null,
-  pins: [],
-  photo: null,
   time: null,
 
   setHunter: (hunter) => set({ hunter }),
-  setPins: (pins) => set({ pins }),
 
   setSpecies(species) {
     try {
@@ -124,32 +115,12 @@ export const useEsau = create<EsauState>((set, get) => ({
   async tapSpot(spot) {
     if (!get().species) return;
     const t = ++ticket;
-    set({ open: true, spot, photo: null, reply: null, history: [], status: 'loading-ground', error: null });
+    set({ open: true, spot, reply: null, history: [], status: 'loading-ground', error: null });
     try {
       const grid = await groundFor(spot);
       if (t !== ticket) return;
       const time = get().time;
       set({ grid, hourIndex: time ? nearestHour(grid, time) : 0 });
-      await get().ask();
-    } catch (err) {
-      if (t !== ticket) return;
-      set({ status: 'error', error: err instanceof Error ? err.message : "Couldn't read the ground here." });
-    }
-  },
-
-  async askPhoto(input) {
-    if (!get().species) {
-      set({ choosing: true });
-      return;
-    }
-    const spot = { lat: input.position.lat, lng: input.position.lng };
-    const t = ++ticket;
-    set({ open: true, spot, photo: input, reply: null, history: [], status: 'loading-ground', error: null });
-    try {
-      const grid = await groundFor(spot);
-      if (t !== ticket) return;
-      // A photo is read at the hour it was taken when that hour is in the forecast; else now.
-      set({ grid, hourIndex: input.takenAt ? nearestHour(grid, new Date(input.takenAt)) : 0 });
       await get().ask();
     } catch (err) {
       if (t !== ticket) return;
@@ -168,19 +139,17 @@ export const useEsau = create<EsauState>((set, get) => ({
       hunter: s.hunter ?? undefined,
       grid: s.grid,
       hourIndex: s.hourIndex,
-      pins: s.pins,
       timeZone: TZ,
       question: q || undefined,
       history: s.history.length ? s.history : undefined,
     };
-    const query = s.photo ? photoQuery(s.photo, { ...base, question: base.question }) : base;
     // A follow-up keeps Esau's earlier words in front of him.
     const history: Turn[] = [...s.history];
     if (s.reply && q) history.push({ role: 'esau', text: s.reply.say });
     if (q) history.push({ role: 'hunter', text: q });
     set({ status: 'asking', error: null });
     try {
-      const reply = await askEsau(query);
+      const reply = await askEsau(base);
       if (t !== ticket) return;
       set({ reply, replyHour: s.hourIndex, history, status: 'ready' });
     } catch (err) {
@@ -192,15 +161,15 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   close() {
     ticket++;
-    set({ open: false, spot: null, photo: null, reply: null, history: [], status: 'idle', error: null });
+    set({ open: false, spot: null, reply: null, history: [], status: 'idle', error: null });
   },
 }));
 
 /** The instant rule-based read for the current hour, for scrubbing the slider without spending a call. */
-export function quickBrief(s: Pick<EsauState, 'species' | 'spot' | 'grid' | 'hourIndex' | 'hunter' | 'pins'>): EsauBrief | null {
+export function quickBrief(s: Pick<EsauState, 'species' | 'spot' | 'grid' | 'hourIndex' | 'hunter'>): EsauBrief | null {
   if (!s.spot || !s.grid || !s.species) return null;
   try {
-    return buildBrief({ species: s.species, spot: s.spot, grid: s.grid, hourIndex: s.hourIndex, hunter: s.hunter ?? undefined, pins: s.pins, timeZone: TZ });
+    return buildBrief({ species: s.species, spot: s.spot, grid: s.grid, hourIndex: s.hourIndex, hunter: s.hunter ?? undefined, timeZone: TZ });
   } catch {
     return null;
   }

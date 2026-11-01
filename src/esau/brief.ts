@@ -36,7 +36,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (!g || !g.cols || !g.rows || g.elevationM?.length !== g.cols * g.rows) throw new EsauInputError("grid is missing or malformed");
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
 
-  const spot = readSpot(g, q.spot, { hunter: q.hunter, pins: q.pins });
+  const spot = readSpot(g, q.spot, { hunter: q.hunter });
   // The wind and thermal module's model by default; tests can pass the prototype rules.
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
@@ -107,7 +107,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   }
 
   if (species.id === "whitetail") {
-    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at), q.pins);
+    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at));
     if (pred.length) lines.push("", ...pred);
   }
 
@@ -115,23 +115,6 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (species.report) lines.push(...species.report(spot, conditions, phase, new Date(conditions.at)));
   else lines.push(`ROUGH SCORES (simple rules, weigh them, don't trust them): bedding ${pct(scores.bedding)}, feeding ${pct(scores.feeding)}, travel ${pct(scores.travel)}.`);
   if (g.notes?.length) lines.push(`Data notes: ${g.notes.join(" ")}`);
-
-  if (q.photo) {
-    const ph = q.photo;
-    lines.push("");
-    lines.push("PHOTO");
-    if (!ph.image) lines.push("The hunter tried to show you a photo, but it could not be read on their phone. You cannot see it; say so.");
-    else lines.push("The hunter attached a photo taken at this spot (above). Read it together with the ground.");
-    const facts: string[] = [];
-    if (ph.name) facts.push(`named "${ph.name}"`);
-    if (ph.takenAt) facts.push(`taken ${localTime(ph.takenAt, q.timeZone)}`);
-    if (ph.headingDeg != null) facts.push(`camera facing ${compass(ph.headingDeg)}`);
-    if (ph.tags?.length) facts.push(`tagged ${ph.tags.join(", ")}`);
-    if (ph.notes) facts.push(`hunter's notes: "${ph.notes}"`);
-    if (facts.length) lines.push(`Photo details: ${facts.join("; ")}.`);
-    if (ph.locationSource === "manual") lines.push("The hunter placed this pin by hand, so the spot may be off by some distance.");
-    else if (ph.locationSource === "exif") lines.push("The location came from the photo's own GPS data.");
-  }
 
   if (q.history?.length) {
     lines.push("");

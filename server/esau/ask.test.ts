@@ -48,13 +48,13 @@ describe("askClaude", () => {
     expect(r.wouldChangeMyMind).toHaveLength(3);
     expect(r.meta.inputTokens).toBe(3900);
   });
-  it("thinks harder when the hunter asks a question or sends a photo", async () => {
+  it("thinks harder when the hunter asks a question", async () => {
     const { client, calls } = fakeClient({});
     await askClaude(SAMPLE_SPOTS[5]!.query, { client });
-    await askClaude({ ...SAMPLE_SPOTS[0]!.query, photo: { image: { mediaType: "image/jpeg", base64: "AAAA" } } }, { client });
+    await askClaude({ ...SAMPLE_SPOTS[0]!.query, question: "Where do I sit?" }, { client });
     expect(calls[0].output_config.effort).toBe("medium");
     expect(calls[1].output_config.effort).toBe("medium");
-    expect(calls[1].messages[0].content[0].type).toBe("image");
+    expect(calls[1].messages[0].content[0].type).toBe("text");
   });
   it("answers a refusal in Esau's voice instead of throwing", async () => {
     const { client } = fakeClient({ stop_reason: "refusal", parsed_output: null });

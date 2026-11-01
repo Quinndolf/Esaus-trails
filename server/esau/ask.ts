@@ -25,11 +25,9 @@ export async function askWithBrief(q: SpotQuery, brief: EsauBrief, cfg: AskConfi
   const client = cfg.client ?? new Anthropic();
   const model = cfg.model ?? process.env.ESAU_MODEL ?? DEFAULT_MODEL;
   const base = cfg.effort ?? ((process.env.ESAU_EFFORT as AskConfig["effort"]) || "low");
-  const effort = q.question?.trim() || q.photo ? STEP_UP[base] : base;
+  const effort = q.question?.trim() ? STEP_UP[base] : base;
 
   const content: Anthropic.Beta.BetaContentBlockParam[] = [];
-  const image = q.photo?.image;
-  if (image) content.push({ type: "image", source: { type: "base64", media_type: image.mediaType, data: image.base64 } });
   content.push({ type: "text", text: brief.report });
 
   const started = Date.now();

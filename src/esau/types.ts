@@ -77,7 +77,6 @@ export interface SpotQuery {
   grid: GroundGrid;
   /** Index into grid.weather.hours the hour slider points at. Defaults to 0. */
   hourIndex?: number;
-  pins?: Pin[];
   /** Names of map layers covering the spot ("Public access: Daniel Boone NF", "Private: J. Smith"). */
   layersHere?: string[];
   /** IANA zone for talking about clock time. Defaults to the device's zone. */
@@ -86,22 +85,6 @@ export interface SpotQuery {
   question?: string;
   /** Prior turns about this same spot, oldest first. */
   history?: { role: "hunter" | "esau"; text: string }[];
-  /** A photo the hunter attached (photo pins). Build it with `photoQuery` from the photo module's EsauPhotoInput. */
-  photo?: SpotPhoto;
-}
-
-export interface SpotPhoto {
-  /** Null when the image could not be read on this device (a HEIC on a non-Apple browser). */
-  image: { mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; base64: string } | null;
-  name?: string;
-  notes?: string;
-  tags?: string[];
-  takenAt?: string | null;
-  /** Compass heading the camera faced. */
-  headingDeg?: number | null;
-  altitudeM?: number | null;
-  /** "manual" means the hunter dropped the pin by hand, so the spot may be off. */
-  locationSource?: "exif" | "device-gps" | "manual";
 }
 
 /** Terrain read for one spot, all in hunter units (feet, yards, degrees). */

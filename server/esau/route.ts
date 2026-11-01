@@ -4,7 +4,7 @@ import { EsauInputError } from "../../src/esau/brief";
 import type { SpotQuery } from "../../src/esau/types";
 import { askClaude, type AskConfig } from "./ask";
 
-const MAX_BODY = 12 * 1024 * 1024; // photos ride along as base64
+const MAX_BODY = 2 * 1024 * 1024; // no photos or marks ever arrive here
 
 // Every call spends Claude credit, so keep strangers and runaway loops off the endpoint.
 const PER_MINUTE = Number(process.env.ESAU_RATE_PER_MIN || 20);
@@ -52,6 +52,8 @@ function validate(body: unknown): SpotQuery {
   if (typeof q.species !== "string") throw new EsauInputError("species is required");
   if (!q.spot || typeof q.spot.lat !== "number" || typeof q.spot.lng !== "number") throw new EsauInputError("spot {lat,lng} is required");
   if (!q.grid || typeof q.grid !== "object") throw new EsauInputError("grid is required");
+  const extra = body as Record<string, unknown>;
+  if ("photo" in extra || "pins" in extra) throw new EsauInputError("photos and marks are never sent to Esau");
   if (q.question && q.question.length > 2000) throw new EsauInputError("question is too long");
   return q as SpotQuery;
 }

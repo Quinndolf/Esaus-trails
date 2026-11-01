@@ -136,31 +136,3 @@ describe("offline read", () => {
   });
 });
 
-describe("photo pins", () => {
-  const input = {
-    name: "Bench thicket",
-    notes: "Beds flattened in the leaves",
-    tags: ["bedding"],
-    position: cell(11, 24),
-    altitude: 250,
-    takenAt: "2026-11-08T13:05:00Z",
-    heading: 200,
-    locationSource: "manual" as const,
-    image: { mediaType: "image/jpeg" as const, base64: "AAAA" },
-  };
-  it("builds a query at the pin, at the hour the photo was taken", async () => {
-    const { photoQuery } = await import("../photo");
-    const q = photoQuery(input, { species: "whitetail", grid, timeZone: "America/Chicago" });
-    expect(q.hourIndex).toBe(2);
-    const r = buildBrief(q).report;
-    expect(r).toContain("PHOTO");
-    expect(r).toContain('named "Bench thicket"');
-    expect(r).toContain("camera facing SSW");
-    expect(r).toContain("placed this pin by hand");
-  });
-  it("tells Esau when the image could not be read", async () => {
-    const { photoQuery } = await import("../photo");
-    const q = photoQuery({ ...input, image: null }, { species: "whitetail", grid });
-    expect(buildBrief(q).report).toContain("You cannot see it");
-  });
-});

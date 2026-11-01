@@ -21,7 +21,6 @@ import {
   usePhotoPinMarkers,
   usePhotoPins,
 } from './photos';
-import type { PinKind } from './esau/types';
 import { SavedSheet, ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools, type WaypointIcon } from './tools';
 import { BasemapIcon, CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, OfflineIcon, ToolsIcon } from './ui/icons';
 import { CallButton } from './calls/CallButton';
@@ -42,18 +41,6 @@ const BASEMAP_KEY = 'esau-basemap';
 
 // The offline-download button is parked for now (satellite coverage is fine where we hunt). Flip to bring it back.
 const SHOW_OFFLINE = false;
-
-/** Waypoint icons Esau treats as ground truth about the property. */
-const ESAU_PIN_KIND: Partial<Record<WaypointIcon, PinKind>> = {
-  food: 'food',
-  water: 'water',
-  bed: 'bed',
-  stand: 'stand',
-  blind: 'stand',
-  rub: 'sign',
-  scrape: 'sign',
-  trail: 'sign',
-};
 
 type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null;
 
@@ -153,19 +140,6 @@ export function App() {
       fix ? { lat: fix.lngLat[1], lng: fix.lngLat[0], accuracyM: fix.accuracy, headingDeg: heading ?? undefined } : null,
     );
   }, [fix, heading]);
-  // Esau reads photo pins and the hunter's food, water, bed, stand and sign waypoints.
-  const photoPins = usePhotoPins((s) => s.pins);
-  const waypoints = useTools((s) => s.waypoints);
-  useEffect(() => {
-    useEsau.getState().setPins([
-      ...photoPins.map((p) => ({ id: p.id, kind: 'photo' as const, lat: p.position.lat, lng: p.position.lng, name: p.name, note: p.notes, tags: p.tags })),
-      ...waypoints.flatMap((w) => {
-        const kind = ESAU_PIN_KIND[w.icon];
-        return kind ? [{ id: w.id, kind, lat: w.position[1], lng: w.position[0], name: w.name, note: w.notes }] : [];
-      }),
-    ]);
-  }, [photoPins, waypoints]);
-
   // Opening a photo pin (new from EXIF, or picked from the list) brings it on screen.
   const selectedPinId = usePhotoPins((s) => s.selectedPinId);
   useEffect(() => {
@@ -300,12 +274,7 @@ export function App() {
       <ToolBar />
       <TrackerChip />
       <PhotosSheet open={sheet === 'photos'} onClose={() => setSheet(null)} />
-      <PhotoPinSheet
-        onAskEsau={(input) => {
-          usePhotoPins.getState().select(null);
-          void useEsau.getState().askPhoto(input);
-        }}
-      />
+      <PhotoPinSheet />
       <EsauPanel />
       <ManualPinPrompt />
       <SpeciesPicker />

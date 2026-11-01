@@ -41,7 +41,6 @@ export const SAMPLE_SPOTS: { name: string; expect: string; query: SpotQuery }[] 
       hourIndex: 0,
       timeZone: "America/Chicago",
       question: "Where would you hang a stand for an all-day sit tomorrow, and how do I walk in?",
-      pins: [{ id: "p1", kind: "sign", lat: cell(7, 18).lat, lng: cell(7, 18).lng, name: "Rub line", tags: ["rub"], note: "Six fresh rubs heading toward the saddle" }],
     },
   },
 ];

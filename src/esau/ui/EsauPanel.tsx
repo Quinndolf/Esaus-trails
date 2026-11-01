@@ -26,7 +26,7 @@ export function EsauPanel() {
   const brief = useMemo(
     () => quickBrief(s),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.species, s.spot, s.grid, s.hourIndex, s.hunter, s.pins],
+    [s.species, s.spot, s.grid, s.hourIndex, s.hunter],
   );
 
   if (!s.open || !s.spot) return null;
@@ -57,7 +57,7 @@ export function EsauPanel() {
               </span>
             </>
           ) : (
-            <strong>{s.photo ? s.photo.name || 'Photo pin' : 'Reading this spot…'}</strong>
+            <strong>Reading this spot…</strong>
           )}
         </div>
         <button className="icon-btn" aria-label="Close" onClick={s.close}>
