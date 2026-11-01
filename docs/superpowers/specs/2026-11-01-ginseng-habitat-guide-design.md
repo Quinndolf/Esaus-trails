@@ -1,6 +1,6 @@
 # Ginseng "Where to look" guide: design
 
-Status: proposed, for review. No code yet.
+Status: implemented in this PR.
 
 ## Why
 The ginseng mode today covers the rules (`src/ginseng/rules.ts`) and seven how-to slides about digging and selling. It does not teach a beginner where to look. Quinn is a brand-new hunter, so the missing lesson is "what ground and what plants say sang might be here."
