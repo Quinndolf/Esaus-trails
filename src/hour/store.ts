@@ -5,6 +5,7 @@ import type { ConditionsModel } from '../model/conditions';
 import { conditionsForGrid } from '../model/esau';
 import { createMovementModel, type MovementModel } from '../model/movement';
 import { fetchGround, type Bbox } from './ground';
+import { nearestSavedGround, saveGround } from './groundCache';
 
 export type HourStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -18,6 +19,8 @@ interface HourState {
   /** The hour the slider points at. Esau's panel follows this. */
   date: Date;
   open: boolean;
+  /** When the weather on screen was read, if it is a saved copy because there was no service. */
+  staleSince: number | null;
   /** Show the predicted food layer (deer only). */
   showFood: boolean;
   setShowFood(on: boolean): void;
@@ -43,6 +46,7 @@ export const useHour = create<HourState>((set, get) => ({
   hours: [],
   date: floorHour(new Date()),
   open: false,
+  staleSince: null,
   showFood: true,
   setShowFood: (showFood) => set({ showFood }),
   setDate: (date) => {
@@ -56,7 +60,7 @@ export const useHour = create<HourState>((set, get) => ({
     const conditions = conditionsForGrid(grid);
     const movement = createMovementModel(grid);
     const hours = conditions.hours(24, now);
-    set({ status: 'ready', error: null, grid, conditions, movement, hours, date: hours[0], open: true });
+    set({ status: 'ready', error: null, grid, conditions, movement, hours, date: hours[0], open: true, staleSince: null });
   },
   async load(b) {
     inflight?.abort();
@@ -67,8 +71,16 @@ export const useHour = create<HourState>((set, get) => ({
       const grid = await fetchGround(b, { signal: ac.signal });
       if (ac.signal.aborted) return;
       get().useGrid(grid);
+      saveGround(grid);
     } catch (err) {
       if (ac.signal.aborted) return;
+      // No service: fall back to the last ground read near here, and say how old it is.
+      const saved = nearestSavedGround([(b.west + b.east) / 2, (b.south + b.north) / 2]);
+      if (saved) {
+        get().useGrid(saved.grid);
+        set({ staleSince: saved.savedAt });
+        return;
+      }
       set({ status: 'error', error: err instanceof Error ? err.message : String(err) });
     }
   },
