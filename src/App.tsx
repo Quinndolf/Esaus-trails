@@ -36,6 +36,7 @@ import { AnalyzePill } from './home/AnalyzePill';
 import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
 import { AnimalChip } from './home/AnimalChip';
 import { ExitPrompt } from './home/ExitPrompt';
+import { JournalSheet } from './journal/JournalSheet';
 import { HourBar } from './home/HourBar';
 import { nextLocation } from './home/location';
 import { Tutorial } from './home/Tutorial';
@@ -47,7 +48,7 @@ import './home/home.css';
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
 
-type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null;
+type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null | 'journal';
 
 function initialBasemap(): BasemapId {
   try {
@@ -280,7 +281,9 @@ export function App() {
         callsHint={callsFor(species).length ? `${CALL_GROUP_TITLE[callsFor(species)[0].species]} calls: how to, credits` : ''}
         onMarkLocation={() => void markMyLocation()}
         onDone={() => setExitOpen(true)}
+        onJournal={() => setSheet('journal')}
       />
+      <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
       <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} species={species} />

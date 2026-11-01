@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { saveSnag } from './snag';
+import { useJournal } from '../journal/store';
+import { useTools } from '../tools/store';
+import { useEsau } from '../esau/ui/store';
 import './home.css';
 
 /** "Did you snag anything?" Saved on this phone only. */
@@ -8,6 +11,23 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
   const [what, setWhat] = useState('');
   const [where, setWhere] = useState('');
   if (!open) return null;
+  const record = (snagged: 'yes' | 'no', what?: string) => {
+    const tools = useTools.getState();
+    const esau = useEsau.getState();
+    const hour = esau.grid?.weather.hours[esau.hourIndex];
+    useJournal.getState().add({
+      id: `j-${Date.now()}`,
+      trackId: tools.tracks[0]?.id ?? null,
+      date: new Date().toLocaleDateString('en-CA'),
+      species: esau.species,
+      weapon: esau.weapon,
+      snagged,
+      what,
+      windFromDeg: hour?.windFrom ?? null,
+      beds: tools.waypoints.filter((w) => w.icon === 'bed').map((w) => w.position),
+      trails: tools.waypoints.filter((w) => w.icon === 'trail').map((w) => w.position),
+    });
+  };
   const finish = () => {
     setYes(null);
     setWhat('');
@@ -25,6 +45,7 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
               data-testid="snag-no"
               onClick={() => {
                 saveSnag({ at: Date.now(), yes: false });
+                record('no');
                 finish();
               }}
             >
@@ -48,6 +69,7 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
                 data-testid="snag-save"
                 onClick={() => {
                   saveSnag({ at: Date.now(), yes: true, what: what || undefined, where: where || undefined });
+                  record('yes', what || undefined);
                   finish();
                 }}
               >

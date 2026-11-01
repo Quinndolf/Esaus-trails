@@ -15,10 +15,11 @@ interface Props {
   callsHint: string;
   /** Opens the "Did you snag anything?" question. */
   onDone: () => void;
+  onJournal: () => void;
 }
 
 /** The Swiss-army knife: every map tool in one sheet. */
-export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, hasCalls, callsHint, onDone }: Props) {
+export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, onCalls, hasCalls, callsHint, onDone, onJournal }: Props) {
   const setMode = useTools((s) => s.setMode);
   const recording = useTools((s) => s.recording);
   const startTrack = useTools((s) => s.startTrack);
@@ -42,6 +43,7 @@ export function ToolsSheet({ open, onClose, onPhotos, onMarkLocation, onSaved, o
     recording
       ? { id: 'track', name: 'Stop tracker', hint: 'Save the route', run: pick(() => void stopTrack()), live: true }
       : { id: 'track', name: 'Tracker', hint: 'Record your route', run: pick(startTrack) },
+    { id: 'journal', name: 'Hunt journal', hint: 'Past hunts and debriefs', run: onJournal },
     { id: 'done', name: 'Done hunting', hint: 'Did you snag anything?', run: pick(onDone) },
   ];
 
