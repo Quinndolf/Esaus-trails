@@ -2,15 +2,9 @@ import { useState } from 'react';
 import { signFits } from '../../esau/species';
 import { useEsau } from '../../esau/ui/store';
 import { BottomSheet } from '../../ui/BottomSheet';
-import { buildEsauPhotoInput, type EsauPhotoInput } from '../esauPhotoInput';
 import { normalizeTags, usePhotoPins } from '../store';
 import { PRESET_TAGS, type PhotoPin } from '../types';
 import { usePhotoUrl } from '../usePhotoUrl';
-
-interface PhotoPinSheetProps {
-  /** Hands the photo and its location to Esau. Wired up by the Esau module. */
-  onAskEsau?(input: EsauPhotoInput): void;
-}
 
 const SOURCE_LABEL: Record<PhotoPin['source'], string> = {
   exif: 'From photo GPS',
@@ -19,14 +13,14 @@ const SOURCE_LABEL: Record<PhotoPin['source'], string> = {
 };
 
 /** Bottom sheet for the selected photo pin: view, name, notes, tags. */
-export function PhotoPinSheet({ onAskEsau }: PhotoPinSheetProps) {
+export function PhotoPinSheet() {
   const pin = usePhotoPins((s) => s.pins.find((p) => p.id === s.selectedPinId) ?? null);
   if (!pin) return null;
   // Keyed so the draft resets when a different pin is opened.
-  return <PinEditor key={pin.id} pin={pin} onAskEsau={onAskEsau} />;
+  return <PinEditor key={pin.id} pin={pin} />;
 }
 
-function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
+function PinEditor({ pin }: { pin: PhotoPin }) {
   const updatePin = usePhotoPins((s) => s.updatePin);
   const removePin = usePhotoPins((s) => s.removePin);
   const select = usePhotoPins((s) => s.select);
@@ -34,7 +28,6 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
   const [name, setName] = useState(pin.name);
   const [notes, setNotes] = useState(pin.notes);
   const [customTag, setCustomTag] = useState('');
-  const [asking, setAsking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const saveText = () => {
@@ -59,17 +52,6 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
     select(null);
   };
 
-  const askEsau = async () => {
-    if (!onAskEsau) return;
-    saveText();
-    setAsking(true);
-    try {
-      onAskEsau(await buildEsauPhotoInput({ ...pin, name, notes }));
-    } finally {
-      setAsking(false);
-    }
-  };
-
   const species = useEsau((st) => st.species);
   const presets = PRESET_TAGS.filter((t) => signFits(t, species));
   const allTags = [...presets, ...pin.tags.filter((t) => !(presets as readonly string[]).includes(t))];
@@ -86,12 +68,6 @@ function PinEditor({ pin, onAskEsau }: { pin: PhotoPin } & PhotoPinSheetProps) {
       />
 
       {image && <img className="photo-sheet__image" src={image} alt={pin.name} />}
-
-      {onAskEsau && (
-        <button type="button" className="photo-sheet__esau" onClick={() => void askEsau()} disabled={asking}>
-          {asking ? 'Getting the photo ready…' : 'Ask Esau about this photo'}
-        </button>
-      )}
 
       <div className="photo-sheet__tags" role="group" aria-label="Tags">
         {allTags.map((tag) => (

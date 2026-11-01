@@ -6,4 +6,3 @@ export { offlineRead } from "./offline";
 export { askEsau, EsauApiError, type AskOptions } from "./client";
 export { SPECIES, speciesBrain } from "./species";
 export { ESAU_PERSONA, buildSystemPrompt } from "./persona";
-export { photoQuery, type PhotoInputLike } from "./photo";

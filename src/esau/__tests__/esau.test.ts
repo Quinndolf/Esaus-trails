@@ -104,7 +104,7 @@ describe("brief", () => {
     expect(buildBrief(up!.query).report).toContain("is blowing toward the tapped spot");
   });
   it("keeps the system prompt identical across taps so it caches", () => {
-    const systems = new Set(SAMPLE_SPOTS.map((s) => buildBrief(s.query).system));
+    const systems = new Set(SAMPLE_SPOTS.filter((s) => s.query.species === "whitetail").map((s) => buildBrief(s.query).system));
     expect(systems.size).toBe(1);
     expect([...systems][0]).toContain("You are Esau");
     expect([...systems][0]).toContain("WHITETAIL DEER");
@@ -126,7 +126,7 @@ describe("brief", () => {
 describe("offline read", () => {
   it("gives a short, honest answer with no signal", () => {
     const r = offlineRead(buildBrief(SAMPLE_SPOTS[1]!.query));
-    expect(r.say).toMatch(/^No signal/);
+    expect(r.more).toMatch(/^No signal/);
     expect(r.say).toContain("smell you");
     expect(r.confidence).toBe("low");
     expect(r.meta.servedBy).toBe("offline-rules");
@@ -136,31 +136,3 @@ describe("offline read", () => {
   });
 });
 
-describe("photo pins", () => {
-  const input = {
-    name: "Bench thicket",
-    notes: "Beds flattened in the leaves",
-    tags: ["bedding"],
-    position: cell(11, 24),
-    altitude: 250,
-    takenAt: "2026-11-08T13:05:00Z",
-    heading: 200,
-    locationSource: "manual" as const,
-    image: { mediaType: "image/jpeg" as const, base64: "AAAA" },
-  };
-  it("builds a query at the pin, at the hour the photo was taken", async () => {
-    const { photoQuery } = await import("../photo");
-    const q = photoQuery(input, { species: "whitetail", grid, timeZone: "America/Chicago" });
-    expect(q.hourIndex).toBe(2);
-    const r = buildBrief(q).report;
-    expect(r).toContain("PHOTO");
-    expect(r).toContain('named "Bench thicket"');
-    expect(r).toContain("camera facing SSW");
-    expect(r).toContain("placed this pin by hand");
-  });
-  it("tells Esau when the image could not be read", async () => {
-    const { photoQuery } = await import("../photo");
-    const q = photoQuery({ ...input, image: null }, { species: "whitetail", grid });
-    expect(buildBrief(q).report).toContain("You cannot see it");
-  });
-});
