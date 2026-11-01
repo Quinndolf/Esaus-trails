@@ -93,6 +93,11 @@ export function nearestHour(grid: GroundGrid, at: Date): number {
   return best;
 }
 
+/** Banners and sit spots for the slider's hour. Judged against the sit spot the hunter chose, never Esau's own pick. */
+function refresh(s: Pick<EsauState, 'analyzer' | 'sit'>): Analysis | null {
+  return s.analyzer?.(s.sit) ?? null;
+}
+
 /** Bumped on every new spot so a slow answer for an old tap can't overwrite a new one. */
 let ticket = 0;
 
@@ -122,7 +127,8 @@ export const useEsau = create<EsauState>((set, get) => ({
     } catch {
       /* ignore */
     }
-    set({ weapon, reply: null });
+    ticket++;
+    set({ weapon, reply: null, analysis: refresh(get()) ?? get().analysis });
     if (weapon && get().spot && get().grid) void get().ask();
   },
 
@@ -146,7 +152,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   setTime(at) {
     const grid = get().grid;
-    set({ time: at, ...(grid ? { hourIndex: nearestHour(grid, at) } : {}) });
+    set({ time: at, ...(grid ? { hourIndex: nearestHour(grid, at) } : {}), analysis: refresh(get()) ?? get().analysis });
   },
 
   async tapSpot(spot) {
@@ -171,7 +177,7 @@ export const useEsau = create<EsauState>((set, get) => ({
     if (!s.spot || !s.grid || !s.species) return;
     const t = ticket;
     const q = question?.trim();
-    const an = s.analyzer?.(s.sit ?? s.spot) ?? null;
+    const an = refresh(s);
     if (an) set({ analysis: an });
     const base: SpotQuery = {
       species: s.species,

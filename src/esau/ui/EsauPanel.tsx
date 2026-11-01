@@ -48,13 +48,19 @@ export function EsauPanel() {
   );
 
   const sun = brief?.conditions.sun.phase ?? 'midday';
-  const safety = s.analysis && s.species
-    ? safetyLines({ species: s.species, weapon: s.weapon, legal: s.analysis.legal, sunPhase: sun, batteryPct: battery, saddle: false, alreadyShown: safetyShown })
-    : { lines: [], shown: [] };
+  // Once-per-hunt lines are kept in state when first produced, so they stay on screen until the card closes.
+  const [safetyText, setSafetyText] = useState<string[]>([]);
   useEffect(() => {
-    if (safety.shown.length) setSafetyShown((prev) => new Set([...prev, ...safety.shown]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [safety.shown.join()]);
+    if (!s.open) {
+      setSafetyText([]);
+      return;
+    }
+    if (!s.analysis || !s.species) return;
+    const r = safetyLines({ species: s.species, weapon: s.weapon, legal: s.analysis.legal, sunPhase: sun, batteryPct: battery, saddle: false, alreadyShown: safetyShown });
+    if (!r.lines.length) return;
+    setSafetyShown((prev) => new Set([...prev, ...r.shown]));
+    setSafetyText((prev) => [...prev, ...r.lines]);
+  }, [s.open, s.analysis, s.species, s.weapon, sun, battery, safetyShown]);
 
   if (!s.open || !s.spot) return null;
 
@@ -99,7 +105,7 @@ export function EsauPanel() {
             <span>{a.detail}</span>
           </div>
         ))}
-        {safety.lines.map((l) => (
+        {safetyText.map((l) => (
           <p key={l} className="esau-safety">
             {l}
           </p>

@@ -21,6 +21,8 @@ export interface LegalQuery {
   species: SpeciesId;
   weapon: Weapon | null;
   at: Date;
+  /** IANA zone the hunter is in. Defaults to Central, where Monroe County is. The day is read in this zone, never the server's. */
+  timeZone?: string;
   /** Only Monroe County is tuned; anything else is treated as Monroe's rules. */
   county?: string;
 }

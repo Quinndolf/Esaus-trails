@@ -46,7 +46,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
   const scores = species.scores(spot, conditions, phase);
 
-  const legal = legalToday({ species: q.species, weapon: q.weapon ?? null, at: new Date(conditions.at) });
+  const legal = legalToday({ species: q.species, weapon: q.weapon ?? null, at: new Date(conditions.at), timeZone: q.timeZone });
 
   const lines: string[] = [];
   lines.push(`FIELD REPORT — ${species.name}`);

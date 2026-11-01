@@ -61,4 +61,15 @@ describe("Kentucky rules (2026-27, Monroe County, deer zone 2)", () => {
     expect(h.steps.join(" ")).toMatch(/midnight/i);
     expect(harvestSteps("squirrel")).toBeNull();
   });
+
+  it("reads the day in the hunter's time zone, not the server's", () => {
+    // 8 pm Central on Nov 13 is already Nov 14 in UTC. Gun season has not opened yet for the hunter.
+    const at = new Date("2026-11-14T02:00:00Z");
+    expect(legalToday({ species: "whitetail", weapon: "rifle", at, timeZone: "America/Chicago" }).status).toBe("closed");
+    expect(legalToday({ species: "whitetail", weapon: "rifle", at, timeZone: "UTC" }).status).toBe("open");
+    expect(legalToday({ species: "squirrel", weapon: "pellet", at, timeZone: "America/Chicago" }).status).toBe("open");
+  });
+  it("defaults to Central time, where Monroe County is", () => {
+    expect(legalToday({ species: "whitetail", weapon: "rifle", at: new Date("2026-11-14T02:00:00Z") }).status).toBe("closed");
+  });
 });

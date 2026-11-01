@@ -25,6 +25,7 @@ export interface AnalyzeInput {
   species: SpeciesId;
   weapon: Weapon | null;
   at: Date;
+  timeZone?: string;
   /** The hunter's chosen sit spot, if any. Used only for the wrong-wind banner. */
   sit: LngLat | null;
   hunter: LngLat | null;
@@ -35,7 +36,7 @@ export interface AnalyzeInput {
  * Pure. Reads only land, wind, weather and the hunter's position, never their marks.
  */
 export function analyzeHour(i: AnalyzeInput): Analysis {
-  const legal = legalToday({ species: i.species, weapon: i.weapon, at: i.at });
+  const legal = legalToday({ species: i.species, weapon: i.weapon, at: i.at, timeZone: i.timeZone });
   const canRank = i.weapon != null && TRAIL_MODEL_SPECIES.includes(i.species);
   const ranked = canRank
     ? topSitSpots({

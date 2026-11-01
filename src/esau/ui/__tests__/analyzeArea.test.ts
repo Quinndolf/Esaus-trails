@@ -67,4 +67,15 @@ describe('analyzeArea', () => {
     await useEsau.getState().tapSpot({ lat: 37.5, lng: -85.5 }).catch(() => {});
     expect(useEsau.getState().sit).toEqual({ lat: 37.5, lng: -85.5 });
   });
+
+  it('refreshes the banners when the slider moves, and when the weapon changes', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    await analyzeArea();
+    expect(useEsau.getState().analysis?.legal.status).toBe('open');
+    useEsau.getState().setWeapon('rifle'); // modern gun opens Nov 14; Nov 8 is closed for a rifle
+    expect(useEsau.getState().analysis?.legal.status).toBe('closed');
+    const before = useEsau.getState().analysis;
+    useHour.getState().setDate(useHour.getState().hours[12]!);
+    expect(useEsau.getState().analysis).not.toBe(before);
+  });
 });

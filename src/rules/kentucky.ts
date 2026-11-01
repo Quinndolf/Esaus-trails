@@ -38,13 +38,15 @@ const SQUIRREL: Window[] = [
 ];
 const SQUIRREL_WEAPONS: Weapon[] = ["pellet", "bow", "crossbow", "shotgun", "muzzleloader"];
 
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export const DEFAULT_TZ = "America/Chicago";
+/** The calendar day (YYYY-MM-DD) of an instant in the hunter's zone. */
+const iso = (d: Date, timeZone = DEFAULT_TZ) => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const within = (day: string, w: Window) => day >= w.from && day <= w.to;
 
 const unknown = (why: string): Legal => ({ status: "unknown", note: `${why} ${CHECK}` });
 
 export function legalToday(q: LegalQuery): Legal {
-  const day = iso(q.at);
+  const day = iso(q.at, q.timeZone);
   if (q.species === "ginseng") {
     const s = seasonStatus(q.at);
     return { status: s.open ? "open" : "closed", note: s.text, seasonLabel: "Kentucky ginseng season (Sept 1 to Dec 1)", source: "src/ginseng/rules", verified: VERIFIED };

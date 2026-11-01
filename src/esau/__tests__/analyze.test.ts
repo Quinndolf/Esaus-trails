@@ -68,3 +68,12 @@ describe("field report: legal and sit spots", () => {
     expect(brief.legal.status).toBe("open");
   });
 });
+
+describe("answer cap on dates", () => {
+  it("does not split after month abbreviations or U.S.", async () => {
+    const { splitAnswer } = await import("../answer");
+    const r = splitAnswer("Gun season opens Nov. 14 in the U.S. south. Sit tight. Watch the draw. Stay low. Last one.");
+    expect(r.say).toContain("Nov. 14");
+    expect(r.overflow).toBe("Last one.");
+  });
+});

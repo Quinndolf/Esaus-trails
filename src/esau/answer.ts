@@ -7,7 +7,8 @@ function sentences(text: string): string[] {
     .trim()
     .replace(/\s+/g, " ")
     .replace(/\b([ap])\.m\./gi, `$1${DOT}m${DOT}`)
-    .replace(/\b(Mr|Mrs|Ms|Dr|St|vs)\./g, `$1${DOT}`)
+    .replace(/\b(Mr|Mrs|Ms|Dr|St|vs|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\./g, `$1${DOT}`)
+    .replace(/\bU\.S\./g, `U${DOT}S${DOT}`)
     .replace(/(\d)\.(\d)/g, `$1${DOT}$2`);
   const parts = guarded.match(/[^.!?]+[.!?]*\s*/g) ?? [];
   return parts.map((p) => p.replaceAll(DOT, ".").trim()).filter(Boolean);
