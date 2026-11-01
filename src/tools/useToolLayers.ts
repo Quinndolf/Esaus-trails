@@ -4,6 +4,7 @@ import type { LngLat } from '../map/geo';
 import { usePhotoPins } from '../photos/store';
 import { ICON_COLORS, iconSvg } from './icons';
 import { useTools } from './store';
+import { attachHoldDrag, justDragged } from '../marks/holdDrag';
 import type { Waypoint } from './types';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -110,10 +111,11 @@ export function useToolLayers(map: MLMap | null) {
       el.innerHTML = iconSvg(wp.icon);
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (useTools.getState().mode !== 'none') return;
+        if (justDragged() || useTools.getState().mode !== 'none') return;
         useTools.getState().selectWaypoint(wp.id);
       });
       const marker = new maplibregl.Marker({ element: el, anchor: wp.icon === 'x' ? 'center' : 'bottom' }).setLngLat(wp.position).addTo(map);
+      attachHoldDrag(map, marker, (to) => void useTools.getState().updateWaypoint(wp.id, { position: to }));
       live.set(wp.id, { marker, wp });
     }
   }, [map, waypoints]);

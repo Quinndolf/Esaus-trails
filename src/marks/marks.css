@@ -1,0 +1,15 @@
+.mark-chips { display: flex; gap: 8px; margin: 10px 0 6px; overflow-x: auto; }
+.mark-chip { flex: none; height: 36px; padding: 0 14px; border: none; border-radius: 18px; background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.mark-chip.is-active { background: var(--text); color: var(--bg); font-weight: 700; }
+.mark-row { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); list-style: none; }
+.mark-delete-bg { position: absolute; inset: 0; background: #ff3b30; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; }
+.mark-row-main { position: relative; background: var(--panel); display: flex; align-items: center; gap: 10px; touch-action: pan-y; }
+.mark-glyph { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--panel-2); display: grid; place-items: center; font-size: 16px; }
+.mark-glyph svg { stroke: var(--wp-color); }
+.mark-open { flex: 1; text-align: left; border: none; background: transparent; color: inherit; font: inherit; padding: 12px 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-width: 0; }
+.mark-open span { color: var(--muted); font-size: 12px; }
+.undo-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-b) + 150px); z-index: 50; display: flex; align-items: center; gap: 14px;
+  background: #1c2a1f; color: #fff; padding: 10px 16px; border-radius: 22px; box-shadow: 0 4px 16px rgba(0, 0, 0, .35); font-size: 14px; }
+.undo-toast .link-btn { color: #7ec8ff; padding: 0; }
+.wp-marker.is-dragging, .photo-pin-marker.is-dragging { transform-origin: bottom; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .45)); opacity: .85; }
+.wp-marker, .photo-pin-marker { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }

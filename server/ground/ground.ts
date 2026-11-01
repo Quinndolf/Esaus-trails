@@ -2,7 +2,7 @@ import { PNG } from "pngjs";
 import type { GroundGrid, WeatherHour } from "../../src/esau/types";
 import { getForecast, memoryCache } from "../../src/model/forecast";
 import type { WeatherHour as ModelHour } from "../../src/model/types";
-import { fetchCrops, fetchGreenness } from "./vegetation";
+import { exportSize, fetchCrops, fetchGreenness } from "./vegetation";
 
 /**
  * Builds the GroundGrid Esau reads, from public sources with no API key:
@@ -91,7 +91,7 @@ export interface ElevationOptions {
 
 /** Thrown when 3DEP could not be reached or errored (as opposed to answering "no data here"). */
 class DepUnavailable extends Error {}
-const DEP_TIMEOUT_MS = 4000;
+const DEP_TIMEOUT_MS = 10_000;
 const DEP_BREAKER_MS = 60_000;
 let depDownUntil = 0;
 export function resetDepBreaker() {
@@ -99,45 +99,98 @@ export function resetDepBreaker() {
 }
 
 /**
- * USGS 3DEP, 1/3 arc-second (about 10 m in the lower 48): sees the benches, saddles and draws a 90 m
- * DEM smooths away. One quick POST per chunk (long point lists don't fit a GET), no retries.
+ * Reads a plain (uncompressed, 32-bit float, one band) GeoTIFF into a cols x rows array, north-west first.
+ * 3DEP's exportImage hands back exactly this; tiled or in strips.
  */
-async function fetch3dep(f: Fetch, chunk: { lat: number; lng: number }[]): Promise<number[]> {
-  if (Date.now() < depDownUntil) throw new DepUnavailable("3DEP skipped: it failed a moment ago");
-  const body = new URLSearchParams({
-    geometry: JSON.stringify({ points: chunk.map((p) => [Number(p.lng.toFixed(6)), Number(p.lat.toFixed(6))]), spatialReference: { wkid: 4326 } }),
-    geometryType: "esriGeometryMultipoint",
-    returnFirstValueOnly: "true",
-    interpolation: "RSP_BilinearInterpolation",
-    f: "json",
-  });
-  let json: any;
+export function elevationFromTiff(buf: Buffer, cols: number, rows: number): number[] {
+  // (cols x rows here are the raster's own size in pixels.)
+  const bad = (why: string) => new Error(`3DEP elevation reply was malformed or had no data (${why})`);
+  if (buf.length < 16) throw bad("too short");
+  const le = buf.toString("latin1", 0, 2) === "II";
+  if (!le && buf.toString("latin1", 0, 2) !== "MM") throw bad("not a TIFF");
+  const u16 = (o: number) => (le ? buf.readUInt16LE(o) : buf.readUInt16BE(o));
+  const u32 = (o: number) => (le ? buf.readUInt32LE(o) : buf.readUInt32BE(o));
+  const f32 = (o: number) => (le ? buf.readFloatLE(o) : buf.readFloatBE(o));
+  const tags = new Map<number, number[]>();
   try {
-    const res = await f("https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples", {
-      method: "POST",
-      headers: { "user-agent": "esaus-trails (hunting map)", "content-type": "application/x-www-form-urlencoded" },
-      body,
-      signal: AbortSignal.timeout(DEP_TIMEOUT_MS),
-    });
+    const ifd = u32(4);
+    const n = u16(ifd);
+    for (let i = 0; i < n; i++) {
+      const e = ifd + 2 + i * 12;
+      const type = u16(e + 2), count = u32(e + 4);
+      const size = type === 3 ? 2 : type === 4 ? 4 : 0;
+      if (!size) continue;
+      const at = count * size <= 4 ? e + 8 : u32(e + 8);
+      tags.set(u16(e), Array.from({ length: Math.min(count, 100000) }, (_, k) => (size === 2 ? u16(at + k * 2) : u32(at + k * 4))));
+    }
+  } catch {
+    throw bad("unreadable header");
+  }
+  const one = (t: number) => tags.get(t)?.[0];
+  const width = one(256), height = one(257);
+  if (width !== cols || height !== rows) throw bad("wrong size");
+  if (one(259) !== 1 || one(258) !== 32 || one(339) !== 3 || (one(277) ?? 1) !== 1) throw bad("unsupported format");
+  const out: number[] = new Array(cols * rows);
+  const put = (r: number, c: number, at: number) => {
+    if (r < rows && c < cols) out[r * cols + c] = f32(at);
+  };
+  try {
+    if (tags.has(324)) {
+      const tw = one(322)!, th = one(323)!, offs = tags.get(324)!;
+      const perRow = Math.ceil(cols / tw);
+      offs.forEach((off, t) => {
+        const r0 = Math.floor(t / perRow) * th, c0 = (t % perRow) * tw;
+        for (let r = 0; r < th; r++) for (let c = 0; c < tw; c++) put(r0 + r, c0 + c, off + (r * tw + c) * 4);
+      });
+    } else {
+      const per = one(278) ?? rows, offs = tags.get(273)!;
+      offs.forEach((off, s) => {
+        for (let r = 0; r < per; r++) for (let c = 0; c < cols; c++) put(s * per + r, c, off + (r * cols + c) * 4);
+      });
+    }
+  } catch {
+    throw bad("truncated");
+  }
+  // NoData, fill values like -9999 and NaN all mean this box isn't covered: fall back as a whole.
+  if (out.some((v) => !Number.isFinite(v) || v < -100 || v > 6000)) throw bad("no data");
+  return out;
+}
+
+/**
+ * USGS 3DEP, 1/3 arc-second (about 10 m in the lower 48): sees the benches, saddles and draws a 90 m
+ * DEM smooths away. One exportImage call returns the whole grid as a float GeoTIFF (about a second); the
+ * point-sampling endpoint costs ~0.1 s per point and times out on a full grid. No retries.
+ */
+async function fetch3dep(f: Fetch, b: Bbox, cols: number, rows: number): Promise<number[]> {
+  if (Date.now() < depDownUntil) throw new DepUnavailable("3DEP skipped: it failed a moment ago");
+  const [w, h] = exportSize(b, cols);
+  const url =
+    "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?f=image" +
+    `&bbox=${b.west},${b.south},${b.east},${b.north}&bboxSR=4326&imageSR=4326&size=${w},${h}` +
+    "&format=tiff&pixelType=F32&noData=-9999&interpolation=RSP_BilinearInterpolation";
+  let buf: Buffer;
+  try {
+    const res = await f(url, { headers: { "user-agent": "esaus-trails (hunting map)" }, signal: AbortSignal.timeout(DEP_TIMEOUT_MS) });
     if (!res.ok) throw new Error(`elevation.nationalmap.gov returned ${res.status}`);
-    json = await res.json();
+    buf = Buffer.from(await res.arrayBuffer());
   } catch (err) {
     depDownUntil = Date.now() + DEP_BREAKER_MS; // an outage costs one probe a minute, not a wait on every tap
     throw new DepUnavailable(err instanceof Error ? err.message : "3DEP unreachable");
   }
-  const out: number[] = new Array(chunk.length);
-  const seen = new Set<number>();
-  for (const sample of Array.isArray(json?.samples) ? json.samples : []) {
-    const id = Number(sample?.locationId);
-    const raw = sample?.value;
-    const v = typeof raw === "number" ? raw : typeof raw === "string" && raw.trim() !== "" ? Number(raw) : NaN;
-    // "NoData", blanks and fill values like -9999 all mean this box isn't covered: fall back as a whole.
-    if (!Number.isInteger(id) || id < 0 || id >= chunk.length || seen.has(id) || !Number.isFinite(v) || v < -100 || v > 6000)
-      throw new Error("3DEP elevation reply was malformed or had no data");
-    seen.add(id);
-    out[id] = v;
-  }
-  if (seen.size !== chunk.length) throw new Error("3DEP elevation reply was malformed or had no data");
+  return gridFromRaster(elevationFromTiff(buf, w, h), w, h, cols, rows);
+}
+
+/** Mean of the raster pixels under each grid cell, north-west first. */
+export function gridFromRaster(v: number[], w: number, h: number, cols: number, rows: number): number[] {
+  const out: number[] = [];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const x0 = Math.floor((c * w) / cols), x1 = Math.max(x0 + 1, Math.floor(((c + 1) * w) / cols));
+      const y0 = Math.floor((r * h) / rows), y1 = Math.max(y0 + 1, Math.floor(((r + 1) * h) / rows));
+      let sum = 0, n = 0;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { sum += v[y * w + x]!; n++; }
+      out.push(sum / n);
+    }
   return out;
 }
 
@@ -147,7 +200,6 @@ async function elevationFrom(source: ElevationSource, chunks: { lat: number; lng
   const tasks = chunks.map((chunk, n) => async () => {
     // Open Topo Data's public limit is about one call a second.
     if (source === "opentopodata" && n > 0 && delay > 0) await sleep(1100);
-    if (source === "3dep") return fetch3dep(f, chunk);
     if (source === "open-meteo") {
       const lat = chunk.map((p) => p.lat.toFixed(5)).join(",");
       const lng = chunk.map((p) => p.lng.toFixed(5)).join(",");
@@ -178,7 +230,7 @@ export async function fetchElevationWithSource(b: Bbox, f: Fetch, cols: number, 
   const deadline = Date.now() + (delay > 0 ? 20000 : 1e9);
   let retryLater = false;
   try {
-    return { values: await elevationFrom("3dep", chunks, f, 0, Date.now() + 8000), source: "3dep" };
+    return { values: await fetch3dep(f, b, cols, rows), source: "3dep" };
   } catch (err) {
     // A blip is worth retrying soon; genuine "no data here" can stay cached with the coarser DEM.
     retryLater = err instanceof DepUnavailable;

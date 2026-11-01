@@ -1,3 +1,4 @@
+import { attachHoldDrag, justDragged } from '../marks/holdDrag';
 import { useEffect, useRef } from 'react';
 import maplibregl, { type Map as MlMap, type MapMouseEvent } from 'maplibre-gl';
 import { getPhoto } from './photoDb';
@@ -44,9 +45,11 @@ export function usePhotoPinMarkers(map: MlMap | null) {
       el.appendChild(img);
       el.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (justDragged()) return;
         usePhotoPins.getState().select(pin.id);
       });
       const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(pin.position).addTo(map);
+      attachHoldDrag(map, marker, (to) => void usePhotoPins.getState().updatePin(pin.id, { position: { lng: to[0], lat: to[1] } }));
       const entry = { marker, pin, url: null as string | null };
       live.set(pin.id, entry);
       void getPhoto(pin.photoId).then((photo) => {
