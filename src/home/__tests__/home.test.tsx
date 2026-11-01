@@ -54,6 +54,16 @@ describe('animal chip', () => {
   });
 });
 
+describe('animal chip outside tap', () => {
+  it('puts the list away when something else is tapped', async () => {
+    const host = await mount(createElement('div', null, createElement(AnimalChip), createElement('button', { id: 'tools' }, 'Tools')));
+    await click(host, '[data-testid="animal-chip"]');
+    expect(host.querySelector('[role="listbox"]')).toBeTruthy();
+    await act(async () => void document.getElementById('tools')!.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+    expect(host.querySelector('[role="listbox"]')).toBeNull();
+  });
+});
+
 describe('location button', () => {
   it('centers, then compass, then back to following', () => {
     expect(nextLocation('free')).toBe('follow');
