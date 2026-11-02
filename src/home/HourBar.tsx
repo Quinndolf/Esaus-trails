@@ -28,11 +28,11 @@ function clock(d: Date, first: boolean) {
  * The hour slider, always on the home map once an animal is chosen: a slim see-through bar at the very
  * bottom, tinted by thermal state across the day, marking sunrise, sunset and legal light.
  */
-export function HourBar({ map, hunter }: { map: MLMap | null; hunter: LngLat | null }) {
+export function HourBar({ map, hunter, facing = null }: { map: MLMap | null; hunter: LngLat | null; facing?: number | null }) {
   const { status, error, hours, date, setDate, grid, conditions, staleSince } = useHour();
   const species = useEsau((s) => s.species);
   const scope = hourScope(species);
-  const frame = useHourOverlays(map, hunter);
+  const frame = useHourOverlays(map, hunter, facing);
   const spot: LngLat | null = hunter ?? (grid ? [(grid.west + grid.east) / 2, (grid.south + grid.north) / 2] : null);
   const cells = useMemo(
     () => (scope && grid && conditions && spot && hours.length ? dayStrip(species, conditions, grid, spot, hours) : []),

@@ -267,7 +267,7 @@ export function App() {
         </button>
       </div>
 
-      <HourBar map={map} hunter={fix?.lngLat ?? null} />
+      <HourBar map={map} hunter={fix?.lngLat ?? null} facing={mode === 'compass' ? heading : null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}
