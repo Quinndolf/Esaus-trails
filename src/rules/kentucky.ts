@@ -61,6 +61,13 @@ export const DEFAULT_TZ = "America/Chicago";
 const iso = (d: Date, timeZone = DEFAULT_TZ) => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const within = (day: string, w: Window) => day >= w.from && day <= w.to;
 
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** "2026-12-05" as "December 5, 2026", for a hunter to read. */
+const nice = (day: string) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return `${MONTHS[(m ?? 1) - 1]} ${d}, ${y}`;
+};
+
 const unknown = (why: string): Legal => ({ status: "unknown", note: `${why} ${CHECK}` });
 
 export function legalToday(q: LegalQuery): Legal {
@@ -92,7 +99,7 @@ export function legalToday(q: LegalQuery): Legal {
       q.weapon === "crossbow" && day < first.from && day >= "2026-09-05"
         ? "Crossbow deer season does not open until September 19, 2026 (archery opens September 5). Hunters with a physician-signed exemption are the exception."
         : next
-          ? `A ${q.weapon} is out of season for deer today. It opens ${next}.`
+          ? `A ${q.weapon} is out of season for deer today. It opens ${nice(next)}.`
           : `A ${q.weapon} is out of season for deer today.`;
     return { status: "closed", note, source: GUIDE_URL, verified: VERIFIED };
   }
@@ -153,7 +160,7 @@ export function legalToday(q: LegalQuery): Legal {
     const next = wins.map((w) => w.from).filter((f) => f > day).sort()[0];
     return {
       status: "closed",
-      note: next ? `A ${q.weapon} is out of season for turkey today. It opens ${next}.` : `A ${q.weapon} is out of season for turkey today.`,
+      note: next ? `A ${q.weapon} is out of season for turkey today. It opens ${nice(next)}.` : `A ${q.weapon} is out of season for turkey today.`,
       source: TURKEY_FALL_URL,
       verified: VERIFIED,
     };
