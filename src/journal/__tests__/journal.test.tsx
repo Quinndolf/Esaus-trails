@@ -103,3 +103,64 @@ describe("hunt journal", () => {
     expect(useJournal.getState().entries).toEqual([]);
   });
 });
+
+describe("route replay", () => {
+  const H = 3600e3;
+  const t0 = Date.now() - 2 * H;
+  const walk: Track = {
+    id: "w1",
+    name: "Walk",
+    startedAt: t0,
+    endedAt: t0 + 10 * 60_000,
+    distance: 0,
+    points: Array.from({ length: 11 }, (_, i) => ({ lngLat: destination(START, 90, i * 10), time: t0 + i * 60_000, altitude: null })),
+  };
+  const entry = { id: "r1", trackId: "w1", date: "2026-11-01", species: "whitetail" as const, weapon: "bow" as const, snagged: null, windFromDeg: null, wind: [{ at: t0, fromDeg: 270, mph: 7 }], beds: [destination(START, 90, 160)], trails: [] };
+  const slide = (host: HTMLElement, v: number) =>
+    act(async () => {
+      const r = host.querySelector('[data-testid="replay-slider"]') as HTMLInputElement;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(r, String(v));
+      r.dispatchEvent(new Event("input", { bubbles: true }));
+      r.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+  it("scrubs the route: shows wind then, reports the position, and counts scent crossings so far", async () => {
+    useTools.setState({ tracks: [walk] });
+    useJournal.setState({ entries: [entry] });
+    const seen: unknown[] = [];
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onReplay: (p: unknown) => seen.push(p) }));
+    await click(host, '[data-testid="replay-open"]');
+    await slide(host, 0);
+    expect(host.querySelector('[data-testid="replay-wind"]')!.textContent).toMatch(/7 mph.*W/);
+    expect(host.querySelector('[data-testid="replay-cross"]')!.textContent).toContain("0");
+    await slide(host, 10);
+    expect(seen.at(-1)).toEqual(walk.points[10]!.lngLat);
+    expect(host.querySelector('[data-testid="replay-cross"]')!.textContent).toContain("1");
+  });
+  it("says there is no wind on file instead of guessing", async () => {
+    useTools.setState({ tracks: [walk] });
+    useJournal.setState({ entries: [{ ...entry, wind: [] }] });
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onReplay: () => {} }));
+    await click(host, '[data-testid="replay-open"]');
+    expect(host.querySelector('[data-testid="replay-wind"]')!.textContent).toMatch(/no wind/i);
+  });
+  it("clears the map marker when the replay closes", async () => {
+    useTools.setState({ tracks: [walk] });
+    useJournal.setState({ entries: [entry] });
+    const seen: unknown[] = [];
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onReplay: (p: unknown) => seen.push(p) }));
+    await click(host, '[data-testid="replay-open"]');
+    await click(host, '[data-testid="replay-close"]');
+    expect(seen.at(-1)).toBeNull();
+  });
+  it("skips a bad GPS point instead of crashing, and falls back to the end-of-hunt wind for old entries", async () => {
+    const bad = { ...walk, points: [{ lngLat: [NaN, NaN] as [number, number], time: t0 - 1, altitude: null }, ...walk.points] };
+    useTools.setState({ tracks: [bad] });
+    useJournal.setState({ entries: [{ ...entry, wind: [], windFromDeg: 270 }] });
+    const seen: unknown[] = [];
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onReplay: (p: unknown) => seen.push(p) }));
+    await click(host, '[data-testid="replay-open"]');
+    expect(seen.every((p) => p === null || (p as number[]).every(Number.isFinite))).toBe(true);
+    expect(host.querySelector('[data-testid="replay-wind"]')!.textContent).toMatch(/end of the hunt.*W/);
+  });
+});

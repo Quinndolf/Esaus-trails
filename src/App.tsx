@@ -38,6 +38,8 @@ import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
 import { AnimalChip } from './home/AnimalChip';
 import { ExitPrompt } from './home/ExitPrompt';
 import { JournalSheet } from './journal/JournalSheet';
+import { useReplayMarker } from './journal/useReplayMarker';
+import { useWindLog } from './journal/useWindLog';
 import { HourBar } from './home/HourBar';
 import { nextLocation } from './home/location';
 import { Tutorial } from './home/Tutorial';
@@ -69,6 +71,8 @@ export function App() {
   const [start] = useState(() => lastKnownFix());
   const recording = useTools((s) => s.recording != null);
   const visible = usePageVisible();
+  useWindLog(recording);
+  const replayAt = useReplayMarker(map);
   const gpsOn = gpsWanted({ mode, recording, visible });
   const { fix, status: gps } = useGeolocation(gpsOn);
   const compass = useHeading(mode === 'compass');
@@ -288,7 +292,7 @@ export function App() {
         onDone={() => setExitOpen(true)}
         onJournal={() => setSheet('journal')}
       />
-      <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} />
+      <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} onReplay={replayAt} />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
       <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} species={species} />
