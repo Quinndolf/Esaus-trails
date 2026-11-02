@@ -37,6 +37,7 @@ import { AnalyzePill } from './home/AnalyzePill';
 import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
 import { AnimalChip } from './home/AnimalChip';
 import { ExitPrompt } from './home/ExitPrompt';
+import { HarvestSheet } from './home/HarvestSheet';
 import { JournalSheet } from './journal/JournalSheet';
 import { useReplayMarker } from './journal/useReplayMarker';
 import { useWindLog } from './journal/useWindLog';
@@ -51,7 +52,7 @@ import './home/home.css';
 const FALLBACK: LngLat = [-85.3, 37.6];
 const BASEMAP_KEY = 'esau-basemap';
 
-type Sheet = 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null | 'journal';
+type Sheet = 'harvest' | 'layers' | 'offline' | 'tools' | 'photos' | 'saved' | 'calls' | null | 'journal';
 
 function initialBasemap(): BasemapId {
   try {
@@ -291,6 +292,7 @@ export function App() {
         onMarkLocation={() => void markMyLocation()}
         onDone={() => setExitOpen(true)}
         onJournal={() => setSheet('journal')}
+        onGotOne={() => setSheet('harvest')}
       />
       <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} onReplay={replayAt} />
       <GinsengRulesSheet />
@@ -307,7 +309,8 @@ export function App() {
       <EsauPanel />
       <ManualPinPrompt />
       <Tutorial />
-      <ExitPrompt open={exitOpen} onClose={() => setExitOpen(false)} />
+      <ExitPrompt open={exitOpen} onClose={() => setExitOpen(false)} onHarvest={() => setSheet('harvest')} />
+      <HarvestSheet open={sheet === 'harvest'} onClose={() => setSheet(null)} />
     </div>
   );
 }
