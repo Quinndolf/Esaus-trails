@@ -134,10 +134,11 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
 
   if (q.weapon) {
     lines.push("");
-    lines.push(`TOP SIT SPOTS (predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground)`);
+    lines.push(`TOP SIT SPOTS (${q.species === "squirrel" ? "predicted from hardwood cover and the hour; not confirmed on the ground, and Esau cannot see which trees are nut trees" : `predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground`})`);
     if (q.sitSpots?.length) {
       for (const s of q.sitSpots) {
-        lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. Predicted trail ${s.yardsToTrail} yd away. ${s.reason}`);
+        const what = s.kind === "food_trees" ? `Food trees ${s.yardsToTrail} yd away` : `Predicted trail ${s.yardsToTrail} yd away`;
+        lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. ${what}. ${s.reason}`);
       }
       lines.push("Name the best one or two as places to sit and which way to look, as predictions.");
     } else {

@@ -15,7 +15,7 @@ export type Weapon = 'bow' | 'crossbow' | 'pellet' | 'shotgun' | 'muzzleloader' 
  * Spots are placed at `ideal` from a trail point; `max` only limits which traffic counts
  * (the pellet gun's working range is 40 yd, the squirrel rule, so that is its `max`).
  */
-const RANGE: Record<Weapon, { ideal: number; max: number }> = {
+export const WEAPON_RANGE_YD: Record<Weapon, { ideal: number; max: number }> = {
   bow: { ideal: 20, max: 35 },
   crossbow: { ideal: 25, max: 45 },
   pellet: { ideal: 25, max: 40 },
@@ -52,8 +52,11 @@ export interface SitSpot {
   watchBearingDeg: number;
   /** 0-1 against the best spot found. */
   score: number;
+  /** Yards to the predicted trail (deer) or to the nearest food trees (squirrel; see `kind`). */
   yardsToTrail: number;
   reason: string;
+  /** What the spot is built around. Absent means a deer trail. */
+  kind?: 'trail' | 'food_trees';
 }
 
 export interface SitSpotInput {
@@ -76,7 +79,7 @@ export interface SitSpotResult {
 
 export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const { grid, trails, beds, weapon } = input;
-  const { ideal, max: reach } = RANGE[weapon];
+  const { ideal, max: reach } = WEAPON_RANGE_YD[weapon];
   const points = thin(trails);
   const flat = trails.flatMap((t) => t.coordinates);
   const limit = Math.max(0, Math.floor(input.max ?? 3));

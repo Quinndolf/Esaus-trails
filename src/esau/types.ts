@@ -77,6 +77,8 @@ export interface SitSpotQuery {
   watchBearingDeg: number;
   yardsToTrail: number;
   reason: string;
+  /** Absent means a deer trail; 'food_trees' means a squirrel food-tree stand. */
+  kind?: 'trail' | 'food_trees';
 }
 
 /** What the app sends when the hunter taps a spot (or asks a follow-up). */

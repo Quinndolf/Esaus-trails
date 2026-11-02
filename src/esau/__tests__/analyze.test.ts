@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cellCenter, type LngLat } from "../../model/geo";
 import type { Trail } from "../../model/movement";
 import { BOX, makeGrid } from "../../model/__tests__/fixtures";
-import { analyzeHour } from "../analyze";
+import { analyzeHour, toSitSpotQuery } from "../analyze";
 import { buildBrief } from "../brief";
 import { cell, hollowGrid } from "../fixtures/hollow";
 
@@ -33,7 +33,17 @@ describe("analyzeHour", () => {
     expect(a.advisories[0]!.kind).toBe("out_of_season");
     expect(a.spots.length).toBeGreaterThan(0);
   });
-  it("gives no spots, and says unsure, for squirrel (no squirrel travel model yet) and with no weapon", () => {
+  it("gives squirrel hunters food-tree stands when the ground has cover, and none when it does not", () => {
+    const sq = { ...base, species: "squirrel" as const, weapon: "pellet" as const, wind: wind(0) };
+    const hardwood = { ...grid, cover: new Array(n).fill(41) };
+    const morning = new Date("2026-11-05T13:00:00Z");
+    const a = analyzeHour({ ...sq, grid: hardwood, at: morning });
+    expect(a.spots.length).toBeGreaterThan(0);
+    expect(a.spots.every((s) => s.kind === "food_trees")).toBe(true);
+    expect(toSitSpotQuery(a.spots[0]!).kind).toBe("food_trees");
+    expect(analyzeHour({ ...sq, grid: { ...grid, cover: new Array(n).fill(81) }, at: morning })).toMatchObject({ spots: [], unsure: true });
+  });
+  it("gives no spots, and says unsure, for squirrel without ground cover and with no weapon", () => {
     expect(analyzeHour({ ...base, wind: wind(0), species: "squirrel", weapon: "pellet" })).toMatchObject({ spots: [], unsure: true });
     expect(analyzeHour({ ...base, wind: wind(0), weapon: null })).toMatchObject({ spots: [], unsure: true });
   });
@@ -52,6 +62,13 @@ describe("field report: legal and sit spots", () => {
     expect(r).toMatch(/predicted/i);
     expect(r).toContain("#1");
     expect(r).toContain("22 yd");
+  });
+  it("describes squirrel spots as food trees, not trails", () => {
+    const sq = [{ rank: 1, lat: 36.75, lng: -85.7, watchBearingDeg: 90, yardsToTrail: 40, reason: "Hardwood cover on the slope.", kind: "food_trees" as const }];
+    const r = buildBrief({ ...q, species: "squirrel", weapon: "pellet", sitSpots: sq, sitUnsure: false }).report;
+    expect(r).toContain("Food trees 40 yd away");
+    expect(r).not.toContain("Predicted trail");
+    expect(r).toMatch(/nut trees/i);
   });
   it("tells Esau to invent nothing when the ground gave nothing", () => {
     const r = buildBrief({ ...q, weapon: "bow", sitSpots: [], sitUnsure: true }).report;
