@@ -2,19 +2,16 @@ import { useMemo, useState } from 'react';
 import { usePhotoPins } from '../store';
 import type { PhotoPin } from '../types';
 import { usePhotoUrl } from '../usePhotoUrl';
-import { Toggle } from './Toggle';
 
 interface PhotoListProps {
   /** Called when a pin is picked, so the map can fly to it. */
   onPick?(pin: PhotoPin): void;
 }
 
-/** All photo pins, filterable by tag, plus the upload setting. */
+/** All photo pins, filterable by tag. */
 export function PhotoList({ onPick }: PhotoListProps) {
   const pins = usePhotoPins((s) => s.pins);
   const select = usePhotoPins((s) => s.select);
-  const uploadEnabled = usePhotoPins((s) => s.uploadEnabled);
-  const setUploadEnabled = usePhotoPins((s) => s.setUploadEnabled);
   const [tag, setTag] = useState<string | null>(null);
 
   const tags = useMemo(() => [...new Set(pins.flatMap((p) => p.tags))].sort(), [pins]);
@@ -22,13 +19,7 @@ export function PhotoList({ onPick }: PhotoListProps) {
 
   return (
     <section className="photo-list" aria-label="Photos">
-      <div className="photo-list__setting">
-        <div>
-          <strong>Back up photos to server</strong>
-          <small>Off keeps every photo on this phone only.</small>
-        </div>
-        <Toggle checked={uploadEnabled} onChange={(v) => void setUploadEnabled(v)} label="Back up photos to server" />
-      </div>
+      <p className="photo-list__note">Photos stay on this phone. Nothing is uploaded.</p>
 
       {tags.length > 0 && (
         <div className="photo-list__filters">
