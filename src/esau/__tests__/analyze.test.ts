@@ -43,6 +43,18 @@ describe("analyzeHour", () => {
     expect(toSitSpotQuery(a.spots[0]!).kind).toBe("food_trees");
     expect(analyzeHour({ ...sq, grid: { ...grid, cover: new Array(n).fill(81) }, at: morning })).toMatchObject({ spots: [], unsure: true });
   });
+  it("gives turkey hunters roost ridges at dawn and strut zones later, and none in the dark", () => {
+    const tk = { ...base, species: "turkey" as const, weapon: "shotgun" as const, wind: wind(0) };
+    const ground = { ...grid, cover: Array.from({ length: n }, (_, i) => (i % BOX.cols < BOX.cols / 2 ? 41 : 81)) };
+    const dawn = analyzeHour({ ...tk, grid: ground, at: new Date("2026-05-05T11:00:00Z") });
+    expect(dawn.spots.length).toBeGreaterThan(0);
+    expect(dawn.spots.every((s) => s.kind === "roost")).toBe(true);
+    const morning = analyzeHour({ ...tk, grid: ground, at: new Date("2026-05-05T15:30:00Z") });
+    expect(morning.spots.every((s) => s.kind === "strut_zone")).toBe(true);
+    expect(toSitSpotQuery(morning.spots[0]!).kind).toBe("strut_zone");
+    expect(morning.legal.status).toBe("open");
+    expect(analyzeHour({ ...tk, grid: ground, at: new Date("2026-05-06T03:00:00Z") })).toMatchObject({ spots: [], unsure: true });
+  });
   it("gives no spots, and says unsure, for squirrel without ground cover and with no weapon", () => {
     expect(analyzeHour({ ...base, wind: wind(0), species: "squirrel", weapon: "pellet" })).toMatchObject({ spots: [], unsure: true });
     expect(analyzeHour({ ...base, wind: wind(0), weapon: null })).toMatchObject({ spots: [], unsure: true });
@@ -69,6 +81,17 @@ describe("field report: legal and sit spots", () => {
     expect(r).toContain("Food trees 40 yd away");
     expect(r).not.toContain("Predicted trail");
     expect(r).toMatch(/nut trees/i);
+  });
+  it("describes turkey spots as roost ridges and strut zones and tells Esau to give no scent advice", () => {
+    const tk = [
+      { rank: 1, lat: 36.75, lng: -85.7, watchBearingDeg: 90, yardsToTrail: 60, reason: "Likely roost ridge.", kind: "roost" as const },
+      { rank: 2, lat: 36.76, lng: -85.7, watchBearingDeg: 270, yardsToTrail: 80, reason: "Likely strut zone.", kind: "strut_zone" as const },
+    ];
+    const r = buildBrief({ ...q, species: "turkey", weapon: "shotgun", sitSpots: tk, sitUnsure: false }).report;
+    expect(r).toContain("Likely roost ridge, opening 60 yd away");
+    expect(r).toContain("Likely strut zone, woods 80 yd away");
+    expect(r).not.toContain("Predicted trail");
+    expect(r).toMatch(/no wind or scent advice/i);
   });
   it("tells Esau to invent nothing when the ground gave nothing", () => {
     const r = buildBrief({ ...q, weapon: "bow", sitSpots: [], sitUnsure: true }).report;

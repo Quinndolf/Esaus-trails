@@ -134,10 +134,17 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
 
   if (q.weapon) {
     lines.push("");
-    lines.push(`TOP SIT SPOTS (${q.species === "squirrel" ? "predicted from hardwood cover and the hour; not confirmed on the ground, and Esau cannot see which trees are nut trees" : `predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground`})`);
+    lines.push(`TOP SIT SPOTS (${q.species === "squirrel" ? "predicted from hardwood cover and the hour; not confirmed on the ground, and Esau cannot see which trees are nut trees" : q.species === "turkey" ? "predicted from timber, open ground, ridges and the hour; not confirmed on the ground. Turkeys see and hear far better than they smell, so give no wind or scent advice" : `predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground`})`);
     if (q.sitSpots?.length) {
       for (const s of q.sitSpots) {
-        const what = s.kind === "food_trees" ? `Food trees ${s.yardsToTrail} yd away` : `Predicted trail ${s.yardsToTrail} yd away`;
+        const what =
+          s.kind === "food_trees"
+            ? `Food trees ${s.yardsToTrail} yd away`
+            : s.kind === "roost"
+              ? `Likely roost ridge, opening ${s.yardsToTrail} yd away`
+              : s.kind === "strut_zone"
+                ? `Likely strut zone, woods ${s.yardsToTrail} yd away`
+                : `Predicted trail ${s.yardsToTrail} yd away`;
         lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. ${what}. ${s.reason}`);
       }
       lines.push("Name the best one or two as places to sit and which way to look, as predictions.");
