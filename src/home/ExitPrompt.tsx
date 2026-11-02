@@ -35,6 +35,10 @@ export function ExitPrompt({ open, onClose, onHarvest }: { open: boolean; onClos
       trails: tools.waypoints.filter((w) => w.icon === 'trail' && near(w.position)).map((w) => w.position),
     });
   };
+  const saveYes = () => {
+    saveSnag({ at: Date.now(), yes: true, what: what || undefined, where: where || undefined });
+    record('yes', what || undefined);
+  };
   const finish = () => {
     setYes(null);
     setWhat('');
@@ -72,6 +76,7 @@ export function ExitPrompt({ open, onClose, onHarvest }: { open: boolean; onClos
                 className="link-btn"
                 data-testid="snag-harvest"
                 onClick={() => {
+                  saveYes();
                   finish();
                   onHarvest();
                 }}
@@ -87,8 +92,7 @@ export function ExitPrompt({ open, onClose, onHarvest }: { open: boolean; onClos
                 className="pill-btn"
                 data-testid="snag-save"
                 onClick={() => {
-                  saveSnag({ at: Date.now(), yes: true, what: what || undefined, where: where || undefined });
-                  record('yes', what || undefined);
+                  saveYes();
                   finish();
                 }}
               >

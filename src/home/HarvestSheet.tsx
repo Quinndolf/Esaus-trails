@@ -1,8 +1,6 @@
 import { BottomSheet } from '../ui/BottomSheet';
 import { useEsau } from '../esau/ui/store';
-import { harvestSteps } from '../rules/kentucky';
-
-const KDFWR_GUIDE = 'https://fw.ky.gov/Hunt/Pages/Recording,-Checking,-Tagging-and-Transporting.aspx';
+import { CHECK_URL, KDFWR_PHONE, VERIFIED, harvestSteps } from '../rules/kentucky';
 
 /** First phone number in a line, as a tel: link. */
 export function telHref(line: string): string | null {
@@ -19,12 +17,12 @@ export function HarvestSheet({ open, onClose }: { open: boolean; onClose: () => 
       {h ? (
         <>
           <p className="hint">Kentucky's steps after a deer is down. Checked {h.verified}; the KDFWR guide has the last word.</p>
-          <ol className="harvest-steps">
+          <ol className="harvest-steps" aria-label="Steps">
             {h.steps.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ol>
-          <ul className="harvest-phones">
+          <ul className="harvest-phones" aria-label="Phone numbers">
             {h.phones.map((p) => {
               const href = telHref(p);
               return <li key={p}>{href ? <a href={href}>{p}</a> : p}</li>;
@@ -32,7 +30,7 @@ export function HarvestSheet({ open, onClose }: { open: boolean; onClose: () => 
           </ul>
           <p>
             <a href={h.source} target="_blank" rel="noreferrer">
-              KDFWR: recording, checking and tagging
+              KDFWR: recording, checking and tagging (opens in a new tab)
             </a>
           </p>
         </>
@@ -40,10 +38,10 @@ export function HarvestSheet({ open, onClose }: { open: boolean; onClose: () => 
         <>
           <p>I don't have after-harvest steps on file for this animal, so I won't guess.</p>
           <p>
-            <a href={KDFWR_GUIDE} target="_blank" rel="noreferrer">
+            <a href={CHECK_URL} target="_blank" rel="noreferrer">
               Check the KDFWR guide
             </a>{' '}
-            for tagging and check-in rules, or call KDFWR at <a href="tel:+18008581549">1-800-858-1549</a>.
+            for tagging and check-in rules, or call KDFWR at <a href={telHref(KDFWR_PHONE) ?? undefined}>{KDFWR_PHONE}</a>. Phone and link checked {VERIFIED}.
           </p>
         </>
       )}

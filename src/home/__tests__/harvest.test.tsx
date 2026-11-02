@@ -45,6 +45,7 @@ describe("Got one: harvest steps", () => {
     const host = await mount(createElement(HarvestSheet, { open: true, onClose: () => {} }));
     expect(host.textContent).toMatch(/don't have/i);
     expect(host.textContent).toMatch(/KDFWR/);
+    expect(host.textContent).toContain("1-800-858-1549");
     expect(host.querySelector("ol")).toBeNull();
   });
   it("is reachable from the exit prompt after saying yes", async () => {
@@ -53,6 +54,30 @@ describe("Got one: harvest steps", () => {
     await act(async () => void (host.querySelector('[data-testid="snag-yes"]') as HTMLElement).click());
     await act(async () => void (host.querySelector('[data-testid="snag-harvest"]') as HTMLElement).click());
     expect(onHarvest).toHaveBeenCalledOnce();
+  });
+  it("saves the yes answer and what they typed before opening the steps", async () => {
+    useEsau.setState({ species: "whitetail" });
+    const onHarvest = vi.fn();
+    const host = await mount(createElement(ExitPrompt, { open: true, onClose: () => {}, onHarvest }));
+    await act(async () => void (host.querySelector('[data-testid="snag-yes"]') as HTMLElement).click());
+    await act(async () => {
+      const input = host.querySelector('[data-testid="snag-what"]') as HTMLInputElement;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "8 pt");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => void (host.querySelector('[data-testid="snag-harvest"]') as HTMLElement).click());
+    expect(JSON.parse(localStorage.getItem("esau-snags")!)).toMatchObject([{ yes: true, what: "8 pt" }]);
+    expect(JSON.parse(localStorage.getItem("esau-journal")!)[0]).toMatchObject({ snagged: "yes", what: "8 pt" });
+    expect(onHarvest).toHaveBeenCalledOnce();
+  });
+  it("gives mule deer the same steps and every phone line a tel link", () => {
+    expect(harvestSteps("mule_deer")).toEqual(harvestSteps("whitetail"));
+    for (const p of harvestSteps("whitetail")!.phones) expect(telHref(p)).not.toBeNull();
+  });
+  it("opens the KDFWR link safely", async () => {
+    useEsau.setState({ species: "whitetail" });
+    const host = await mount(createElement(HarvestSheet, { open: true, onClose: () => {} }));
+    expect(host.querySelector('a[href^="https://"]')!.getAttribute("rel")).toContain("noreferrer");
   });
   it("hides that button when no handler is given", async () => {
     const host = await mount(createElement(ExitPrompt, { open: true, onClose: () => {} }));

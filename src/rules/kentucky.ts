@@ -12,7 +12,7 @@ export const GUIDE_URL = "https://fw.ky.gov/Hunt/Documents/huntingguideentire.pd
 const SQUIRREL_URL = "https://fw.ky.gov/Hunt/Pages/Squirrel-Hunting.aspx";
 const TURKEY_SPRING_URL = "https://fw.ky.gov/Hunt/pages/spring-turkey-hunting.aspx";
 const TURKEY_FALL_URL = "https://fw.ky.gov/Hunt/Pages/TurkeyHunt.aspx";
-const CHECK_URL = "https://fw.ky.gov/Hunt/Pages/Recording,-Checking,-Tagging-and-Transporting.aspx";
+export const CHECK_URL = "https://fw.ky.gov/Hunt/Pages/Recording,-Checking,-Tagging-and-Transporting.aspx";
 const TABLE_FROM = "2026-05-01";
 const TABLE_TO = "2027-03-31";
 const CHECK = "Check the KDFWR guide to be sure.";
@@ -160,6 +160,8 @@ export function legalToday(q: LegalQuery): Legal {
   }
   return unknown("I don't have Kentucky dates for this animal.");
 }
+
+export const KDFWR_PHONE = "1-800-858-1549";
 
 /** What the law asks after a deer is down. Only deer; everything else comes back null. */
 export function harvestSteps(species: SpeciesId): HarvestSteps | null {
