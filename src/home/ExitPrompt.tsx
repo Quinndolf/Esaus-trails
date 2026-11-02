@@ -3,6 +3,7 @@ import { saveSnag } from './snag';
 import { useJournal } from '../journal/store';
 import { useTools } from '../tools/store';
 import { distance } from '../map/geo';
+import { samplesBetween } from '../journal/windLog';
 import { useEsau } from '../esau/ui/store';
 import './home.css';
 
@@ -29,6 +30,7 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
       snagged,
       what,
       windFromDeg: hour?.windFrom ?? null,
+      wind: track ? samplesBetween(track.startedAt - 3600e3, track.endedAt + 1800e3) : [],
       beds: tools.waypoints.filter((w) => w.icon === 'bed' && near(w.position)).map((w) => w.position),
       trails: tools.waypoints.filter((w) => w.icon === 'trail' && near(w.position)).map((w) => w.position),
     });

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { SpeciesId } from "../esau/types";
 import type { Weapon } from "../model/sitSpots";
 import type { LngLat } from "../map/geo";
+import type { WindSample } from "./windLog";
 
 /** One finished hunt. Lives in this phone's localStorage only; nothing here is ever uploaded. */
 export interface JournalEntry {
@@ -14,6 +15,8 @@ export interface JournalEntry {
   what?: string;
   /** Wind the hunter had when they finished (degrees it blows from), if Esau had weather. */
   windFromDeg: number | null;
+  /** Wind logged while the tracker ran, for replaying the hunt against the wind it had. */
+  wind?: WindSample[];
   /** The hunter's own bed and trail marks at that time, for the scent check. */
   beds: LngLat[];
   trails: LngLat[];
@@ -26,7 +29,7 @@ const read = (): JournalEntry[] => {
     if (!Array.isArray(v)) return [];
     return v
       .filter((e): e is Record<string, unknown> => !!e && typeof e === "object" && typeof (e as { id?: unknown }).id === "string")
-      .map((e) => ({ ...e, beds: Array.isArray(e.beds) ? e.beds : [], trails: Array.isArray(e.trails) ? e.trails : [], windFromDeg: typeof e.windFromDeg === "number" ? e.windFromDeg : null }) as unknown as JournalEntry);
+      .map((e) => ({ ...e, beds: Array.isArray(e.beds) ? e.beds : [], trails: Array.isArray(e.trails) ? e.trails : [], wind: Array.isArray(e.wind) ? e.wind.filter((w: unknown) => w && typeof (w as WindSample).at === "number" && typeof (w as WindSample).fromDeg === "number") : [], windFromDeg: typeof e.windFromDeg === "number" ? e.windFromDeg : null }) as unknown as JournalEntry);
   } catch {
     return [];
   }
