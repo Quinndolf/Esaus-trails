@@ -10,6 +10,8 @@ import type { HarvestSteps, Legal, LegalQuery, Weapon } from "./types";
 export const VERIFIED = "2026-11-01";
 export const GUIDE_URL = "https://fw.ky.gov/Hunt/Documents/huntingguideentire.pdf";
 const SQUIRREL_URL = "https://fw.ky.gov/Hunt/Pages/Squirrel-Hunting.aspx";
+const TURKEY_SPRING_URL = "https://fw.ky.gov/Hunt/pages/spring-turkey-hunting.aspx";
+const TURKEY_FALL_URL = "https://fw.ky.gov/Hunt/Pages/TurkeyHunt.aspx";
 const CHECK_URL = "https://fw.ky.gov/Hunt/Pages/Recording,-Checking,-Tagging-and-Transporting.aspx";
 const TABLE_FROM = "2026-05-01";
 const TABLE_TO = "2027-03-31";
@@ -37,6 +39,22 @@ const SQUIRREL: Window[] = [
   { from: "2026-11-16", to: "2027-02-28", label: "fall squirrel season (Nov 16, 2026 to Feb 28, 2027)" },
 ];
 const SQUIRREL_WEAPONS: Weapon[] = ["pellet", "bow", "crossbow", "shotgun", "muzzleloader"];
+
+/** Spring turkey general season (youth weekend Apr 4-5 is before the table starts). Shotgun, bow, crossbow, muzzleloader. */
+const TURKEY_SPRING: Window = { from: "2026-04-18", to: "2026-05-10", label: "spring turkey season (April 18 to May 10, 2026)" };
+const TURKEY_SPRING_WEAPONS: Weapon[] = ["shotgun", "bow", "crossbow", "muzzleloader"];
+/** Fall turkey by weapon, from KDFWR's turkey page. The county list was not checked, so every window is unconfirmed. */
+const TURKEY_FALL: Partial<Record<Weapon, Window[]>> = {
+  shotgun: [
+    { from: "2026-10-24", to: "2026-10-30", label: "fall turkey shotgun season (Oct 24 to 30, 2026)", unconfirmed: true },
+    { from: "2026-12-05", to: "2026-12-11", label: "fall turkey shotgun season (Dec 5 to 11, 2026)", unconfirmed: true },
+  ],
+  bow: [{ from: "2026-09-05", to: "2027-01-18", label: "fall turkey archery season (Sept 5, 2026 to Jan 18, 2027)", unconfirmed: true }],
+  crossbow: [
+    { from: "2026-10-01", to: "2026-10-18", label: "fall turkey crossbow season (Oct 1 to 18, 2026)", unconfirmed: true },
+    { from: "2026-11-14", to: "2026-12-31", label: "fall turkey crossbow season (Nov 14 to Dec 31, 2026)", unconfirmed: true },
+  ],
+};
 
 export const DEFAULT_TZ = "America/Chicago";
 /** The calendar day (YYYY-MM-DD) of an instant in the hunter's zone. */
@@ -98,6 +116,45 @@ export function legalToday(q: LegalQuery): Legal {
       status: "closed",
       note: pause ? "Squirrel season pauses the first weekend of deer gun season and opens again November 16." : "Squirrel season is closed today.",
       source: SQUIRREL_URL,
+      verified: VERIFIED,
+    };
+  }
+  if (q.species === "turkey") {
+    if (within(day, TURKEY_SPRING) && TURKEY_SPRING_WEAPONS.includes(q.weapon)) {
+      return {
+        status: "open",
+        note: `It is ${TURKEY_SPRING.label}. Bearded turkeys only (a male, or a hen with a visible beard). One a day, two for the spring. Shooting hours run 30 minutes before sunrise to 30 minutes after sunset. No baiting.`,
+        seasonLabel: TURKEY_SPRING.label,
+        source: TURKEY_SPRING_URL,
+        verified: VERIFIED,
+      };
+    }
+    if (!["shotgun", "bow", "crossbow", "muzzleloader"].includes(q.weapon)) {
+      return {
+        status: "closed",
+        note: `A ${q.weapon} is not a legal turkey weapon. Kentucky allows shotguns, bows and crossbows (and muzzleloaders in spring).`,
+        source: TURKEY_SPRING_URL,
+        verified: VERIFIED,
+      };
+    }
+    const wins = TURKEY_FALL[q.weapon];
+    if (!wins) return unknown(`I don't have fall turkey dates for a ${q.weapon}.`);
+    const hit = wins.find((w) => within(day, w));
+    if (hit) {
+      return {
+        status: "open",
+        note: `It is ${hit.label}. Shooting hours run 30 minutes before sunrise to 30 minutes after sunset. Fall turkey is open only in some counties, so ${CHECK}`,
+        seasonLabel: hit.label,
+        source: TURKEY_FALL_URL,
+        verified: VERIFIED,
+        unconfirmed: true,
+      };
+    }
+    const next = wins.map((w) => w.from).filter((f) => f > day).sort()[0];
+    return {
+      status: "closed",
+      note: next ? `A ${q.weapon} is out of season for turkey today. It opens ${next}.` : `A ${q.weapon} is out of season for turkey today.`,
+      source: TURKEY_FALL_URL,
       verified: VERIFIED,
     };
   }

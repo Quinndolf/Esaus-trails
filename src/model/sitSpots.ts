@@ -56,7 +56,7 @@ export interface SitSpot {
   yardsToTrail: number;
   reason: string;
   /** What the spot is built around. Absent means a deer trail. */
-  kind?: 'trail' | 'food_trees';
+  kind?: 'trail' | 'food_trees' | 'roost' | 'strut_zone';
 }
 
 export interface SitSpotInput {
