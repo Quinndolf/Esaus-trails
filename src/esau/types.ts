@@ -121,6 +121,8 @@ export interface SpotReading {
   cover: { code: number; name: string; woody: boolean };
   crop: { code: number; name: string } | null;
   canopy: number; // 0-1 rough estimate from cover class
+  /** Hedged tree hint from land cover and forest type; null where there is no forest. */
+  trees: string | null;
   nearestFoodYd: number | null;
   nearestFoodWhat: string | null;
   nearestWaterYd: number | null;
