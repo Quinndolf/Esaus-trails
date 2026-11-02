@@ -25,7 +25,7 @@ import {
 import { ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools } from './tools';
 import { CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, ToolsIcon } from './ui/icons';
 import { CallsSheet } from './calls/CallsSheet';
-import { GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
+import { GinsengGearSheet, GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
 import { hourScope } from './hour/scope';
 import { bboxAround } from './hour/ground';
@@ -295,6 +295,7 @@ export function App() {
       <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} onReplay={replayAt} />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
+      <GinsengGearSheet />
       <CallsSheet open={sheet === 'calls'} onClose={() => setSheet(null)} species={species} />
       <MarksSheet open={sheet === 'saved'} onClose={() => setSheet(null)} map={map} />
       <UndoToast />

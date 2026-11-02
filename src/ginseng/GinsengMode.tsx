@@ -1,3 +1,4 @@
+import { GearSheet } from './GearSheet';
 import { useEffect, useMemo } from 'react';
 import type { ImageSource, Map as MLMap } from 'maplibre-gl';
 import { useEsau } from '../esau/ui/store';
@@ -52,7 +53,7 @@ export function useGinsengLayer(map: MLMap | null) {
 /** Top-of-screen status in ginseng mode: the season, the rules, and a way out. */
 export function GinsengPill({ map }: { map: MLMap | null }) {
   const on = useEsau((s) => s.species === 'ginseng');
-  const { status, error, setRulesOpen, setHowtoOpen, exit, load } = useGinseng();
+  const { status, error, setRulesOpen, setHowtoOpen, setGearOpen, exit, load } = useGinseng();
   if (!on) return null;
   const season = seasonStatus(new Date());
   const center = () => {
@@ -67,6 +68,7 @@ export function GinsengPill({ map }: { map: MLMap | null }) {
       {status === 'error' && <span className="warn">{error}</span>}
       <div className="ginseng-actions">
         <button onClick={() => setRulesOpen(true)}>Rules</button>
+        <button onClick={() => setGearOpen(true)}>What to bring</button>
         <button onClick={() => setHowtoOpen(true)}>How to dig</button>
         <button
           onClick={() => {
@@ -80,6 +82,12 @@ export function GinsengPill({ map }: { map: MLMap | null }) {
       </div>
     </div>
   );
+}
+
+export function GinsengGearSheet() {
+  const open = useGinseng((s) => s.gearOpen);
+  const setOpen = useGinseng((s) => s.setGearOpen);
+  return <GearSheet open={open} onClose={() => setOpen(false)} />;
 }
 
 export function GinsengHowToSheet() {

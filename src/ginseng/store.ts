@@ -11,6 +11,8 @@ interface GinsengState {
   error: string | null;
   rulesOpen: boolean;
   howtoOpen: boolean;
+  gearOpen: boolean;
+  setGearOpen(open: boolean): void;
   setHowtoOpen(open: boolean): void;
   setRulesOpen(open: boolean): void;
   /** Switch Esau to ginseng and read the ground around `center` ([lng, lat]). */
@@ -35,6 +37,8 @@ export const useGinseng = create<GinsengState>((set, get) => ({
   error: null,
   rulesOpen: false,
   howtoOpen: false,
+  gearOpen: false,
+  setGearOpen: (gearOpen) => set({ gearOpen }),
   setHowtoOpen: (howtoOpen) => set({ howtoOpen }),
 
   setRulesOpen(rulesOpen) {
