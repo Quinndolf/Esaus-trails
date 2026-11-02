@@ -1,4 +1,5 @@
 import { GridGeom, FT_PER_M, M_PER_YD, angleBetween, bearingDeg, compass, compassWord, distanceM, toDeg } from "./geo";
+import { treeHint } from "./trees";
 import { coverClass, cropClass, foodScore } from "./landcover";
 import type { GroundGrid, LatLng, Landform, NearbyFeature, Pin, SpotReading } from "./types";
 
@@ -295,6 +296,7 @@ export function readSpot(grid: GroundGrid, spot: LatLng, opts: { hunter?: LatLng
     cover: { code: coverCode, name: cover.name, woody: cover.woody },
     crop: crop ? { code: grid.crop[i] ?? 0, name: crop.name } : null,
     canopy: cover.canopy,
+    trees: treeHint(coverCode, grid.forestType?.[i]),
     nearestFoodYd,
     nearestFoodWhat,
     nearestWaterYd,

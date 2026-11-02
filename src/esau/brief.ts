@@ -74,6 +74,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
     `${spot.landform}, ${spot.elevationFt} ft, ${spot.slopeDeg}° slope${spot.aspectName ? `, ${spot.aspectName}` : ""}, ${spot.reliefFt >= 0 ? `${spot.reliefFt} ft above` : `${-spot.reliefFt} ft below`} the surrounding ground.`,
   );
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
+  if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover; unconfirmed on the ground).`);
   const near = (yd: number | null, what: string) => (yd === null ? `no ${what} on this map` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`);
   lines.push(
     `Nearest: ${near(spot.nearestFoodYd, "food")}${spot.nearestFoodWhat && spot.nearestFoodYd ? ` (${spot.nearestFoodWhat})` : ""}; ${near(spot.nearestWaterYd, "water")}; ${near(spot.nearestEdgeYd, "cover edge")}.`,
