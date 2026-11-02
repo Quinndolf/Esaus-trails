@@ -18,19 +18,21 @@ import {
 import { useEsau } from '../esau/ui/store';
 import { hourScope, type HourScope } from './scope';
 import { likelihoodField } from './likelihood';
+import { trailsInView } from './facing';
 import { useHour } from './store';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 const BLANK_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const IMAGES = ['hour-thermal', 'hour-food', 'hour-presence'] as const;
-const GEOJSON = ['hour-wind', 'hour-ticks', 'hour-trails', 'hour-beds', 'hour-scent'] as const;
+const GEOJSON = ['hour-wind', 'hour-ticks', 'hour-trails', 'hour-beds', 'hour-scent', 'hour-facing'] as const;
 export const HOUR_LAYER_IDS = [
   'hour-thermal',
   'hour-food',
   'hour-presence',
   'hour-trails-casing',
   'hour-trails',
+  'hour-facing',
   'hour-ticks',
   'hour-wind',
   'hour-scent-fill',
@@ -79,6 +81,16 @@ function ensureLayers(map: MLMap) {
       source: 'hour-trails',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#1a1208', 'line-width': ['+', 2, ['*', 5, ['get', 'weight']]], 'line-opacity': 0.6 },
+    },
+    before,
+  );
+  map.addLayer(
+    {
+      id: 'hour-facing',
+      type: 'line',
+      source: 'hour-facing',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': ['+', 3, ['*', 4, ['get', 'weight']]], 'line-opacity': 0.9 },
     },
     before,
   );
@@ -159,7 +171,7 @@ function ensureLayers(map: MLMap) {
 
 const THERMAL_IDS = ['hour-thermal', 'hour-ticks'];
 const SCENT_IDS = ['hour-scent-fill', 'hour-scent-line'];
-const MOVEMENT_IDS = ['hour-trails-casing', 'hour-trails', 'hour-beds'];
+const MOVEMENT_IDS = ['hour-trails-casing', 'hour-trails', 'hour-facing', 'hour-beds'];
 const PRESENCE_IDS = ['hour-presence'];
 const FOOD_IDS = ['hour-food'];
 
@@ -177,7 +189,8 @@ function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: bool
 }
 
 /** Paints the slider's hour on the map: thermals, deer presence, trails, beds, wind and the hunter's scent. */
-export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
+/** `facing`: the compass heading while the hunter is looking around; trails ahead of them are picked out. */
+export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing: number | null = null) {
   const { grid, conditions, movement, date, open, status, showFood } = useHour();
   const species = useEsau((st) => st.species);
   const scope = useMemo(() => hourScope(species), [species]);
@@ -215,8 +228,11 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null) {
     (map.getSource('hour-ticks') as GeoJSONSource).setData(thermalTicks(grid, frame.hc));
     (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m));
     (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m));
+    (map.getSource('hour-facing') as GeoJSONSource).setData(
+      facing != null && hunter ? trailsInView(frame.m.trails, hunter, facing) : { type: 'FeatureCollection', features: [] },
+    );
     (map.getSource('hour-scent') as GeoJSONSource).setData(plumePolygon(frame.plume));
-  }, [map, frame, show, grid, scope, showFood]);
+  }, [map, frame, show, grid, scope, showFood, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
 
   return frame;
 }
