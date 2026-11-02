@@ -7,7 +7,8 @@ import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
-import { lastKnownFix, useGeolocation } from './map/useGeolocation';
+import { currentFix, gpsWanted, lastKnownFix, useGeolocation } from './map/useGeolocation';
+import { usePageVisible } from './map/usePageVisible';
 import { useHeading } from './map/useHeading';
 import { EsauPanel, registerAnalyzer, useEsau, useEsauMap } from './esau/ui';
 import { callsFor, CALL_GROUP_TITLE } from './calls/catalog';
@@ -66,7 +67,10 @@ export function App() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [map, setMap] = useState<MLMap | null>(null);
   const [start] = useState(() => lastKnownFix());
-  const { fix, status: gps } = useGeolocation();
+  const recording = useTools((s) => s.recording != null);
+  const visible = usePageVisible();
+  const gpsOn = gpsWanted({ mode, recording, visible });
+  const { fix, status: gps } = useGeolocation(gpsOn);
   const compass = useHeading(mode === 'compass');
   const layers = useLayerState();
   // Layers meant for another animal are switched off on the map and left out of offline saves.
@@ -125,12 +129,14 @@ export function App() {
   }, [map, selectedWaypointId]);
 
   async function markMyLocation() {
-    if (!fix) {
+    // GPS may be off to save battery, so take one fresh reading for this mark.
+    const here = gpsOn ? fix : ((await currentFix()) ?? null);
+    if (!here) {
       setNotice('No GPS fix yet. Step into the open and try again.');
       return;
     }
     const t = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    await useTools.getState().addWaypoint({ position: fix.lngLat, altitude: fix.altitude, icon: 'x', name: `Marked ${t}` });
+    await useTools.getState().addWaypoint({ position: here.lngLat, altitude: here.altitude, icon: 'x', name: `Marked ${t}` });
   }
 
   // Esau: a tap on open map reads that spot, unless a sheet, a photo pin drop or a map tool owns the tap.
@@ -176,7 +182,6 @@ export function App() {
 
   // Ask "Did you snag anything?" when the hunter comes back after leaving the app, or stops the tracker.
   const [exitOpen, setExitOpen] = useState(false);
-  const recording = useTools((s) => s.recording != null);
   const wasRecording = useRef(false);
   useEffect(() => {
     if (wasRecording.current && !recording) setExitOpen(true);

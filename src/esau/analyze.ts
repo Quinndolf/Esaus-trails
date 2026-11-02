@@ -3,13 +3,14 @@ import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
 import { topSitSpots, type SitSpot, type Weapon } from "../model/sitSpots";
 import { squirrelSitSpots } from "../model/squirrelSpots";
+import { turkeySitSpots } from "../model/turkeySpots";
 import type { ElevationGrid } from "../model/types";
 import { legalToday } from "../rules/kentucky";
 import type { Legal } from "../rules/types";
 import { advisories, type Advisory } from "./advisory";
 import type { SitSpotQuery, SpeciesId } from "./types";
 
-/** Animals the movement model's trails and beds describe. Squirrel has its own food-tree model; others get no sit spots yet. */
+/** Animals the movement model's trails and beds describe. Squirrel and turkey have their own models; others get no sit spots yet. */
 const TRAIL_MODEL_SPECIES: SpeciesId[] = ["whitetail", "mule_deer"];
 
 export interface Analysis {
@@ -44,8 +45,14 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
     i.weapon != null && i.species === "squirrel" && i.grid.cover
       ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon })
       : null;
+  const turkey =
+    i.weapon != null && i.species === "turkey" && i.grid.cover
+      ? turkeySitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon })
+      : null;
   const ranked = squirrel
     ? squirrel
+    : turkey
+    ? turkey
     : canRank
     ? topSitSpots({
         grid: i.grid,
