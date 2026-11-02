@@ -8,7 +8,7 @@ import { useEsau } from '../esau/ui/store';
 import './home.css';
 
 /** "Did you snag anything?" Saved on this phone only. */
-export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ExitPrompt({ open, onClose, onHarvest }: { open: boolean; onClose: () => void; onHarvest?: () => void }) {
   const [yes, setYes] = useState<boolean | null>(null);
   const [what, setWhat] = useState('');
   const [where, setWhere] = useState('');
@@ -67,6 +67,18 @@ export function ExitPrompt({ open, onClose }: { open: boolean; onClose: () => vo
             <input className="text-input" data-testid="snag-what" placeholder="What?" value={what} onChange={(e) => setWhat(e.target.value)} />
             <input className="text-input" placeholder="Where?" value={where} onChange={(e) => setWhere(e.target.value)} />
             <p className="hint">Saved on this phone only.</p>
+            {onHarvest && (
+              <button
+                className="link-btn"
+                data-testid="snag-harvest"
+                onClick={() => {
+                  finish();
+                  onHarvest();
+                }}
+              >
+                What do I do now? (tagging and check-in)
+              </button>
+            )}
             <div className="tutorial-actions">
               <button className="link-btn" onClick={finish}>
                 Cancel
