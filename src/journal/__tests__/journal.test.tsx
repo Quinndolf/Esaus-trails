@@ -153,4 +153,14 @@ describe("route replay", () => {
     await click(host, '[data-testid="replay-close"]');
     expect(seen.at(-1)).toBeNull();
   });
+  it("skips a bad GPS point instead of crashing, and falls back to the end-of-hunt wind for old entries", async () => {
+    const bad = { ...walk, points: [{ lngLat: [NaN, NaN] as [number, number], time: t0 - 1, altitude: null }, ...walk.points] };
+    useTools.setState({ tracks: [bad] });
+    useJournal.setState({ entries: [{ ...entry, wind: [], windFromDeg: 270 }] });
+    const seen: unknown[] = [];
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onReplay: (p: unknown) => seen.push(p) }));
+    await click(host, '[data-testid="replay-open"]');
+    expect(seen.every((p) => p === null || (p as number[]).every(Number.isFinite))).toBe(true);
+    expect(host.querySelector('[data-testid="replay-wind"]')!.textContent).toMatch(/end of the hunt.*W/);
+  });
 });

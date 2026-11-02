@@ -79,7 +79,9 @@ export function scentCrossings(
   const targets: { p: LngLat; what: Crossing["what"] }[] = [...a.beds.map((p) => ({ p, what: "bed" as const })), ...a.trails.map((p) => ({ p, what: "trail" as const }))];
   for (const step of track.points) {
     if (!step.lngLat.every(Number.isFinite)) continue;
-    const toward = normalizeBearing(a.windFromDeg(step.lngLat, step.time) + 180);
+    const from = a.windFromDeg(step.lngLat, step.time);
+    if (!Number.isFinite(from)) continue; // no wind reading: say nothing rather than guess
+    const toward = normalizeBearing(from + 180);
     for (const t of targets) {
       const key = `${t.what}:${t.p[0]},${t.p[1]}`;
       if (seen.has(key)) continue;

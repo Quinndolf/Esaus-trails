@@ -55,7 +55,7 @@ function Entry({ e, track, onReplay }: { e: JournalEntry; track: Track | undefin
       </strong>
       <p>{e.snagged === "yes" ? `Snagged: ${e.what || "yes"}` : e.snagged === "no" ? "Nothing this time" : "Didn't say"}</p>
       {track ? lines.map((l, i) => <p key={i}>{l}</p>) : <p className="hint">This hunt has no route saved.</p>}
-      {track && track.points.length > 1 && !replaying && (
+      {track && track.points.filter((q) => q.lngLat.every(Number.isFinite)).length > 1 && !replaying && (
         <button className="link-btn" data-testid="replay-open" onClick={() => setReplaying(true)}>
           Replay this walk
         </button>
@@ -77,13 +77,14 @@ function Entry({ e, track, onReplay }: { e: JournalEntry; track: Track | undefin
 }
 
 function Replay({ e, track, crossings, onClose, onAt }: { e: JournalEntry; track: Track; crossings: { at: number }[]; onClose: () => void; onAt?: (at: LngLat | null) => void }) {
-  const pts = track.points;
+  const pts = useMemo(() => track.points.filter((q) => q.lngLat.every(Number.isFinite)), [track]);
   const [i, setI] = useState(0);
   const p = pts[Math.min(i, pts.length - 1)]!;
   useEffect(() => {
     onAt?.(p.lngLat);
   }, [p, onAt]);
-  const wind = windAt(e.wind ?? [], p.time);
+  const sample = windAt(e.wind ?? [], p.time);
+  const wind = sample ?? (e.windFromDeg != null ? { fromDeg: e.windFromDeg, mph: null as number | null } : null);
   const fromStart = Math.round(distance(pts[0]!.lngLat, p.lngLat) * 1.09361);
   const so = crossings.filter((c) => c.at <= p.time).length;
   return (
@@ -103,7 +104,7 @@ function Replay({ e, track, crossings, onClose, onAt }: { e: JournalEntry; track
         {Number.isFinite(p.time) ? new Date(p.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "Time unknown"} · {fromStart} yd from where you started
       </p>
       <p data-testid="replay-wind">
-        {wind ? `Wind then: ${Math.round(wind.mph)} mph from the ${cardinal(wind.fromDeg)}, so your scent went ${cardinal(wind.fromDeg + 180)}.` : "No wind on file for this time, so no scent read."}
+        {wind ? `${wind.mph == null ? "Wind at the end of the hunt" : "Wind then"}: ${wind.mph == null ? "" : `${Math.round(wind.mph)} mph `}from the ${cardinal(wind.fromDeg)}, so your scent went ${cardinal(wind.fromDeg + 180)}.` : "No wind on file for this time, so no scent read."}
       </p>
       <p data-testid="replay-cross">Beds or trails your scent reached so far: {so}</p>
       <button className="link-btn" data-testid="replay-close" onClick={onClose}>

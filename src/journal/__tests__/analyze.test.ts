@@ -48,6 +48,9 @@ describe("scentCrossings", () => {
   it("flags nothing when the wind carries scent the other way", () => {
     expect(scentCrossings(t, { windFromDeg: () => 90, beds: [bed], trails: [] })).toEqual([]);
   });
+  it("flags nothing when the wind reading is missing (NaN)", () => {
+    expect(scentCrossings(t, { windFromDeg: () => NaN, beds: [bed], trails: [] })).toEqual([]);
+  });
   it("flags nothing when the bed is past 150 yd", () => {
     expect(scentCrossings(t, { windFromDeg: () => 270, beds: [destination(START, 90, 300)], trails: [] })).toEqual([]);
   });

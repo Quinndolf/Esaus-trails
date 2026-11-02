@@ -29,7 +29,7 @@ const read = (): JournalEntry[] => {
     if (!Array.isArray(v)) return [];
     return v
       .filter((e): e is Record<string, unknown> => !!e && typeof e === "object" && typeof (e as { id?: unknown }).id === "string")
-      .map((e) => ({ ...e, beds: Array.isArray(e.beds) ? e.beds : [], trails: Array.isArray(e.trails) ? e.trails : [], wind: Array.isArray(e.wind) ? e.wind.filter((w: unknown) => w && typeof (w as WindSample).at === "number" && typeof (w as WindSample).fromDeg === "number") : [], windFromDeg: typeof e.windFromDeg === "number" ? e.windFromDeg : null }) as unknown as JournalEntry);
+      .map((e) => ({ ...e, beds: Array.isArray(e.beds) ? e.beds : [], trails: Array.isArray(e.trails) ? e.trails : [], wind: Array.isArray(e.wind) ? e.wind.filter((w: unknown) => w && typeof (w as WindSample).at === "number" && typeof (w as WindSample).fromDeg === "number" && Number.isFinite((w as WindSample).at) && Number.isFinite((w as WindSample).fromDeg) && Number.isFinite((w as WindSample).mph)) : [], windFromDeg: typeof e.windFromDeg === "number" ? e.windFromDeg : null }) as unknown as JournalEntry);
   } catch {
     return [];
   }
