@@ -10,16 +10,23 @@ import { FOREST_GROUP } from "../model/food";
  */
 export function treeHint(cover: number, forestGroup?: number): string | null {
   if (![41, 42, 43].includes(cover)) return null;
+  // The group only counts where it agrees with the cover class; otherwise the two sources conflict and we fall back to cover.
+  const hardwoodish = cover === 41 || cover === 43;
+  const evergreenish = cover === 42 || cover === 43;
   switch (forestGroup) {
     case FOREST_GROUP.oakHickory:
+      if (!hardwoodish) break;
       return "Oak-hickory ground, so white and red oaks are likely. Look for acorns and shaggy hickory bark.";
     case FOREST_GROUP.oakPine:
     case FOREST_GROUP.oakGum:
+      if (!hardwoodish) break;
       return "Oak mixed with pine or gum, so oaks are likely in the hardwood pockets.";
     case FOREST_GROUP.mapleBeech:
-      return "Maple and beech ground, so beech nuts are likely and acorns are not.";
+      if (!hardwoodish) break;
+      return "Maple and beech ground, so beech nuts are likely and acorns less so.";
     case FOREST_GROUP.pine:
     case FOREST_GROUP.whitePine:
+      if (!evergreenish) break;
       return "Pine ground, so little mast is likely. Look for bedding cover more than food.";
   }
   if (cover === 41) return "Hardwood forest. In Kentucky that is often oaks and hickories on the ridges, so look for acorns and nut shells to confirm.";

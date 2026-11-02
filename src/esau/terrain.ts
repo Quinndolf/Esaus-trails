@@ -296,7 +296,7 @@ export function readSpot(grid: GroundGrid, spot: LatLng, opts: { hunter?: LatLng
     cover: { code: coverCode, name: cover.name, woody: cover.woody },
     crop: crop ? { code: grid.crop[i] ?? 0, name: crop.name } : null,
     canopy: cover.canopy,
-    trees: treeHint(coverCode, grid.forestType?.[i]),
+    trees: treeHint(coverCode, grid.forestType?.length === grid.cover.length ? grid.forestType[i] : undefined),
     nearestFoodYd,
     nearestFoodWhat,
     nearestWaterYd,
