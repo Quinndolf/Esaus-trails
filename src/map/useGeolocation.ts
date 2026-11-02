@@ -23,12 +23,21 @@ export function lastKnownFix(): Fix | null {
   }
 }
 
-/** Continuous high-accuracy GPS. Remembers the last fix so the map opens where you were. */
-export function useGeolocation() {
+/**
+ * GPS only runs when it is needed (battery): while the map follows you, the compass is on, or a track is
+ * recording. Panning away, or the app going to the background, switches it off; a tracked hunt keeps it on.
+ */
+export function gpsWanted(s: { mode: 'follow' | 'free' | 'compass'; recording: boolean; visible: boolean }): boolean {
+  return s.recording || (s.visible && s.mode !== 'free');
+}
+
+/** High-accuracy GPS while `active`. Remembers the last fix so the map opens where you were. */
+export function useGeolocation(active = true) {
   const [fix, setFix] = useState<Fix | null>(null);
   const [status, setStatus] = useState<GeoStatus>('waiting');
 
   useEffect(() => {
+    if (!active) return;
     if (!('geolocation' in navigator)) {
       setStatus('unavailable');
       return;
@@ -55,7 +64,27 @@ export function useGeolocation() {
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, []);
+  }, [active]);
 
   return { fix, status };
+}
+
+/** One fresh reading for a single action (marking a spot) while the continuous watch is off. Null if none in time. */
+export function currentFix(timeoutMs = 10000): Promise<Fix | null> {
+  return new Promise((resolve) => {
+    if (!('geolocation' in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) =>
+        resolve({
+          lngLat: [p.coords.longitude, p.coords.latitude],
+          accuracy: p.coords.accuracy,
+          altitude: p.coords.altitude,
+          heading: null,
+          speed: p.coords.speed,
+          time: p.timestamp,
+        }),
+      () => resolve(null),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: timeoutMs },
+    );
+  });
 }
