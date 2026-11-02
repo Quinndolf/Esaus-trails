@@ -150,6 +150,19 @@ describe("offline read", () => {
     expect(offlineRead({ ...base, legal: { ...base.legal, status: "closed", note: "Deer season is closed." } }).more).toMatch(/closed.*KDFWR/);
     expect(offlineRead({ ...base, legal: { ...base.legal, status: "unknown" } }).more).toMatch(/can't confirm the season/);
   });
+  it("leads with the legal heads-up and drops the hunt-it advice when closed", () => {
+    const base = buildBrief(SAMPLE_SPOTS[1]!.query);
+    const more = offlineRead({ ...base, legal: { ...base.legal, status: "closed", note: "Deer season is closed. Check the KDFWR guide." } }).more;
+    expect(more.indexOf("Heads up")).toBeLessThan(more.indexOf("Look for"));
+    expect(more).not.toContain(base.phase.notes.split(/(?<=[.!?])\s/)[0]!);
+    expect((more.match(/KDFWR/g) ?? []).length).toBe(1);
+  });
+  it("does not cut phase notes at a.m., p.m. or U.S.", () => {
+    const base = buildBrief(SAMPLE_SPOTS[1]!.query);
+    const more = offlineRead({ ...base, phase: { ...base.phase, notes: "Be set by 6 a.m. near the U.S. highway. Then wait." } }).more;
+    expect(more).toContain("Be set by 6 a.m. near the U.S. highway.");
+    expect(more).not.toContain("Then wait.");
+  });
   it("calls the bean field at noon open ground or feeding, not bedding", () => {
     expect(offlineRead(buildBrief(SAMPLE_SPOTS[4]!.query)).spotRole).not.toBe("bedding");
   });
