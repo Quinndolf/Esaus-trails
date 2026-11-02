@@ -20,6 +20,11 @@ describe("Kentucky rules (2026-27, Monroe County, deer zone 2)", () => {
     expect(r.note).toMatch(/crossbow/i);
     expect(r.note).toMatch(/Sept(ember)? 19/);
   });
+  it("writes the next opening as a date a person can read, not 2026-11-14", () => {
+    const r = legalToday({ species: "whitetail", weapon: "rifle", at: day("2026-10-26") });
+    expect(r.note).toContain("November 14, 2026");
+    expect(r.note).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
   it("opens rifle (modern gun) only Nov 14 to 29", () => {
     expect(legalToday({ species: "whitetail", weapon: "rifle", at: day("2026-11-14") }).status).toBe("open");
     expect(legalToday({ species: "whitetail", weapon: "rifle", at: day("2026-11-30") }).status).toBe("closed");
@@ -99,7 +104,7 @@ describe("Kentucky turkey (2026, from KDFWR's turkey pages)", () => {
 
   it("names the next opening when closed, and says a rifle or air gun is not on the legal list", () => {
     const closed = legalToday({ species: "turkey", weapon: "shotgun", at: day("2026-11-02") });
-    expect(closed.note).toMatch(/2026-12-05|December 5/);
+    expect(closed.note).toContain("December 5, 2026");
     const rifle = legalToday({ species: "turkey", weapon: "rifle", at: day("2026-10-26") });
     expect(rifle.status).toBe("closed");
     expect(rifle.note).toMatch(/shotgun/i);
