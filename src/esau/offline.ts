@@ -30,10 +30,15 @@ export function offlineRead(b: EsauBrief): EsauReply {
     Math.abs(((spot.fromHunter.bearingDeg - c.scentToward + 540) % 360) - 180) <= 42;
 
   const more = [
-    `No signal, so this is the short version from the saved ground.`,
+    "This is my short read from the saved ground and the last forecast, not the full one.",
+    b.legal.status === "closed" ? `Heads up: ${b.legal.note}${/KDFWR/.test(b.legal.note) ? "" : " Check the KDFWR guide before you hunt it."}` : b.legal.status === "unknown" ? "I can't confirm the season for this animal and weapon, so check the KDFWR guide first." : "",
+    signToLookFor(species.id, role),
+    b.legal.status === "closed" ? "" : firstSentence(b.phase.notes),
+    timeOfDay(c.sun.phase, species.id),
     thermal.trim(),
+    spot.trees ?? "",
     c.windMph >= 2 ? "The wind is the last forecast I got, so it may be out of date." : "",
-    "I'll give you the full read when you're back in service.",
+    "The full read, with more reasons, comes when Esau's online service is available.",
   ].filter(Boolean).join(" ");
 
   return {
@@ -48,6 +53,35 @@ export function offlineRead(b: EsauBrief): EsauReply {
   };
 }
 
+const firstSentence = (t: string) => {
+  const guarded = t.replace(/\b(a\.m|p\.m|U\.S|vs|etc|approx)\./gi, (m) => m.replace(/\./g, "\u0000"));
+  const first = (/^.*?[.!?](\s|$)/.exec(guarded)?.[0] ?? guarded).trim();
+  return first.replace(/\u0000/g, ".");
+};
+
+/** What to look for on the ground at this kind of spot, in plain words. */
+function signToLookFor(id: string, role: EsauReply["spotRole"]): string {
+  if (role === "unlikely" || role === "open ground") return "Not much to look for here; walk on to cover or food.";
+  if (id === "squirrel") return role === "feeding" ? "Look for cut hickory husks, shell bits on logs and stumps, and cuttings on the ground." : "Look for leaf nests in forks, den holes, and the creek-bottom timber they travel.";
+  if (id === "turkey") return role === "feeding" ? "Look for scratched-up leaves, droppings and tracks in the dirt." : "Look for dusting bowls, roost trees with droppings below, and tracks on bare ground.";
+  if (id === "whitetail" || id === "mule_deer") {
+    if (role === "bedding") return "Look for oval beds pressed in leaves or grass, droppings, and a clear view downwind.";
+    if (role === "feeding") return "Look for browsed twigs, fresh droppings, acorns cracked open, and tracks.";
+    return "Look for a worn trail, tracks in soft dirt, rubs on small trees, and hair on fences.";
+  }
+  if (id === "hog") return "Look for rooting, wallows, tracks and rubbed trees.";
+  return "Look for tracks, droppings and fresh sign before you commit to a spot.";
+}
+
+function timeOfDay(phase: "night" | "dawn" | "morning" | "midday" | "afternoon" | "dusk", id: string): string {
+  if (id === "ginseng") return "";
+  if (id === "hog" || id === "black_bear") return "";
+  if (phase === "dawn" || phase === "dusk") return "Dawn and dusk are often the best movement; move slowly and get set before they do.";
+  if (phase === "midday") return id === "whitetail" || id === "mule_deer" ? "" : "Midday is often the slow stretch. Sit tight or scout.";
+  if (phase === "night") return "It's dark, so keep to the plan and mind your footing.";
+  return "";
+}
+
 function ginsengOfflineRead(b: EsauBrief): EsauReply {
   const { spot, conditions: c } = b;
   const f = ginsengFactors(siteFromSpot(spot));
@@ -60,7 +94,7 @@ function ginsengOfflineRead(b: EsauBrief): EsauReply {
     : "Season's closed until September 1, so scout it and leave it be.";
   return {
     say: `That ${ground} is ${CLASS_WORDS[cls]}. ${law}`,
-    more: "No signal, so this is the short version. The map can't see the understory or the soil, so look for tulip-poplar, bloodroot, wild ginger and damp black leaf litter before you believe it. I'll give you the full read when you're back in service.",
+    more: "This is my short read from the saved ground, not the full one. The map can't see the understory or the soil, so look for tulip-poplar, bloodroot, wild ginger and damp black leaf litter before you believe it. The full read comes when Esau's online service is available.",
     headline: cls === "poor" ? "Not ginseng ground" : cls === "fair" ? "Possible, not the best" : "Worth a look",
     confidence: "low",
     spotRole: role,
