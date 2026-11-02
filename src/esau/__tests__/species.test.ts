@@ -34,7 +34,7 @@ describe("every species", () => {
       for (let i = 0; i < SAMPLE_SPOTS.length; i++) {
         const b = buildBrief(q(id, i));
         for (const v of Object.values(b.scores)) expect(v).toBeGreaterThanOrEqual(0);
-        expect(offlineRead(b).more).toMatch(/^No signal/);
+        expect(offlineRead(b).more).toMatch(/^This is my short read/);
       }
   });
 });

@@ -126,10 +126,29 @@ describe("brief", () => {
 describe("offline read", () => {
   it("gives a short, honest answer with no signal", () => {
     const r = offlineRead(buildBrief(SAMPLE_SPOTS[1]!.query));
-    expect(r.more).toMatch(/^No signal/);
+    expect(r.more).toMatch(/^This is my short read/);
+    expect(r.more).not.toMatch(/No signal/);
     expect(r.say).toContain("smell you");
     expect(r.confidence).toBe("low");
     expect(r.meta.servedBy).toBe("offline-rules");
+  });
+  it("teaches from the rules: sign to look for, the season phase, and the sun", () => {
+    const b = buildBrief(SAMPLE_SPOTS[1]!.query);
+    const r = offlineRead(b);
+    expect(r.more).toContain(b.phase.notes.split(/(?<=[.!?])\s/)[0]);
+    expect(r.more).toMatch(/Look for/);
+  });
+  it("keeps the spoken part to four sentences and never mentions photos", () => {
+    for (const s of SAMPLE_SPOTS) {
+      const r = offlineRead(buildBrief(s.query));
+      expect(r.say.split(/(?<=[.!?])\s+/).length).toBeLessThanOrEqual(4);
+      expect(`${r.say} ${r.more}`).not.toMatch(/photo/i);
+    }
+  });
+  it("says when the season is closed or unconfirmed instead of staying quiet", () => {
+    const base = buildBrief(SAMPLE_SPOTS[1]!.query);
+    expect(offlineRead({ ...base, legal: { ...base.legal, status: "closed", note: "Deer season is closed." } }).more).toMatch(/closed.*KDFWR/);
+    expect(offlineRead({ ...base, legal: { ...base.legal, status: "unknown" } }).more).toMatch(/can't confirm the season/);
   });
   it("calls the bean field at noon open ground or feeding, not bedding", () => {
     expect(offlineRead(buildBrief(SAMPLE_SPOTS[4]!.query)).spotRole).not.toBe("bedding");
