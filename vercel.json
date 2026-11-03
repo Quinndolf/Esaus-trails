@@ -4,8 +4,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/ground.ts": { "maxDuration": 30 },
-    "api/esau.ts": { "maxDuration": 30 }
+    "api/ground.js": { "maxDuration": 30 },
+    "api/esau.js": { "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/nws/:path*", "destination": "/api/nws?path=/:path*" },

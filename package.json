@@ -11,6 +11,7 @@
     "api": "tsx --env-file-if-exists=.env server/index.mjs",
     "esau:spots": "tsx --env-file-if-exists=.env server/esau/sample-spots.ts",
     "typecheck:server": "tsc -p server/esau/tsconfig.json",
+    "build:api": "node scripts/build-api.mjs",
     "calls:fetch": "node scripts/fetch-calls.mjs",
     "ginseng:photos": "node scripts/fetch-ginseng-photos.mjs",
     "preview:shots": "node scripts/preview/shoot.mjs"

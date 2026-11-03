@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { handleGround } from "../server/ground/route";
+import { handleEsau } from "../esau/route";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  if (!(await handleGround(req, res))) {
+  if (!(await handleEsau(req, res))) {
     res.writeHead(404, { "content-type": "application/json" });
     res.end(JSON.stringify({ error: "not found" }));
   }

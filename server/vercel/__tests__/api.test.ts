@@ -52,7 +52,7 @@ describe("vercel function wrappers", () => {
 
 describe("handleNws forwarding", () => {
   it("forwards the path and extra query params to weather.gov", async () => {
-    const { handleNws } = await import("../../server/nws");
+    const { handleNws } = await import("../../nws");
     const seen: string[] = [];
     const f = (async (u: string) => (seen.push(u), new Response(JSON.stringify({ ok: 1 }), { status: 200 }))) as unknown as typeof fetch;
     const s = createServer((req, res) => void handleNws(req, res, f));
@@ -64,4 +64,20 @@ describe("handleNws forwarding", () => {
     expect(seen[0]).toBe("https://api.weather.gov/gridpoints/X/1,2/forecast?units=si");
     expect(seen[1]).toBe("https://api.weather.gov/points/36.75,-85.7");
   });
+});
+
+describe("bundled functions (what Vercel actually runs)", () => {
+  it("builds each function into a single ES module that loads in plain Node with no TypeScript", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { execFileSync } = await import("node:child_process");
+    const { pathToFileURL } = await import("node:url");
+    const out = mkdtempSync(join(tmpdir(), "esau-api-"));
+    execFileSync(process.execPath, ["scripts/build-api.mjs", out], { stdio: "pipe" });
+    for (const name of ["health", "ground", "esau", "nws"]) {
+      const mod = await import(pathToFileURL(join(out, `${name}.js`)).href);
+      expect(typeof mod.default, name).toBe("function");
+    }
+  }, 60_000);
 });
