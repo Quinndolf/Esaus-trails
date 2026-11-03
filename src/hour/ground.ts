@@ -12,6 +12,31 @@ export function bboxAround([lng, lat]: [number, number]): Bbox {
   return { west: lng - 0.03, east: lng + 0.03, south: lat - 0.022, north: lat + 0.022 };
 }
 
+const MI_PER_DEG_LAT = 69;
+/** Esau reads what you're looking at, but never less than ~200 acres or more than a few square miles: what a hunter can walk in a couple of hours. */
+export const MIN_SIDE_MI = 0.6;
+export const MAX_SIDE_MI = 2;
+
+/** The ground to read for a map view: the visible box, clamped to walkable size around its center. */
+export function viewBbox(view: Bbox): Bbox {
+  const lat = (view.south + view.north) / 2;
+  const lng = (view.west + view.east) / 2;
+  const miPerLng = MI_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180);
+  const clamp = (v: number) => Math.min(MAX_SIDE_MI, Math.max(MIN_SIDE_MI, v));
+  const halfLat = clamp((view.north - view.south) * MI_PER_DEG_LAT) / MI_PER_DEG_LAT / 2;
+  const halfLng = clamp((view.east - view.west) * miPerLng) / miPerLng / 2;
+  return { west: lng - halfLng, east: lng + halfLng, south: lat - halfLat, north: lat + halfLat };
+}
+
+/** Is a loaded grid still the right read for this view? Same ground (center inside it) and about the same scale. */
+export function groundFits(grid: Bbox, want: Bbox): boolean {
+  const cx = (want.west + want.east) / 2;
+  const cy = (want.south + want.north) / 2;
+  const inside = cx > grid.west && cx < grid.east && cy > grid.south && cy < grid.north;
+  const ratio = (want.north - want.south) / (grid.north - grid.south);
+  return inside && ratio > 0.7 && ratio < 1.4;
+}
+
 /** Ground grid (elevation, cover, crop, weather) from the server's /api/ground. */
 export async function fetchGround(b: Bbox, opts: { signal?: AbortSignal; cells?: number } = {}): Promise<GroundGrid> {
   const cells = String(opts.cells ?? 32);

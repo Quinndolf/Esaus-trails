@@ -1,6 +1,7 @@
 import type { Map as MLMap } from 'maplibre-gl';
 import { analyzeArea } from '../esau/ui/analyzeArea';
 import { useEsau } from '../esau/ui/store';
+import { ensureGroundForView } from '../hour/view';
 import './home.css';
 
 /**
@@ -15,7 +16,11 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
       className="pill-btn analyze-pill"
       data-testid="analyze-pill"
       disabled={!map || status === 'loading-ground' || status === 'asking'}
-      onClick={() => void analyzeArea()}
+      onClick={() => {
+        // Read what's on screen (walkable size), then analyze it.
+        if (!map) return;
+        void ensureGroundForView(map).then(() => analyzeArea());
+      }}
     >
       Analyze area
     </button>
