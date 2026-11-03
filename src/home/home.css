@@ -66,7 +66,6 @@
 .tutorial-actions .link-btn { color: var(--frost-muted); padding: 8px 0; }
 .tutorial-actions .pill-btn { background: #1c2a1f; color: #fff; box-shadow: none; }
 .tool-call { display: flex; margin: 4px 0 12px; }
-.top-bar { top: calc(var(--safe-t) + 58px); }
 .hour-bar-head { flex-wrap: wrap; }
 .tutorial-actions .link-btn { min-width: 48px; min-height: 40px; padding: 8px 12px; }
 .mark-chip, .chip-item { min-height: 40px; }

@@ -112,3 +112,14 @@ export function aboveSheetOffset(mapHeight: number): [number, number] {
 export function recenterOn(map: { getZoom(): number; flyTo(o: object): unknown }, at: LngLat | { lng: number; lat: number }): void {
   map.flyTo({ center: at, zoom: map.getZoom(), offset: [0, 0] });
 }
+
+/**
+ * How many pixels to pan the map (screen-down positive) so a tapped spot at `y` is not hidden behind a bottom panel
+ * covering `cover` of the map height. Zero when it is already clear of the panel by a comfortable margin.
+ */
+export function panShiftAboveSheet(y: number, mapHeight: number, cover: number): number {
+  const stripBottom = mapHeight * (1 - cover);
+  const margin = 48;
+  if (y >= 0 && y <= stripBottom - margin) return 0;
+  return y - stripBottom / 2;
+}
