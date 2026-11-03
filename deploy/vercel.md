@@ -15,6 +15,7 @@ No server to look after. Takes about 10 minutes. Everything here is on the free 
 On a computer with Node: `node scripts/smoke.mjs https://your-app.vercel.app`. Four lines starting `ok` means the site, weather and ground lookups answer.
 
 ## Notes
+- The functions in `api/` are pre-bundled by `npm run build:api` from `server/vercel/`. Run it after changing server code; CI fails if `api/` is stale.
 - Your marks, photos and tracks stay on your phone. Nothing here stores them.
 - If the ground lookup times out, wait a minute and tap again. The free plan limits each request to 30 seconds.
 - Free plan is for personal, non-commercial use. A paid app later would need a paid plan.
