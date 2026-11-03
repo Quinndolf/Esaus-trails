@@ -5,6 +5,7 @@ const KEY = 'esau-tutorial-seen';
 const STEPS = [
   { title: 'Pick your animal', body: 'The chip at top left sets the animal and your weapon. Everything on the map follows it.' },
   { title: 'Tap the map', body: "Tap where you'd sit. Esau tells you what the animal is doing right now, and you can ask him to teach you more." },
+  { title: 'Analyze area', body: "Analyze area shows Esau's top 3 sit spots as numbered circles. Tap a number to see why he picked it: wind, air movement, ground, and how to walk in." },
   { title: 'Slide the hour', body: 'The bar at the bottom moves the day. Blue shading is rising air, dark red is air pulling down.' },
   { title: 'Tools, Layers, My Location', body: 'Tools (bottom) holds calls, photos, marks and your tracker. Layers and My Location are on the right.' },
 ];
