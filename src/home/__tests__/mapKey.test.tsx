@@ -6,6 +6,7 @@ import { MapKeyButton, MapKeyCard, WhatsThisCard, useExplain } from "../MapKey";
 import { Tutorial } from "../Tutorial";
 import { useEsau } from "../../esau/ui/store";
 import { useHour } from "../../hour/store";
+import { useSpotWhy } from "../SpotWhyCard";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 async function mount(el: any) {
@@ -87,6 +88,20 @@ describe("what's this card", () => {
     const host = await mount(createElement(WhatsThisCard));
     await act(async () => useEsau.setState({ spot: { lat: 1, lng: 2 } }));
     expect(host.querySelector('[data-testid="whats-this"]')).toBeNull();
+  });
+});
+
+describe("one card at a time", () => {
+  it("a tapped mark or the key closes the sit-spot card, and a sit spot closes them", () => {
+    useSpotWhy.setState({ rank: 1 });
+    useExplain.getState().show({ title: "t", text: "x", lngLat: [0, 0] });
+    expect(useSpotWhy.getState().rank).toBeNull();
+    useSpotWhy.getState().show(2);
+    expect(useExplain.getState().item).toBeNull();
+    useExplain.getState().openKey(true);
+    expect(useSpotWhy.getState().rank).toBeNull();
+    useSpotWhy.getState().show(1);
+    expect(useExplain.getState().keyOpen).toBe(false);
   });
 });
 

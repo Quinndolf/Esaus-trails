@@ -82,7 +82,17 @@ describe("tap a mark", () => {
       ]),
     };
     expect(pickExplainable(map, { x: 100, y: 50 })!.title).toBe("Likely bedding");
-    expect(map.queryRenderedFeatures).toHaveBeenCalledWith([[90, 40], [110, 60]], { layers: [...EXPLAINABLE_LAYERS] });
+    expect(map.queryRenderedFeatures).toHaveBeenCalledWith([[90, 40], [110, 60]], { layers: ["hour-beds"] });
+  });
+
+  it("needs a near-direct hit on thin wind arrows, and never claims a tap inside the scent cone", () => {
+    const q = vi.fn((_box: [[number, number], [number, number]], o: { layers: string[] }) =>
+      o.layers[0] === "hour-wind" ? [{ layer: { id: "hour-wind" }, properties: { mph: 3 } }] : [],
+    );
+    pickExplainable({ getLayer: () => true, queryRenderedFeatures: q }, { x: 100, y: 100 });
+    const wind = q.mock.calls.find((c) => c[1].layers[0] === "hour-wind")!;
+    expect(wind[0]).toEqual([[96, 96], [104, 104]]);
+    expect(EXPLAINABLE_LAYERS).not.toContain("hour-scent-fill");
   });
 
   it("returns null when nothing is under the tap or no layers exist yet", () => {

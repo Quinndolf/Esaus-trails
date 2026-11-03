@@ -4,6 +4,7 @@ import { useEsau } from '../esau/ui/store';
 import { useHour } from '../hour/store';
 import { hourScope } from '../hour/scope';
 import { legendItems, type Explained, type Swatch } from '../hour/legend';
+import { useSpotWhy } from './SpotWhyCard';
 import './home.css';
 
 interface ExplainState {
@@ -17,9 +18,20 @@ interface ExplainState {
 export const useExplain = create<ExplainState>((set) => ({
   item: null,
   keyOpen: false,
-  show: (item) => set({ item, keyOpen: false }),
-  openKey: (keyOpen) => set({ keyOpen, item: null }),
+  // One card at a time: opening this closes the sit-spot card, and the other way round below.
+  show: (item) => {
+    if (item) useSpotWhy.getState().show(null);
+    set({ item, keyOpen: false });
+  },
+  openKey: (keyOpen) => {
+    if (keyOpen) useSpotWhy.getState().show(null);
+    set({ keyOpen, item: null });
+  },
 }));
+
+useSpotWhy.subscribe((s) => {
+  if (s.rank != null && (useExplain.getState().item || useExplain.getState().keyOpen)) useExplain.setState({ item: null, keyOpen: false });
+});
 
 /** A tiny picture of each map mark, drawn the way the map draws it. */
 export function SwatchIcon({ s }: { s: Swatch }) {
@@ -152,7 +164,7 @@ export function WhatsThisCard() {
             void useEsau.getState().tapSpot({ lat: item.lngLat[1], lng: item.lngLat[0] });
           }}
         >
-          Sit here and ask Esau
+          Ask Esau about here
         </button>
         <button className="link-btn" data-testid="whats-this-key" onClick={() => useExplain.getState().openKey(true)}>
           Map key

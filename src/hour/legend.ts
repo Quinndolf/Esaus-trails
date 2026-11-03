@@ -44,7 +44,7 @@ export function legendItems(scope: HourScope | null, opts: LegendOpts): LegendIt
         id: 'thermal-shade',
         swatch: { kind: 'fill', colors: ['rgb(120,200,255)', 'rgb(150,20,30)'] },
         name: 'Blue and red shading: air moving along the ground',
-        says: 'Light blue is warm air rising uphill, usually mid-morning to afternoon on sunny slopes. Dark red is cool air sinking downhill, in the evening, at night and early morning. No shading means the air is settled. Your scent rides this air when the wind is light. Turn it off with Thermals on the hour bar.',
+        says: 'Light blue is warm air rising uphill, usually mid-morning to afternoon on sunny slopes. Dark red is cool air sinking downhill or pooling in low ground, in the evening, at night and early morning. No shading means the air is settled, and the shading fades out when the wind is over about 15 mph, because then the wind moves the air. Your scent rides this air when the wind is light. Turn it off with Thermals on the hour bar.',
       },
       {
         id: 'thermal-ticks',
@@ -176,17 +176,21 @@ export function explainFeature(layer: string, props: Record<string, unknown>, no
   }
 }
 
-/** Layers a tap can explain, most specific first. */
-export const EXPLAINABLE_LAYERS = [
-  'hour-beds',
-  'hour-facing',
-  'hour-trails',
-  'hour-trails-casing',
-  'hour-ticks',
-  'hour-wind',
-  'hour-scent-line',
-  'hour-scent-fill',
-] as const;
+/**
+ * Layers a tap can explain, most specific first, with how close (px) the tap must be.
+ * Thin lines need a near-direct hit so an ordinary "sit here" tap on open ground still reads the spot.
+ * The scent cone's fill is left out: it starts at the hunter, where taps to sit are most common.
+ */
+export const EXPLAINABLE: { id: string; slop: number }[] = [
+  { id: 'hour-beds', slop: 10 },
+  { id: 'hour-facing', slop: 6 },
+  { id: 'hour-trails', slop: 6 },
+  { id: 'hour-trails-casing', slop: 6 },
+  { id: 'hour-ticks', slop: 4 },
+  { id: 'hour-wind', slop: 4 },
+  { id: 'hour-scent-line', slop: 4 },
+];
+export const EXPLAINABLE_LAYERS = EXPLAINABLE.map((e) => e.id);
 
 interface QueryableMap {
   getLayer(id: string): unknown;
@@ -196,20 +200,18 @@ interface QueryableMap {
   ): { layer: { id: string }; properties: Record<string, unknown> | null }[];
 }
 
-/** Finds the mark under a tap (within a finger's width), or null. */
-export function pickExplainable(map: QueryableMap, point: { x: number; y: number }, noun?: string, slop = 10): Explained | null {
-  const layers = EXPLAINABLE_LAYERS.filter((id) => map.getLayer(id));
-  if (!layers.length) return null;
-  const hits = map.queryRenderedFeatures(
-    [
-      [point.x - slop, point.y - slop],
-      [point.x + slop, point.y + slop],
-    ],
-    { layers: [...layers] },
-  );
-  for (const id of EXPLAINABLE_LAYERS) {
-    const f = hits.find((h) => h.layer.id === id);
-    if (f) return explainFeature(id, f.properties ?? {}, noun);
+/** Finds the mark under a tap, or null. Each layer has its own reach (see EXPLAINABLE). */
+export function pickExplainable(map: QueryableMap, point: { x: number; y: number }, noun?: string): Explained | null {
+  for (const { id, slop } of EXPLAINABLE) {
+    if (!map.getLayer(id)) continue;
+    const hits = map.queryRenderedFeatures(
+      [
+        [point.x - slop, point.y - slop],
+        [point.x + slop, point.y + slop],
+      ],
+      { layers: [id] },
+    );
+    if (hits.length) return explainFeature(id, hits[0]!.properties ?? {}, noun);
   }
   return null;
 }
