@@ -19,3 +19,5 @@ jobs:
       - run: npm run build
       - run: for f in deploy/*.sh; do bash -n "$f"; done
       - run: node --check scripts/smoke.mjs
+      - name: api/ bundles are up to date
+        run: npm run build:api && git diff --exit-code -- api

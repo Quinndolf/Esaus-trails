@@ -4,5 +4,5 @@
     "types": ["node"],
     "lib": ["ES2022", "DOM"]
   },
-  "include": [".", "../ground", "../nws.ts", "../../src/esau", "../../api"]
+  "include": [".", "../ground", "../nws.ts", "../../src/esau", "../vercel"]
 }
