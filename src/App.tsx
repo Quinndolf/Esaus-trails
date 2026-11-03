@@ -29,7 +29,7 @@ import { CallsSheet } from './calls/CallsSheet';
 import { GinsengGearSheet, GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
 import { useGinseng } from './ginseng/store';
 import { hourScope } from './hour/scope';
-import { bboxAround } from './hour/ground';
+import { viewGround } from './hour/view';
 import { useHour } from './hour/store';
 import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
@@ -112,8 +112,7 @@ export function App() {
   const hourIdle = useHour((s) => s.status === 'idle');
   useEffect(() => {
     if (!map || !hourWanted || !hourIdle) return;
-    const c = start?.lngLat ?? [map.getCenter().lng, map.getCenter().lat];
-    void useHour.getState().load(bboxAround(c as LngLat));
+    void useHour.getState().load(viewGround(map));
   }, [map, hourWanted, hourIdle, start]);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {

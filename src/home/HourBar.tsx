@@ -3,7 +3,7 @@ import type { Map as MLMap } from 'maplibre-gl';
 import type { LngLat } from '../map/geo';
 import { THERMAL_WORDS } from '../model/describe';
 import { useEsau } from '../esau/ui/store';
-import { bboxAround } from '../hour/ground';
+import { viewGround } from '../hour/view';
 import { dayStrip, hourScope } from '../hour/scope';
 import { ageLabel } from '../hour/groundCache';
 import { useHour } from '../hour/store';
@@ -69,8 +69,7 @@ export function HourBar({ map, hunter, facing = null }: { map: MLMap | null; hun
             className="link-btn"
             onClick={() => {
               if (!map) return;
-              const c = map.getCenter();
-              void useHour.getState().load(bboxAround([c.lng, c.lat]));
+              void useHour.getState().load(viewGround(map));
             }}
           >
             Try again
