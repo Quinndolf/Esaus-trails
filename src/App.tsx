@@ -46,6 +46,9 @@ import { JournalSheet } from './journal/JournalSheet';
 import { useReplayMarker } from './journal/useReplayMarker';
 import { useWindLog } from './journal/useWindLog';
 import { HourBar } from './home/HourBar';
+import { MockChip } from './mock/MockChip';
+import { justHeld, useMock } from './mock/store';
+import { useMockHold } from './mock/useMockHold';
 import { nextLocation } from './home/location';
 import { Tutorial } from './home/Tutorial';
 import { MarksSheet, UndoToast } from './marks/MarksSheet';
@@ -117,6 +120,7 @@ export function App() {
     if (!map || !hourWanted || !hourIdle) return;
     void useHour.getState().load(viewGround(map));
   }, [map, hourWanted, hourIdle, start]);
+  const mock = useMock((s) => s.pos);
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!notice) return;
@@ -154,10 +158,14 @@ export function App() {
     await useTools.getState().addWaypoint({ position: here.lngLat, altitude: here.altitude, icon: 'x', name: `Marked ${t}` });
   }
 
+  // Hold open map to pretend you're standing there: scent drift draws from that spot.
+  useMockHold(map, () => !isAwaitingPinDrop() && !isToolCapturingTaps() && sheet === null);
+
   // Esau: a tap on open map reads that spot, unless a sheet, a photo pin drop or a map tool owns the tap.
   useEsauMap(
     map,
     () =>
+      justHeld() ||
       isAwaitingPinDrop() ||
       isToolCapturingTaps() ||
       sheet !== null ||
@@ -305,7 +313,8 @@ export function App() {
         </button>
       </div>
 
-      <HourBar map={map} hunter={fix?.lngLat ?? null} facing={mode === 'compass' ? heading : null} />
+      <MockChip />
+      <HourBar map={map} hunter={mock ?? fix?.lngLat ?? null} facing={mode === 'compass' && !mock ? heading : null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}
