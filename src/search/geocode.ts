@@ -51,3 +51,59 @@ export async function geocode(query: string, doFetch: typeof fetch = fetch): Pro
     };
   });
 }
+
+const PHOTON = 'https://photon.komoot.io/api/';
+export type Near = [number, number] | null;
+
+interface PhotonFeature {
+  properties: Record<string, string | number[] | undefined>;
+  geometry: { coordinates: [number, number] };
+}
+
+function photonLabel(p: PhotonFeature['properties']): string {
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+  const parts = [p.name && p.name !== p.street ? p.name : null, street || null, p.city ?? p.county, p.state, p.country === 'United States' ? null : p.country];
+  const out: string[] = [];
+  for (const x of parts) if (x && !out.includes(String(x))) out.push(String(x));
+  return out.join(', ');
+}
+
+async function photon(query: string, near: Near, doFetch: typeof fetch): Promise<Place[]> {
+  const params = new URLSearchParams({ q: query, limit: '5' });
+  if (near) {
+    params.set('lon', String(near[0]));
+    params.set('lat', String(near[1]));
+  }
+  const res = await doFetch(`${PHOTON}?${params}`);
+  if (!res.ok) throw new Error('Place search is not answering. Try again in a moment.');
+  const { features } = (await res.json()) as { features: PhotonFeature[] };
+  return features.map((f) => {
+    const ex = f.properties.extent as number[] | undefined;
+    return {
+      label: photonLabel(f.properties),
+      lng: f.geometry.coordinates[0],
+      lat: f.geometry.coordinates[1],
+      // Photon's extent is [west, north, east, south].
+      ...(ex?.length === 4 && ex[0] !== ex[2] ? { bbox: [ex[0], ex[3], ex[2], ex[1]] as Place['bbox'] } : {}),
+    };
+  });
+}
+
+/** Matches while typing, from the free Photon service (built for search-as-you-type), nearest the map centre first. */
+export async function suggest(query: string, near: Near, doFetch: typeof fetch = fetch): Promise<Place[]> {
+  const q = query.trim();
+  if (q.length < 3 || parseLatLng(q)) return [];
+  return photon(q, near, doFetch);
+}
+
+/** For a query with no match: Photon forgives small typos, so retry with fewer trailing words and offer the first hit. */
+export async function didYouMean(query: string, near: Near, doFetch: typeof fetch = fetch): Promise<Place | null> {
+  const words = query.trim().split(/\s+/);
+  for (let n = words.length - 1; n >= 1; n--) {
+    const q = words.slice(0, n).join(' ');
+    if (q.length < 3) break;
+    const [hit] = await photon(q, near, doFetch);
+    if (hit) return hit;
+  }
+  return null;
+}
