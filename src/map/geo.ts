@@ -99,3 +99,16 @@ export function formatDuration(ms: number): string {
   const sec = s % 60;
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
 }
+
+/** Fraction of the screen a bottom sheet covers (matches `.sheet` height: 85dvh). */
+export const SHEET_COVER = 0.85;
+
+/** flyTo offset that lands a point in the middle of the strip of map left uncovered above a bottom sheet. */
+export function aboveSheetOffset(mapHeight: number): [number, number] {
+  return [0, -mapHeight * (0.5 - (1 - SHEET_COVER) / 2)];
+}
+
+/** After a sheet closes, bring the thing it showed back to the middle of the map so it doesn't sit stranded at the edge. */
+export function recenterOn(map: { getZoom(): number; flyTo(o: object): unknown }, at: LngLat | { lng: number; lat: number }): void {
+  map.flyTo({ center: at, zoom: map.getZoom(), offset: [0, 0] });
+}
