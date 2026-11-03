@@ -29,7 +29,7 @@ function clock(d: Date, first: boolean) {
  * bottom, tinted by thermal state across the day, marking sunrise, sunset and legal light.
  */
 export function HourBar({ map, hunter, facing = null }: { map: MLMap | null; hunter: LngLat | null; facing?: number | null }) {
-  const { status, error, hours, date, setDate, grid, conditions, staleSince } = useHour();
+  const { status, error, hours, date, setDate, grid, conditions, staleSince, showThermals, setShowThermals } = useHour();
   const species = useEsau((s) => s.species);
   const scope = hourScope(species);
   const frame = useHourOverlays(map, hunter, facing);
@@ -64,6 +64,16 @@ export function HourBar({ map, hunter, facing = null }: { map: MLMap | null; hun
       <div className="hour-bar-head">
         <strong data-testid="hour-label">{status === 'ready' && hours.length ? clock(date, k === 0) : 'Hour by hour'}</strong>
         <span data-testid="hour-readout">{line}</span>
+        {scope.thermals && status === 'ready' && (
+          <button
+            className={`thermal-toggle ${showThermals ? 'is-on' : ''}`}
+            data-testid="thermal-toggle"
+            aria-pressed={showThermals}
+            onClick={() => setShowThermals(!showThermals)}
+          >
+            Thermals {showThermals ? 'on' : 'off'}
+          </button>
+        )}
         {status === 'error' && grid == null && (
           <button
             className="link-btn"

@@ -95,3 +95,5 @@
 .spot-why dd { margin: 2px 0 0; font-size: 14px; line-height: 1.35; }
 .spot-why .pill-btn { align-self: flex-start; }
 button.sit-marker { padding: 0; cursor: pointer; }
+.thermal-toggle { border: 1px solid var(--frost-muted); background: transparent; color: var(--frost-muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.thermal-toggle.is-on { background: #2f8cff; border-color: #2f8cff; color: #fff; }
