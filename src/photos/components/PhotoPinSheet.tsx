@@ -57,7 +57,7 @@ function PinEditor({ pin }: { pin: PhotoPin }) {
   const allTags = [...presets, ...pin.tags.filter((t) => !(presets as readonly string[]).includes(t))];
 
   return (
-    <BottomSheet title="Photo" open onClose={close}>
+    <BottomSheet title="Photo" open onClose={close} peek>
       <div className="photo-sheet">
       <input
         className="photo-sheet__name"

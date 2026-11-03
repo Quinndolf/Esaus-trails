@@ -103,9 +103,12 @@ export function formatDuration(ms: number): string {
 /** Fraction of the screen a bottom sheet covers (matches `.sheet` height: 85dvh). */
 export const SHEET_COVER = 0.85;
 
+/** Fraction covered by a pin's compact sheet (`peek`), so the pin stays well in view above it. */
+export const PEEK_COVER = 0.38;
+
 /** flyTo offset that lands a point in the middle of the strip of map left uncovered above a bottom sheet. */
-export function aboveSheetOffset(mapHeight: number): [number, number] {
-  return [0, -mapHeight * (0.5 - (1 - SHEET_COVER) / 2)];
+export function aboveSheetOffset(mapHeight: number, cover = SHEET_COVER): [number, number] {
+  return [0, -mapHeight * (0.5 - (1 - cover) / 2)];
 }
 
 /** After a sheet closes, bring the thing it showed back to the middle of the map so it doesn't sit stranded at the edge. */

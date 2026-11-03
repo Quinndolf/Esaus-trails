@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import type { BasemapId } from './map/basemaps';
-import { aboveSheetOffset, cardinal, recenterOn, type LngLat } from './map/geo';
+import { PEEK_COVER, aboveSheetOffset, cardinal, recenterOn, type LngLat } from './map/geo';
 import { ALL_LAYERS, foldersFor, scopeLayerState } from './layers/registry';
 import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
@@ -85,7 +85,8 @@ export function App() {
   const { fix: liveFix, status: gps } = useGeolocation(gpsOn);
   // Long-press 'find me' reading, and the last known spot, so the dot shows even before the live GPS locks on.
   const [found, setFound] = useState<Fix | null>(null);
-  const fix = liveFix ?? found ?? start;
+  const realFix = liveFix ?? found;
+  const fix = realFix ?? start; // the dot and camera may use the last-known spot; marks, tracks and Esau must not
   const compass = useHeading(mode === 'compass');
   const layers = useLayerState();
   // Layers meant for another animal are switched off on the map and left out of offline saves.
@@ -130,8 +131,8 @@ export function App() {
 
   // Feed GPS into the route tracker while it records.
   useEffect(() => {
-    if (fix) useTools.getState().addFix({ lngLat: fix.lngLat, accuracy: fix.accuracy, altitude: fix.altitude, time: fix.time });
-  }, [fix]);
+    if (liveFix) useTools.getState().addFix({ lngLat: liveFix.lngLat, accuracy: liveFix.accuracy, altitude: liveFix.altitude, time: liveFix.time });
+  }, [liveFix]);
 
   // Opening a waypoint brings it on screen above the sheet.
   const selectedWaypointId = useTools((s) => s.selectedWaypointId);
@@ -140,7 +141,7 @@ export function App() {
     if (!map || !wp) return;
     setMode((m) => (m === 'follow' ? 'free' : m));
     const h = map.getContainer().clientHeight;
-    map.flyTo({ center: wp.position, zoom: Math.max(map.getZoom(), 16), offset: aboveSheetOffset(h) });
+    map.flyTo({ center: wp.position, zoom: Math.max(map.getZoom(), 16), offset: aboveSheetOffset(h, PEEK_COVER) });
     return () => {
       // Sheet closed (or another opened): don't leave the waypoint stranded at the top edge.
       if (useTools.getState().selectedWaypointId === null) recenterOn(map, wp.position);
@@ -149,7 +150,8 @@ export function App() {
 
   async function markMyLocation() {
     // GPS may be off to save battery, so take one fresh reading for this mark.
-    const here = gpsOn ? fix : ((await currentFix()) ?? null);
+    // Only a real reading counts: never the last-known spot the dot falls back on.
+    const here = (gpsOn ? (liveFix ?? found) : null) ?? ((await currentFix()) ?? null);
     if (!here) {
       setNotice('No GPS fix yet. Step into the open and try again.');
       return;
@@ -181,9 +183,9 @@ export function App() {
   );
   useEffect(() => {
     useEsau.getState().setHunter(
-      fix ? { lat: fix.lngLat[1], lng: fix.lngLat[0], accuracyM: fix.accuracy, headingDeg: heading ?? undefined } : null,
+      realFix ? { lat: realFix.lngLat[1], lng: realFix.lngLat[0], accuracyM: realFix.accuracy, headingDeg: heading ?? undefined } : null,
     );
-  }, [fix, heading]);
+  }, [realFix, heading]);
   // Opening a photo pin (new from EXIF, or picked from the list) brings it on screen.
   const selectedPinId = usePhotoPins((s) => s.selectedPinId);
   useEffect(() => {
@@ -314,7 +316,7 @@ export function App() {
       </div>
 
       <MockChip />
-      <HourBar map={map} hunter={mock ?? fix?.lngLat ?? null} facing={mode === 'compass' && !mock ? heading : null} />
+      <HourBar map={map} hunter={mock ?? realFix?.lngLat ?? null} facing={mode === 'compass' && !mock ? heading : null} />
       <LayersSheet
         open={sheet === 'layers'}
         onClose={() => setSheet(null)}

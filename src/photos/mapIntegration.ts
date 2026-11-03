@@ -1,4 +1,4 @@
-import { aboveSheetOffset } from '../map/geo';
+import { PEEK_COVER, aboveSheetOffset } from '../map/geo';
 import { attachHoldDrag, justDragged } from '../marks/holdDrag';
 import { useEffect, useRef } from 'react';
 import maplibregl, { type Map as MlMap, type MapMouseEvent } from 'maplibre-gl';
@@ -116,6 +116,6 @@ export function flyToPin(map: MlMap, pin: PhotoPin, { aboveSheet = false } = {})
   map.flyTo({
     center: pin.position,
     zoom: Math.max(map.getZoom(), 16),
-    offset: aboveSheet ? aboveSheetOffset(h) : [0, 0],
+    offset: aboveSheet ? aboveSheetOffset(h, PEEK_COVER) : [0, 0],
   });
 }
