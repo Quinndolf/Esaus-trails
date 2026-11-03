@@ -31,6 +31,8 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
   const mapRef = useRef<MLMap | null>(null);
   const loaded = useRef(false);
   const [zoomTick, setZoomTick] = useState(0);
+  // State, not just the ref: a GPS fix that lands before the style loads must redraw the dot once it does.
+  const [ready, setReady] = useState(false);
   const latest = useRef({ onUserMove });
   latest.current = { onUserMove };
 
@@ -107,6 +109,7 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
         paint: { 'circle-radius': 7, 'circle-color': '#2f8cff' },
       });
       loaded.current = true;
+      setReady(true);
       // Handle for browser tests and debugging from the console.
       (window as unknown as { __esauMap?: MLMap }).__esauMap = map;
       onReady(map);
@@ -154,7 +157,7 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
         ? polygon(coneRing(fix.lngLat, heading, CONE_SPREAD, metersPerPixel * CONE_PIXELS))
         : EMPTY,
     );
-  }, [fix, heading, mode, zoomTick]);
+  }, [fix, heading, mode, zoomTick, ready]);
 
   // Camera: follow keeps the dot centered; compass also turns the map heading-up.
   // The first fix, or re-centering from far out, brings the hunter in close.
