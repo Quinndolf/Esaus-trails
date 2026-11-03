@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Map as MLMap } from 'maplibre-gl';
 import type { BasemapId } from './map/basemaps';
-import { cardinal, type LngLat } from './map/geo';
+import { aboveSheetOffset, cardinal, recenterOn, type LngLat } from './map/geo';
 import { ALL_LAYERS, foldersFor, scopeLayerState } from './layers/registry';
 import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
@@ -130,7 +130,11 @@ export function App() {
     if (!map || !wp) return;
     setMode((m) => (m === 'follow' ? 'free' : m));
     const h = map.getContainer().clientHeight;
-    map.flyTo({ center: wp.position, zoom: Math.max(map.getZoom(), 16), offset: [0, -h * 0.4] });
+    map.flyTo({ center: wp.position, zoom: Math.max(map.getZoom(), 16), offset: aboveSheetOffset(h) });
+    return () => {
+      // Sheet closed (or another opened): don't leave the waypoint stranded at the top edge.
+      if (useTools.getState().selectedWaypointId === null) recenterOn(map, wp.position);
+    };
   }, [map, selectedWaypointId]);
 
   async function markMyLocation() {
@@ -166,6 +170,9 @@ export function App() {
     if (!map || !pin) return;
     setMode((m) => (m === 'follow' ? 'free' : m));
     flyToPin(map, pin, { aboveSheet: true });
+    return () => {
+      if (usePhotoPins.getState().selectedPinId === null) recenterOn(map, pin.position);
+    };
   }, [map, selectedPinId]);
 
   const setBasemap = useCallback((b: BasemapId) => {
