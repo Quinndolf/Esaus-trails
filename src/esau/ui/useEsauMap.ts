@@ -20,10 +20,13 @@ const MARK_LABEL: Record<EsauMark['kind'], string> = {
  * Wires Esau into the map: a tap reads that spot (unless another tool owns the tap),
  * and his marks and the tapped spot are drawn as markers.
  * `shouldSkip` lets the shell veto a tap, e.g. while a photo pin is waiting to be placed.
+ * `intercept` can claim a tap for something else (returns true when it did).
  */
-export function useEsauMap(map: MlMap | null, shouldSkip: () => boolean) {
+export function useEsauMap(map: MlMap | null, shouldSkip: () => boolean, intercept?: (e: MapMouseEvent) => boolean) {
   const skip = useRef(shouldSkip);
   skip.current = shouldSkip;
+  const claim = useRef(intercept);
+  claim.current = intercept;
   const spot = useEsau((s) => s.spot);
   const reply = useEsau((s) => s.reply);
 
@@ -31,6 +34,8 @@ export function useEsauMap(map: MlMap | null, shouldSkip: () => boolean) {
     if (!map) return;
     const onClick = (e: MapMouseEvent) => {
       if (skip.current()) return;
+      // A tap on a trail, bed or arrow gets explained instead of read.
+      if (claim.current?.(e)) return;
       void useEsau.getState().tapSpot({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     };
     map.on('click', onClick);

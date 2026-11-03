@@ -37,6 +37,8 @@ import { ToolsSheet } from './ui/ToolsSheet';
 import { AnalyzePill } from './home/AnalyzePill';
 import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
 import { SpotWhyCard } from './home/SpotWhyCard';
+import { MapKeyButton, MapKeyCard, WhatsThisCard, useExplain } from './home/MapKey';
+import { pickExplainable } from './hour/legend';
 import { AnimalChip } from './home/AnimalChip';
 import { ExitPrompt } from './home/ExitPrompt';
 import { HarvestSheet } from './home/HarvestSheet';
@@ -161,6 +163,13 @@ export function App() {
       sheet !== null ||
       usePhotoPins.getState().selectedPinId !== null ||
       useTools.getState().selectedWaypointId !== null,
+    (e) => {
+      if (!map) return false;
+      const hit = pickExplainable(map, e.point, hourScope(useEsau.getState().species)?.noun);
+      if (!hit) return false;
+      useExplain.getState().show({ ...hit, lngLat: [e.lngLat.lng, e.lngLat.lat] });
+      return true;
+    },
   );
   useEffect(() => {
     useEsau.getState().setHunter(
@@ -272,6 +281,8 @@ export function App() {
 
       <AdvisoryBanner />
       <SpotWhyCard />
+      <WhatsThisCard />
+      <MapKeyCard />
       <RangePill />
       <AnalyzePill map={map} />
 
@@ -280,6 +291,7 @@ export function App() {
       </button>
 
       <div className="home-stack">
+        <MapKeyButton />
         <button className="frost-btn" onClick={() => setSheet('layers')} aria-label="Map Layers">
           <LayersIcon />
         </button>
