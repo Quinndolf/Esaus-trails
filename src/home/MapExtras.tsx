@@ -3,9 +3,10 @@ import maplibregl, { type Map as MLMap } from 'maplibre-gl';
 import { yardsBetween } from '../model/geo';
 import { useEsau } from '../esau/ui/store';
 import { rangeNote } from './range';
+import { useSpotWhy } from './SpotWhyCard';
 import './home.css';
 
-/** Esau's top sit spots as numbered dashed markers, clearly different from the hunter's own marks. */
+/** Esau's top sit spots as numbered dashed markers, clearly different from the hunter's own marks. Tap one for his reasons. */
 export function useSitSpotMarkers(map: MLMap | null) {
   const spots = useEsau((s) => s.analysis?.spots);
   const live = useRef<maplibregl.Marker[]>([]);
@@ -13,11 +14,16 @@ export function useSitSpotMarkers(map: MLMap | null) {
     if (!map) return;
     live.current.forEach((m) => m.remove());
     live.current = (spots ?? []).map((s) => {
-      const el = document.createElement('div');
+      // A button: tap it to read why Esau picked this spot.
+      const el = document.createElement('button');
+      el.type = 'button';
       el.className = 'sit-marker';
       el.textContent = String(s.rank);
-      el.setAttribute('role', 'img');
-      el.setAttribute('aria-label', `Esau's suggested sit spot ${s.rank}`);
+      el.setAttribute('aria-label', `Why Esau picked sit spot ${s.rank}`);
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        useSpotWhy.getState().show(s.rank);
+      });
       return new maplibregl.Marker({ element: el }).setLngLat(s.lngLat).addTo(map);
     });
     return () => live.current.forEach((m) => m.remove());

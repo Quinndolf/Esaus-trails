@@ -36,6 +36,7 @@ import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
 import { AnalyzePill } from './home/AnalyzePill';
 import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
+import { SpotWhyCard } from './home/SpotWhyCard';
 import { AnimalChip } from './home/AnimalChip';
 import { ExitPrompt } from './home/ExitPrompt';
 import { HarvestSheet } from './home/HarvestSheet';
@@ -270,6 +271,7 @@ export function App() {
       </div>
 
       <AdvisoryBanner />
+      <SpotWhyCard />
       <RangePill />
       <AnalyzePill map={map} />
 

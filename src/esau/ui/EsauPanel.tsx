@@ -110,6 +110,11 @@ export function EsauPanel() {
             {l}
           </p>
         ))}
+        {!!s.analysis?.spots.length && (
+          <p className="esau-hint" data-testid="spot-why-hint">
+            Tap a numbered spot on the map to see why Esau picked it.
+          </p>
+        )}
 
         {brief && (
           <p className="esau-air">
