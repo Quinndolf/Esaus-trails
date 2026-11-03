@@ -85,3 +85,6 @@
 .harvest-steps li { margin-bottom: 8px; }
 .harvest-phones { list-style: none; padding: 0; margin: 8px 0; }
 .harvest-phones li a { display: inline-block; padding: 8px 0; min-height: 36px; }
+
+.thermal-toggle { border: 1px solid var(--frost-muted); background: transparent; color: var(--frost-muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.thermal-toggle.is-on { background: #2f8cff; border-color: #2f8cff; color: #fff; }
