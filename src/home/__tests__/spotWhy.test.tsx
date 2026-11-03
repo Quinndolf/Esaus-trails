@@ -91,6 +91,14 @@ describe("Why this spot card", () => {
     expect(useSpotWhy.getState().rank).toBeNull();
   });
 
+  it("closes when the hunter taps somewhere else on the map", async () => {
+    useEsau.setState({ analysis: analysis([1]), spot: null });
+    useSpotWhy.setState({ rank: 1 });
+    const host = await mount(createElement(SpotWhyCard));
+    await act(async () => useEsau.setState({ spot: { lat: 36.7, lng: -85.6 } }));
+    expect(host.querySelector('[data-testid="spot-why"]')).toBeNull();
+  });
+
   it("Close hides it", async () => {
     useEsau.setState({ analysis: analysis([1]) });
     useSpotWhy.setState({ rank: 1 });

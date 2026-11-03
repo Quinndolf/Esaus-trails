@@ -19,12 +19,19 @@ const TARGET: Record<NonNullable<SitSpot["kind"]>, string> = {
   trail: "the trail",
   food_trees: "the food trees",
   roost: "the opening they fly down to",
-  strut_zone: "the open ground",
+  strut_zone: "the woods they come out of",
 };
+
+/** Squirrel and turkey picks with nothing nearby to face carry bearing 0, which means "no direction", not north. */
+const hasDirection = (s: SitSpot) => !s.kind || s.kind === "trail" || s.yardsToTrail > 0;
+/** Only deer picks are built around keeping scent off the animal. */
+const scentMatters = (s: SitSpot) => !s.kind || s.kind === "trail";
+const yards = (n: number) => (n < 10 ? "a few yd" : `about ${Math.round(n / 10) * 10} yd`);
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function face(spot: SitSpot, target: string): string {
+  if (!hasDirection(spot)) return spot.kind === "food_trees" ? "You're in the food trees. Watch all around you." : "Face the side with the most open view.";
   const far = spot.yardsToTrail > 0 ? ` about ${spot.yardsToTrail} yd out` : "";
   return `Face ${compassWord(spot.watchBearingDeg)}, toward ${target}${far}.`;
 }
@@ -33,7 +40,9 @@ function scent(spot: SitSpot, r: PointReading): string {
   if (r.scent.driver === "swirling") {
     return `${r.wind.line} Your scent swirls here and can go any way, so stay still and keep it short.`;
   }
-  const drift = `Your scent drifts ${compassWord(r.scent.towardDeg)} about ${Math.round(r.scent.reachYards / 10) * 10} yd`;
+  const drift = `Your scent drifts ${compassWord(r.scent.towardDeg)} ${yards(r.scent.reachYards)}`;
+  if (spot.kind === "roost" || spot.kind === "strut_zone") return `${r.wind.line} ${drift}. Turkeys go by eyesight, not smell, so staying still matters more than the wind.`;
+  if (!scentMatters(spot) || !hasDirection(spot)) return `${r.wind.line} ${drift}. Squirrels go by sight and sound more than smell, so move slow and stay still.`;
   const off = angleDiff(r.scent.towardDeg, spot.watchBearingDeg);
   const verdict =
     off <= TOWARD_DEG
@@ -49,7 +58,7 @@ function air(r: PointReading): string {
     case "Rising":
       return "Warm air is rising uphill now, so your scent lifts up the slope. Animals below you are less likely to smell you.";
     case "Sinking":
-      return "Cool air is sliding downhill now, so your scent drops into lower ground. Sit above where animals travel.";
+      return "Cool air is sliding downhill now, so your scent flows down onto lower ground. Don't sit above where animals travel; sit level with or below them.";
     case "Pooling":
       return "Cool air is pooling in low ground now, so scent sits and spreads in the bottoms.";
     default:
@@ -67,11 +76,11 @@ function walkIn(spot: SitSpot): string {
   const behind = compassWord(spot.watchBearingDeg + 180);
   switch (spot.kind) {
     case "food_trees":
-      return `Walk in slow and quiet from the ${behind}, stopping often. Squirrels hear and see you long before you see them.`;
+      return `Walk in slow and quiet${hasDirection(spot) ? ` from the ${behind}` : ""}, stopping often. Squirrels hear and see you long before you see them.`;
     case "roost":
-      return `Slip in before light from the ${behind} side, and never walk under the roost.`;
+      return `Slip in before light${hasDirection(spot) ? ` from the ${behind} side` : ""}, and never walk under the roost.`;
     case "strut_zone":
-      return `Come in from the ${behind} side through the woods, not across the open ground.`;
+      return "Come in along the edge of the woods before birds reach the opening, and never walk across the open ground.";
     default:
       return `Come in from the ${behind}, behind where you'll face, so you never cross the trail. Be settled before deer move.`;
   }
@@ -79,7 +88,7 @@ function walkIn(spot: SitSpot): string {
 
 function rank(spot: SitSpot): string {
   if (spot.rank === 1) return "Esau's strongest pick for this hour.";
-  return `About ${Math.round(spot.score * 10) * 10}% as strong as spot 1 this hour.`;
+  return `About ${Math.max(10, Math.round(spot.score * 10) * 10)}% as strong as spot 1 this hour.`;
 }
 
 /**

@@ -19,6 +19,11 @@ export function SpotWhyCard() {
   const date = useHour((s) => s.date);
   const spot = rank == null ? undefined : spots?.find((s) => s.rank === rank);
 
+  // A tap elsewhere on the map (Esau moves to a new spot) closes the card.
+  useEffect(() => useEsau.subscribe((s, prev) => {
+    if (s.spot !== prev.spot) useSpotWhy.getState().show(null);
+  }), []);
+
   // A new read without this spot (or Esau closed) closes the card, so it doesn't pop back later.
   useEffect(() => {
     if (rank != null && !spot) useSpotWhy.getState().show(null);

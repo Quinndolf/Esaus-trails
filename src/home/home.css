@@ -86,7 +86,7 @@
 .harvest-phones { list-style: none; padding: 0; margin: 8px 0; }
 .harvest-phones li a { display: inline-block; padding: 8px 0; min-height: 36px; }
 
-.spot-why { position: fixed; left: 12px; right: 12px; top: calc(var(--safe-t) + 56px); z-index: 12; max-width: 520px; margin: 0 auto; max-height: 62vh; max-height: 62dvh; overflow-y: auto;
+.spot-why { position: fixed; left: 12px; right: 12px; top: calc(var(--safe-t) + 56px); z-index: 10; max-width: 520px; margin: 0 auto; max-height: 62vh; max-height: 62dvh; overflow-y: auto;
   background: var(--frost); color: var(--frost-ink); border-radius: 16px; padding: 14px 16px; box-shadow: var(--frost-shadow); display: flex; flex-direction: column; gap: 10px; }
 .spot-why header { display: flex; justify-content: space-between; align-items: center; }
 .spot-why h2 { margin: 0; font-size: 17px; }

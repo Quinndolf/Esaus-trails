@@ -83,7 +83,35 @@ describe("spotWhy", () => {
     expect(text(roost, "Face")).toContain("toward the opening");
     expect(text(roost, "Walk in")).toMatch(/before light/);
     const strut = spotWhy(spot({ kind: "strut_zone", reason: "Likely strut zone." }), reading());
-    expect(text(strut, "Face")).toContain("toward the open ground");
+    expect(text(strut, "Face")).toContain("toward the woods they come out of");
+    expect(text(strut, "Walk in")).toMatch(/never walk across the open ground/);
+  });
+
+  it("teaches to stay level with or below animals when air sinks", () => {
+    const t = text(spotWhy(spot(), reading({ state: "Sinking" })), "Air movement");
+    expect(t).toMatch(/Don't sit above/);
+  });
+
+  it("does not invent a facing direction for squirrel or turkey spots that have none", () => {
+    const sq = spotWhy(spot({ kind: "food_trees", watchBearingDeg: 0, yardsToTrail: 0 }), reading({ towardDeg: 0 }));
+    expect(text(sq, "Face")).not.toMatch(/north/);
+    expect(text(sq, "Wind and scent")).not.toMatch(/weak this hour/);
+    expect(text(sq, "Walk in")).not.toMatch(/from the/);
+    const tk = spotWhy(spot({ kind: "roost", watchBearingDeg: 0, yardsToTrail: 0 }), reading());
+    expect(text(tk, "Face")).not.toMatch(/north/);
+  });
+
+  it("does not judge turkey spots by wind", () => {
+    const t = text(spotWhy(spot({ kind: "strut_zone", yardsToTrail: 40 }), reading({ towardDeg: 0 })), "Wind and scent");
+    expect(t).toMatch(/eyesight/);
+    expect(t).not.toMatch(/weak this hour/);
+  });
+
+  it("does not round small numbers to zero", () => {
+    const r = reading();
+    r.scent.reachYards = 4;
+    expect(text(spotWhy(spot(), r), "Wind and scent")).toContain("a few yd");
+    expect(text(spotWhy(spot({ rank: 3, score: 0.02 }), reading()), "Rank")).toContain("About 10%");
   });
 
   it("ranks against the best spot", () => {
