@@ -97,3 +97,13 @@
 button.sit-marker { padding: 0; cursor: pointer; }
 .thermal-toggle { border: 1px solid var(--frost-muted); background: transparent; color: var(--frost-muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .thermal-toggle.is-on { background: #2f8cff; border-color: #2f8cff; color: #fff; }
+
+.map-key-btn { font-size: 18px; font-weight: 800; }
+.map-key ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.map-key li { display: flex; gap: 10px; align-items: flex-start; }
+.map-key li svg { flex: none; margin-top: 2px; }
+.map-key li div { display: flex; flex-direction: column; gap: 2px; }
+.map-key li strong { font-size: 14px; }
+.map-key li span, .map-key-tip, .whats-this-text { font-size: 13.5px; line-height: 1.35; margin: 0; }
+.map-key-tip { opacity: 0.75; }
+.whats-this-actions { display: flex; gap: 14px; align-items: center; }

@@ -20,6 +20,7 @@ import { hourScope, type HourScope } from './scope';
 import { likelihoodField } from './likelihood';
 import { trailsInView } from './facing';
 import { useHour } from './store';
+import { TICK_COLORS } from './legend';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 const BLANK_PNG =
@@ -115,7 +116,8 @@ function ensureLayers(map: MLMap) {
       type: 'line',
       source: 'hour-ticks',
       paint: {
-        'line-color': ['match', ['get', 'state'], 1, '#ffb066', 3, '#7d9bff', '#9fd0ff'],
+        // Match the shading: light blue rising, red sinking; purple where cold air pools.
+        'line-color': ['match', ['get', 'state'], 1, TICK_COLORS.rising, 3, TICK_COLORS.pooling, TICK_COLORS.sinking],
         'line-width': 1.6,
         'line-opacity': 0.9,
       },
