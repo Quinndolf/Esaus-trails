@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react';
 import maplibregl, { type Map as MlMap, type MapMouseEvent } from 'maplibre-gl';
 import type { EsauMark } from '../types';
 import { useEsau } from './store';
+import { panShiftAboveSheet } from '../../map/geo';
+
+/** Share of the screen Esau's collapsed panel covers (matches `.esau-panel` max-height: 52dvh). */
+const PANEL_COVER = 0.52;
 
 const MARK_LABEL: Record<EsauMark['kind'], string> = {
   bedding: 'Bed',
@@ -39,6 +43,10 @@ export function useEsauMap(map: MlMap | null, shouldSkip: () => boolean) {
     const el = document.createElement('div');
     el.className = 'esau-spot-marker';
     const m = new maplibregl.Marker({ element: el }).setLngLat([spot.lng, spot.lat]).addTo(map);
+    // Esau's panel covers the lower half; if the tap landed under it, slide the map so the ring stays in view.
+    const h = map.getContainer().clientHeight;
+    const dy = h ? panShiftAboveSheet(map.project([spot.lng, spot.lat]).y, h, PANEL_COVER) : 0;
+    if (dy) map.panBy([0, dy], { duration: 300 });
     return () => void m.remove();
   }, [map, spot]);
 
