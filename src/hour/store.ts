@@ -7,6 +7,15 @@ import { createMovementModel, type MovementModel } from '../model/movement';
 import { fetchGround, type Bbox } from './ground';
 import { nearestSavedGround, saveGround } from './groundCache';
 
+const THERMALS_KEY = 'esau-show-thermals';
+function readThermalsPref(): boolean {
+  try {
+    return localStorage.getItem(THERMALS_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
 export type HourStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface HourState {
@@ -24,6 +33,9 @@ interface HourState {
   /** Show the predicted food layer (deer only). */
   showFood: boolean;
   setShowFood(on: boolean): void;
+  /** Thermal shading and arrows. Off shows the bare topo underneath. Remembered on the phone. */
+  showThermals: boolean;
+  setShowThermals(on: boolean): void;
   setDate(d: Date): void;
   setOpen(open: boolean): void;
   load(b: Bbox): Promise<void>;
@@ -49,6 +61,15 @@ export const useHour = create<HourState>((set, get) => ({
   staleSince: null,
   showFood: true,
   setShowFood: (showFood) => set({ showFood }),
+  showThermals: readThermalsPref(),
+  setShowThermals: (showThermals) => {
+    set({ showThermals });
+    try {
+      localStorage.setItem(THERMALS_KEY, showThermals ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  },
   setDate: (date) => {
     set({ date });
     // One clock for the whole app: Esau's tap panel reads the same hour.

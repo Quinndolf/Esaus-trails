@@ -176,10 +176,10 @@ const PRESENCE_IDS = ['hour-presence'];
 const FOOD_IDS = ['hour-food'];
 
 /** Only the layers that belong to the hunted animal draw; wind arrows are the one thing every animal shares. */
-function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: boolean) {
+function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: boolean, thermals = true) {
   for (const id of HOUR_LAYER_IDS) {
     const mine =
-      (!THERMAL_IDS.includes(id) || !!scope?.thermals) &&
+      (!THERMAL_IDS.includes(id) || (thermals && !!scope?.thermals)) &&
       (!SCENT_IDS.includes(id) || !!scope?.scent) &&
       (!MOVEMENT_IDS.includes(id) || !!scope?.movement) &&
       (!FOOD_IDS.includes(id) || (food && !!scope?.movement)) &&
@@ -191,7 +191,7 @@ function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: bool
 /** Paints the slider's hour on the map: thermals, deer presence, trails, beds, wind and the hunter's scent. */
 /** `facing`: the compass heading while the hunter is looking around; trails ahead of them are picked out. */
 export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing: number | null = null) {
-  const { grid, conditions, movement, date, open, status, showFood } = useHour();
+  const { grid, conditions, movement, date, open, status, showFood, showThermals } = useHour();
   const species = useEsau((st) => st.species);
   const scope = useMemo(() => hourScope(species), [species]);
   const show = open && status === 'ready' && !!scope;
@@ -209,7 +209,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing
     // `map` only arrives after its style has loaded (MapView's onReady), so layers can go straight on.
     if (!map) return;
     ensureLayers(map);
-    setVisible(map, show && !!frame, scope, showFood);
+    setVisible(map, show && !!frame, scope, showFood, showThermals);
     if (!show || !frame || !grid) return;
     const corners = imageCorners(grid);
     (map.getSource('hour-thermal') as ImageSource).updateImage({
@@ -232,7 +232,7 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing
       facing != null && hunter ? trailsInView(frame.m.trails, hunter, facing) : { type: 'FeatureCollection', features: [] },
     );
     (map.getSource('hour-scent') as GeoJSONSource).setData(plumePolygon(frame.plume));
-  }, [map, frame, show, grid, scope, showFood, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
+  }, [map, frame, show, grid, scope, showFood, showThermals, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
 
   return frame;
 }
