@@ -51,3 +51,48 @@ describe('geocode', () => {
     expect(f).not.toHaveBeenCalled();
   });
 });
+
+import { didYouMean, suggest } from '../geocode';
+
+const feature = (p: Record<string, unknown>, c: [number, number]) => ({ properties: p, geometry: { coordinates: c } });
+const photon = (features: unknown[]) => vi.fn(async () => ({ ok: true, json: async () => ({ features }) }));
+
+describe('suggest (Photon)', () => {
+  it('maps matches to labelled places, biased toward the map centre', async () => {
+    const f = photon([
+      feature({ housenumber: '12', street: 'Main St', city: 'Bardstown', state: 'Kentucky', extent: [-85.5, 37.9, -85.4, 37.8] }, [-85.46, 37.81]),
+      feature({ name: 'Bardstown', state: 'Kentucky', country: 'United States' }, [-85.47, 37.8]),
+    ]);
+    const r = await suggest('12 main bardstown', [-85.3, 37.6], f as unknown as typeof fetch);
+    const url = String((f.mock.calls[0] as unknown[])[0]);
+    expect(url).toContain('photon.komoot.io/api');
+    expect(url).toContain('lat=37.6');
+    expect(url).toContain('lon=-85.3');
+    expect(r[0]).toMatchObject({ label: '12 Main St, Bardstown, Kentucky', lat: 37.81, lng: -85.46, bbox: [-85.5, 37.8, -85.4, 37.9] });
+    expect(r[1].label).toBe('Bardstown, Kentucky');
+  });
+  it('skips short text and coordinates', async () => {
+    const f = photon([]);
+    expect(await suggest('ba', null, f as unknown as typeof fetch)).toEqual([]);
+    expect(await suggest('37.6, -85.3', null, f as unknown as typeof fetch)).toEqual([]);
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('throws a plain error when the service is down', async () => {
+    const f = vi.fn(async () => ({ ok: false, status: 500 }));
+    await expect(suggest('bardstown', null, f as unknown as typeof fetch)).rejects.toThrow(/search/i);
+  });
+});
+
+describe('didYouMean', () => {
+  it('drops trailing words until something matches', async () => {
+    const f = vi.fn(async (u: string) => ({
+      ok: true,
+      json: async () => ({ features: String(u).includes('q=Bardstwn') ? [feature({ name: 'Bardstown', state: 'Kentucky' }, [-85.47, 37.8])] : [] }),
+    }));
+    const r = await didYouMean('Bardstwn Kentuky', null, f as unknown as typeof fetch);
+    expect(r?.label).toBe('Bardstown, Kentucky');
+  });
+  it('returns null when nothing is close', async () => {
+    expect(await didYouMean('qqq zzz', null, photon([]) as unknown as typeof fetch)).toBeNull();
+  });
+});
