@@ -24,10 +24,13 @@ export function attachHoldDrag(map: maplibregl.Map, marker: maplibregl.Marker, c
   let start: { x: number; y: number; id: number } | null = null;
   let dragging = false;
   let origin: [number, number] | null = null;
+  // Where the marker sat relative to the finger when it was picked up. Markers draw above the finger, so
+  // without this the pin jumps to the fingertip and a plain long press would move it.
+  let grab: [number, number] = [0, 0];
 
   const lngLatAt = (e: PointerEvent): LngLat => {
     const r = map.getCanvas().getBoundingClientRect();
-    const p = map.unproject([e.clientX - r.left, e.clientY - r.top]);
+    const p = map.unproject([e.clientX - r.left + grab[0], e.clientY - r.top + grab[1]]);
     return [p.lng, p.lat];
   };
 
@@ -51,6 +54,9 @@ export function attachHoldDrag(map: maplibregl.Map, marker: maplibregl.Marker, c
       dragging = true;
       const ll = marker.getLngLat();
       origin = [ll.lng, ll.lat];
+      const r = map.getCanvas().getBoundingClientRect();
+      const at = map.project(ll);
+      grab = [at.x - (start!.x - r.left), at.y - (start!.y - r.top)];
       el.classList.add('is-dragging');
       map.dragPan.disable();
       el.setPointerCapture?.(start!.id);

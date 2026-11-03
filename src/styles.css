@@ -55,6 +55,10 @@ button { font: inherit; color: inherit; }
   border-radius: 16px 16px 0 0; display: flex; flex-direction: column; box-shadow: 0 -6px 24px rgba(0,0,0,.5);
   animation: sheet-in .22s ease-out; transition: transform .2s; }
 @media (min-width: 720px) { .sheet { left: 16px; right: auto; width: 420px; bottom: 16px; height: 75vh; border-radius: 16px; } }
+@media (max-width: 719px) { .sheet.sheet-peek { height: 38vh; height: 38dvh; }
+  .sheet.sheet-peek.is-tall { height: 85vh; height: 85dvh; }
+  /* A compact sheet leaves the map bright and untouched above it. */
+  .sheet-scrim.scrim-clear { background: transparent; pointer-events: none; } }
 @keyframes sheet-in { from { transform: translateY(40%); opacity: .4; } to { transform: none; opacity: 1; } }
 .sheet-head { position: relative; display: flex; align-items: center; justify-content: center; padding: 18px 16px 10px; touch-action: none; }
 .sheet-handle { position: absolute; top: 7px; left: 50%; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: var(--line); }

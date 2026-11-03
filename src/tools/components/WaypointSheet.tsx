@@ -39,7 +39,7 @@ function Editor({ wp }: { wp: Waypoint }) {
   };
 
   return (
-    <BottomSheet title="Waypoint" open onClose={close}>
+    <BottomSheet title="Waypoint" open onClose={close} peek>
       <input className="text-input wp-name" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveText} aria-label="Waypoint name" />
 
       <h3 className="sheet-section">Icon</h3>
