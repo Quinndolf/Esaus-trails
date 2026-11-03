@@ -51,6 +51,7 @@ import { justHeld, useMock } from './mock/store';
 import { useMockHold } from './mock/useMockHold';
 import { nextLocation } from './home/location';
 import { Tutorial } from './home/Tutorial';
+import { SearchBar } from './search/SearchBar';
 import { MarksSheet, UndoToast } from './marks/MarksSheet';
 import { useWeapon } from './home/weapon';
 import './home/home.css';
@@ -274,6 +275,7 @@ export function App() {
       />
 
       <AnimalChip />
+      <SearchBar map={map} onFly={onUserMove} />
 
       <div className="top-bar">
         {mode === 'compass' && (
