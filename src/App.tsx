@@ -7,7 +7,8 @@ import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
-import { currentFix, gpsWanted, lastKnownFix, useGeolocation } from './map/useGeolocation';
+import { currentFix, gpsWanted, lastKnownFix, useGeolocation, type Fix } from './map/useGeolocation';
+import { useLongPress } from './map/useLongPress';
 import { usePageVisible } from './map/usePageVisible';
 import { useHeading } from './map/useHeading';
 import { EsauPanel, registerAnalyzer, useEsau, useEsauMap } from './esau/ui';
@@ -75,7 +76,10 @@ export function App() {
   useWindLog(recording);
   const replayAt = useReplayMarker(map);
   const gpsOn = gpsWanted({ mode, recording, visible });
-  const { fix, status: gps } = useGeolocation(gpsOn);
+  const { fix: liveFix, status: gps } = useGeolocation(gpsOn);
+  // Long-press 'find me' reading, and the last known spot, so the dot shows even before the live GPS locks on.
+  const [found, setFound] = useState<Fix | null>(null);
+  const fix = liveFix ?? found ?? start;
   const compass = useHeading(mode === 'compass');
   const layers = useLayerState();
   // Layers meant for another animal are switched off on the map and left out of offline saves.
@@ -190,6 +194,19 @@ export function App() {
     setMode(next);
   }
 
+  // Long-press the location button: jump back to wherever you are, with a fresh reading.
+  async function findMe() {
+    setMode((m) => (m === 'compass' ? m : 'follow'));
+    const here = liveFix ?? (await currentFix());
+    if (!here) {
+      setNotice('Can\'t find you yet. Check Location is allowed for this site and step into the open.');
+      return;
+    }
+    setFound(here);
+    map?.easeTo({ center: here.lngLat, zoom: Math.max(map.getZoom(), 16), duration: 500 });
+  }
+  const locateHandlers = useLongPress(() => void onLocation(), () => void findMe());
+
   const onUserMove = useCallback(() => setMode((m) => (m === 'follow' ? 'free' : m)), []);
 
   // Ask "Did you snag anything?" when the hunter comes back after leaving the app, or stops the tracker.
@@ -267,7 +284,7 @@ export function App() {
         </button>
         <button
           className={`frost-btn ${mode !== 'free' ? 'is-on' : ''}`}
-          onClick={() => void onLocation()}
+          {...locateHandlers}
           aria-label={mode === 'follow' ? 'My location. Tap for compass' : mode === 'compass' ? 'Compass on. Tap to turn off' : 'My location'}
           aria-pressed={mode !== 'free'}
         >
