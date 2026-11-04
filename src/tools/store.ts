@@ -32,7 +32,7 @@ interface ToolsState {
 
   load(): Promise<void>;
 
-  addWaypoint(input: { position: LngLat; altitude?: number | null; icon?: WaypointIcon; name?: string }): Promise<Waypoint>;
+  addWaypoint(input: { position: LngLat; altitude?: number | null; accuracyM?: number | null; icon?: WaypointIcon; name?: string }): Promise<Waypoint>;
   updateWaypoint(id: string, patch: WaypointPatch): Promise<void>;
   addWaypointPhoto(id: string, file: File): Promise<void>;
   removeWaypointPhoto(id: string, photoId: string): Promise<void>;
@@ -78,7 +78,7 @@ export const useTools = create<ToolsState>((set, get) => ({
     });
   },
 
-  async addWaypoint({ position, altitude = null, icon = 'x', name }) {
+  async addWaypoint({ position, altitude = null, accuracyM = null, icon = 'x', name }) {
     const stamp = now();
     const wp: Waypoint = {
       id: newId(),
@@ -87,6 +87,7 @@ export const useTools = create<ToolsState>((set, get) => ({
       notes: '',
       position,
       altitude,
+      accuracyM,
       photoIds: [],
       createdAt: stamp,
       updatedAt: stamp,

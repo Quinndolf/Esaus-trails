@@ -7,7 +7,7 @@ import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
-import { currentFix, gpsWanted, lastKnownFix, useGeolocation, type Fix } from './map/useGeolocation';
+import { bestFix, currentFix, gpsWanted, lastKnownFix, useGeolocation, type Fix } from './map/useGeolocation';
 import { useLongPress } from './map/useLongPress';
 import { usePageVisible } from './map/usePageVisible';
 import { useHeading } from './map/useHeading';
@@ -150,15 +150,17 @@ export function App() {
   }, [map, selectedWaypointId]);
 
   async function markMyLocation() {
-    // GPS may be off to save battery, so take one fresh reading for this mark.
-    // Only a real reading counts: never the last-known spot the dot falls back on.
-    const here = (gpsOn ? (liveFix ?? found) : null) ?? ((await currentFix()) ?? null);
+    // Take the best reading we can get in a few seconds, never the last-known spot or a first coarse guess.
+    setNotice('Finding your spot…');
+    const here = await bestFix();
     if (!here) {
       setNotice('No GPS fix yet. Step into the open and try again.');
       return;
     }
     const t = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    await useTools.getState().addWaypoint({ position: here.lngLat, altitude: here.altitude, icon: 'x', name: `Marked ${t}` });
+    await useTools.getState().addWaypoint({ position: here.lngLat, altitude: here.altitude, accuracyM: Math.round(here.accuracy), icon: 'x', name: `Marked ${t}` });
+    setFound(here);
+    setNotice(here.accuracy > 50 ? `Marked, but GPS is only good to about ${Math.round(here.accuracy * 3.28)} ft. Step into the open and mark again for a tighter spot.` : null);
   }
 
   // Hold open map to pretend you're standing there: scent drift draws from that spot.
