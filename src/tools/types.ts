@@ -11,6 +11,8 @@ export interface Waypoint {
   position: LngLat;
   /** Meters, from GPS when marked where the hunter stood. */
   altitude: number | null;
+  /** How far off the GPS said it could be (meters) when marked where the hunter stood. */
+  accuracyM?: number | null;
   /** Ids of images in the shared on-device photo store. */
   photoIds: string[];
   createdAt: string;

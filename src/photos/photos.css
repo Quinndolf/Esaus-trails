@@ -40,7 +40,8 @@
 /* Marker: round thumbnail with a white ring and a point underneath.
    MapLibre owns the element's transform, so nothing here may set one. */
 .photo-pin-marker {
-  position: relative;
+  /* No `position` here: MapLibre's .maplibregl-marker (absolute) positions the pin, and it is the containing
+     block for the children. A relative here, loaded later in the production bundle, pushed pins out of place. */
   width: 44px;
   height: 52px;
   padding: 0;

@@ -90,6 +90,12 @@ function Editor({ wp }: { wp: Waypoint }) {
         <dd>
           {wp.position[1].toFixed(5)}, {wp.position[0].toFixed(5)}
         </dd>
+        {wp.accuracyM != null && (
+          <>
+            <dt>GPS accuracy</dt>
+            <dd>about ±{Math.round(metersToFeet(wp.accuracyM)).toLocaleString()} ft</dd>
+          </>
+        )}
         {wp.altitude != null && (
           <>
             <dt>Elevation</dt>

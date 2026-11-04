@@ -88,3 +88,44 @@ export function currentFix(timeoutMs = 10000): Promise<Fix | null> {
     );
   });
 }
+
+export const GOOD_ACCURACY_M = 25;
+
+/**
+ * For marking a spot: listen for up to `timeoutMs` and keep the most accurate reading, stopping early once one is
+ * within `goodM`. The first reading a phone gives is often a coarse cell-tower or Wi-Fi guess hundreds of
+ * meters off; the real GPS lock follows seconds later. Null if nothing arrived.
+ */
+export function bestFix(timeoutMs = 12000, goodM = GOOD_ACCURACY_M): Promise<Fix | null> {
+  return new Promise((resolve) => {
+    if (!('geolocation' in navigator)) return resolve(null);
+    let best: Fix | null = null;
+    let done = false;
+    let id = -1;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (id >= 0) navigator.geolocation.clearWatch(id);
+      resolve(best);
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    id = navigator.geolocation.watchPosition(
+      (p) => {
+        const f: Fix = {
+          lngLat: [p.coords.longitude, p.coords.latitude],
+          accuracy: p.coords.accuracy,
+          altitude: p.coords.altitude,
+          heading: null,
+          speed: p.coords.speed,
+          time: p.timestamp,
+        };
+        if (!best || f.accuracy < best.accuracy) best = f;
+        if (best.accuracy <= goodM) finish();
+      },
+      () => finish(),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
+    );
+    if (done) navigator.geolocation.clearWatch(id);
+  });
+}

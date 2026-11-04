@@ -128,3 +128,6 @@ button { font: inherit; color: inherit; }
 .check { flex: none; width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; }
 .check.is-on { background: var(--green); border-color: var(--green); color: #07210f; }
 .check svg { width: 16px; height: 16px; }
+
+/* Markers must stay absolutely positioned by MapLibre whatever order the CSS bundles in. */
+.maplibregl-canvas-container > .maplibregl-marker { position: absolute; top: 0; left: 0; }
