@@ -38,6 +38,49 @@ export interface ScentField {
   driver: Uint8Array;
   /** How fast scent thins along the ground, per 100 yards (exponential rate). */
   decay: Float32Array;
+  /**
+   * Drift as smooth east/north components (mph), lightly blurred across neighbouring
+   * cells. The plume tracer reads these with bilinear interpolation so the path bends
+   * continuously instead of snapping to the grid.
+   */
+  driftEast: Float32Array;
+  driftNorth: Float32Array;
+}
+
+/** 3x3 binomial blur (1-2-1 each way), edges clamped. Cheap Gaussian stand-in. */
+function blur3(src: Float32Array, cols: number, rows: number): Float32Array {
+  const tmp = new Float32Array(src.length);
+  const out = new Float32Array(src.length);
+  const w = [0.25, 0.5, 0.25];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      let a = 0;
+      for (let d = -1; d <= 1; d++) a += w[d + 1] * src[r * cols + clamp(c + d, 0, cols - 1)];
+      tmp[r * cols + c] = a;
+    }
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      let a = 0;
+      for (let d = -1; d <= 1; d++) a += w[d + 1] * tmp[clamp(r + d, 0, rows - 1) * cols + c];
+      out[r * cols + c] = a;
+    }
+  return out;
+}
+
+/** Bilinear sample of a cell-centred field at a point; null off the grid. */
+function sampleField(g: Terrain['grid'], f: Float32Array, [lng, lat]: LngLat): number | null {
+  if (lng < g.west || lng > g.east || lat < g.south || lat > g.north) return null;
+  const fx = clamp(((lng - g.west) / (g.east - g.west)) * g.cols - 0.5, 0, g.cols - 1);
+  const fy = clamp(((g.north - lat) / (g.north - g.south)) * g.rows - 0.5, 0, g.rows - 1);
+  const c0 = Math.min(Math.floor(fx), g.cols - 2 < 0 ? 0 : g.cols - 2);
+  const r0 = Math.min(Math.floor(fy), g.rows - 2 < 0 ? 0 : g.rows - 2);
+  const c1 = Math.min(c0 + 1, g.cols - 1);
+  const r1 = Math.min(r0 + 1, g.rows - 1);
+  const tx = fx - c0;
+  const ty = fy - r0;
+  const top = f[r0 * g.cols + c0] * (1 - tx) + f[r0 * g.cols + c1] * tx;
+  const bot = f[r1 * g.cols + c0] * (1 - tx) + f[r1 * g.cols + c1] * tx;
+  return top * (1 - ty) + bot * ty;
 }
 
 /** 10 m forecast wind to roughly nose height in cover (log profile, rough ground). */
@@ -50,6 +93,8 @@ export function computeScent(t: Terrain, wind: WindField, thermal: ThermalField,
   const spreadDeg = new Float32Array(n);
   const driver = new Uint8Array(n);
   const decay = new Float32Array(n);
+  const rawE = new Float32Array(n);
+  const rawN = new Float32Array(n);
   const gustiness = clamp(
     ((weather.gustMph ?? weather.windMph) - weather.windMph) / Math.max(weather.windMph, 3),
     0,
@@ -76,6 +121,8 @@ export function computeScent(t: Terrain, wind: WindField, thermal: ThermalField,
       ts / groundWind < 1.6;
     const swirl = speed < 0.8 || wind.eddy[i] === 1 || opposed || lifting;
 
+    rawE[i] = e;
+    rawN[i] = no;
     driftBearing[i] = speed > 0.05 ? vectorBearing(e, no) : wind.fromDeg[i] + 180;
     driftMph[i] = speed;
     driver[i] = swirl ? ScentDriver.Swirl : ts > groundWind ? ScentDriver.Thermal : ScentDriver.Wind;
@@ -90,7 +137,9 @@ export function computeScent(t: Terrain, wind: WindField, thermal: ThermalField,
     if (swirl) k += 0.3;
     decay[i] = Math.max(0.15, k);
   }
-  return { driftBearing, driftMph, spreadDeg, driver, decay };
+  const driftEast = blur3(rawE, t.grid.cols, t.grid.rows);
+  const driftNorth = blur3(rawN, t.grid.cols, t.grid.rows);
+  return { driftBearing, driftMph, spreadDeg, driver, decay, driftEast, driftNorth };
 }
 
 export interface Plume {
@@ -122,32 +171,56 @@ export interface PlumeOptions {
 export function tracePlume(t: Terrain, scent: ScentField, source: LngLat, opts: PlumeOptions = {}): Plume {
   const maxYards = opts.maxYards ?? 600;
   const threshold = opts.threshold ?? 0.15;
-  const step = Math.max(5, t.cellM * M_TO_YD * 0.5);
+  // Quarter-cell steps with a midpoint (RK2) integrator over bilinear-interpolated drift:
+  // the path follows the smoothed flow field like a particle, so it curves with the ground.
+  const step = Math.max(3, t.cellM * M_TO_YD * 0.25);
+  const g = t.grid;
   const path: LngLat[] = [source];
   const along = [0];
   const halfWidth = [0];
-  const start = cellAt(t.grid, source);
+  const start = cellAt(g, source);
   const driver = start == null ? ScentDriver.Wind : (scent.driver[start] as ScentDriver);
   let conc = 1;
   let dist = 0;
   let spreadSum = 0;
   let p = source;
   let end: Plume['end'] = 'max';
+  let heading = start == null ? 0 : scent.driftBearing[start];
+
+  /** Unit-ish flow heading at a point, or the previous heading when the air is dead still. */
+  const flowAt = (q: LngLat, prev: number): number | null => {
+    const e = sampleField(g, scent.driftEast, q);
+    const nn = sampleField(g, scent.driftNorth, q);
+    if (e == null || nn == null) return null;
+    return Math.hypot(e, nn) > 0.05 ? vectorBearing(e, nn) : prev;
+  };
 
   while (dist < maxYards) {
-    const c = cellAt(t.grid, p);
-    if (c == null) {
+    if (cellAt(g, p) == null) {
       end = 'edge';
       break;
     }
-    conc *= Math.exp((-scent.decay[c] * step) / 100);
+    const decay = sampleField(g, scent.decay, p) ?? 0.4;
+    conc *= Math.exp((-decay * step) / 100);
     if (conc < threshold) {
       end = 'faded';
       break;
     }
-    p = stepYards(p, scent.driftBearing[c], step);
+    const h1 = flowAt(p, heading);
+    if (h1 == null) {
+      end = 'edge';
+      break;
+    }
+    const h2 = flowAt(stepYards(p, h1, step / 2), h1) ?? h1;
+    // Air that turns back on itself has pooled in a low spot: the scent stops travelling.
+    if (path.length > 1 && angleDiff(h2, heading) > 100) {
+      end = 'faded';
+      break;
+    }
+    heading = h2;
+    p = stepYards(p, h2, step);
     dist += step;
-    spreadSum += scent.spreadDeg[c];
+    spreadSum += sampleField(g, scent.spreadDeg, p) ?? 60;
     const meanSpread = spreadSum / path.length;
     path.push(p);
     along.push(dist);

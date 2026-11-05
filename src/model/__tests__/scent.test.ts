@@ -119,3 +119,41 @@ describe('walk-in check', () => {
     for (let k = 1; k < pts.length - 1; k++) expect(yardsBetween(pts[k - 1], pts[k])).toBeCloseTo(70, 0);
   });
 });
+
+describe('plume smoothness', () => {
+  // Calm night on a curved bowl with a diagonal tilt: cold air should drain in a smooth curve.
+  const bowl = () =>
+    fields(
+      makeGrid((x, y) => 250 + 0.0006 * (x * x + 2 * y * y) + 0.08 * x + 0.05 * y),
+      KY_2AM,
+      { windMph: 0.5, windFrom: 0 },
+    );
+  const turns = (path: [number, number][]) => {
+    const out: number[] = [];
+    for (let k = 2; k < path.length; k++)
+      out.push(angleDiff(bearingBetween(path[k - 2], path[k - 1]), bearingBetween(path[k - 1], path[k])));
+    return out;
+  };
+
+  it('bends gradually instead of in grid-sized jumps', () => {
+    const { t, scent } = bowl();
+    for (const off of [[-300, 250], [200, -150], [-120, -300]]) {
+      const src = stepYards(stepYards(CENTER, 90, off[0]), 0, off[1]);
+      const p = tracePlume(t, scent, src, { maxYards: 500 });
+      expect(p.path.length).toBeGreaterThan(8);
+      expect(Math.max(...turns(p.path))).toBeLessThan(12);
+    }
+  });
+
+  it('has a continuous cone outline (no big width jumps)', () => {
+    const { t, scent } = bowl();
+    const p = tracePlume(t, scent, stepYards(CENTER, 270, 200), { maxYards: 500 });
+    for (let k = 1; k < p.halfWidth.length; k++) expect(Math.abs(p.halfWidth[k] - p.halfWidth[k - 1])).toBeLessThan(25);
+  });
+
+  it('keeps a straight steady wind straight', () => {
+    const { t, scent } = fields(makeGrid(() => 200), KY_11AM, { windMph: 10, windFrom: 270 });
+    const p = tracePlume(t, scent, CENTER, { maxYards: 400 });
+    expect(Math.max(...turns(p.path))).toBeLessThan(0.5);
+  });
+});
