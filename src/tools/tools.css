@@ -1,12 +1,14 @@
 /* Tools: waypoints, measure/draw bar, tracker. */
 .tool-capturing { cursor: crosshair; }
 
-.wp-marker { width: 34px; height: 34px; padding: 0; border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform-origin: center;
-  background: #1d2219; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.5); cursor: pointer; }
-.wp-marker svg { transform: rotate(45deg); stroke: var(--wp-color); }
-.wp-marker:not(.wp-x) { rotate: -45deg; }
-.wp-marker.wp-x { width: 36px; height: 36px; border: none; border-radius: 0; background: none; box-shadow: none; }
-.wp-marker.wp-x svg { width: 36px; height: 36px; transform: none; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
+.wp-marker { width: 34px; height: 34px; padding: 0; border: none; background: none; cursor: pointer; display: block; }
+/* MapLibre owns the marker element's transform, so the teardrop's rotation lives on this inner shape. */
+.wp-pin { width: 34px; height: 34px; border: 2px solid #fff; border-radius: 50% 50% 50% 0; background: #1d2219; display: grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.5); rotate: -45deg; translate: 0 -7px; pointer-events: none; }
+.wp-pin svg { transform: rotate(45deg); stroke: var(--wp-color); }
+.wp-marker.wp-x { width: 36px; height: 36px; }
+.wp-marker.wp-x .wp-pin { width: 36px; height: 36px; border: none; border-radius: 0; background: none; box-shadow: none; rotate: none; translate: none; }
+.wp-marker.wp-x .wp-pin svg { width: 36px; height: 36px; transform: none; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
 .wp-marker.is-selected { outline: 3px solid var(--blue); outline-offset: 2px; }
 
 .tool-bar { position: absolute; top: calc(var(--safe-t) + 10px); left: 12px; right: 12px; z-index: 5; background: rgba(29, 34, 25, .96);

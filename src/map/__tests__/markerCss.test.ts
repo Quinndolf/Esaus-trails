@@ -20,4 +20,15 @@ describe('map marker CSS', () => {
     }
     expect(bad).toEqual([]);
   });
+
+  it('no marker element sets rotate/scale/translate/transform itself (they compose with MapLibre\'s transform and send pins flying as the map moves; put them on an inner element)', () => {
+    const bad: string[] = [];
+    for (const f of cssFiles('src')) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+        const sel = m[1]!.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (/\.[\w-]*-marker(?![\w-]*__)(?!\s)/.test(sel.replace(/\s+/g, ' ')) && !sel.includes(' ') && !/::/.test(sel) && /(^|;|\s)(rotate|scale|translate|transform):/.test(m[2]!)) bad.push(`${f}: ${sel}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
 });
