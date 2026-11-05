@@ -10,14 +10,15 @@ describe('thermal shading', () => {
     expect(windFade(25)).toBe(0);
   });
 
-  it('paints rising air light blue and sinking air dark red', () => {
+  it('paints rising air dark red (warm) and sinking air light blue (cold)', () => {
     const rise = thermalRgba(ThermalState.Rising, 1, 5);
     const sink = thermalRgba(ThermalState.Sinking, 1, 5);
-    expect(rise[2]).toBeGreaterThan(rise[0]);
-    expect(rise[2]).toBeGreaterThan(200);
-    expect(sink[0]).toBeGreaterThan(sink[2]);
-    expect(sink[0]).toBeLessThan(200);
-    expect(thermalRgba(ThermalState.Pooling, 1, 5)[0]).toBeGreaterThan(thermalRgba(ThermalState.Pooling, 1, 5)[2]);
+    expect(rise[0]).toBeGreaterThan(rise[2]);
+    expect(rise[0]).toBeLessThan(200);
+    expect(sink[2]).toBeGreaterThan(sink[0]);
+    expect(sink[2]).toBeGreaterThan(200);
+    // Cold air pooling in low ground is cold, so it shades like sinking air.
+    expect(thermalRgba(ThermalState.Pooling, 1, 5)[2]).toBeGreaterThan(thermalRgba(ThermalState.Pooling, 1, 5)[0]);
   });
 
   it('is clear where settled and scales alpha by wind fade', () => {

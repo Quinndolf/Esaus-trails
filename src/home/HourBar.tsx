@@ -14,9 +14,9 @@ import './home.css';
 
 const TINT: Record<number, string> = {
   0: 'transparent',
-  1: 'rgba(120, 200, 255, 0.65)', // rising: light blue
-  2: 'rgba(150, 20, 30, 0.55)', // sinking: dark red
-  3: 'rgba(150, 20, 30, 0.55)',
+  1: 'rgba(150, 20, 30, 0.55)', // rising: dark red (warm)
+  2: 'rgba(120, 200, 255, 0.65)', // sinking: light blue (cold)
+  3: 'rgba(120, 200, 255, 0.65)', // pooling: light blue (cold)
 };
 
 function clock(d: Date, first: boolean) {

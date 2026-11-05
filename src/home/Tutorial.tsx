@@ -6,7 +6,7 @@ const STEPS = [
   { title: 'Pick your animal', body: 'The chip at top left sets the animal and your weapon. Everything on the map follows it.' },
   { title: 'Tap the map', body: "Tap where you'd sit. Esau tells you what the animal is doing right now, and you can ask him to teach you more." },
   { title: 'Analyze area', body: "Analyze area shows Esau's top 3 sit spots as numbered circles. Tap a number to see why he picked it: wind, air movement, ground, and how to walk in." },
-  { title: 'Slide the hour', body: 'The bar at the bottom moves the day, and the map changes with it. Blue shading is air rising uphill, dark red is air sinking downhill.' },
+  { title: 'Slide the hour', body: 'The bar at the bottom moves the day, and the map changes with it. Red shading is warm air rising uphill, blue is cold air sinking downhill.' },
   {
     title: 'Read the map',
     body: "Yellow dashed lines are likely deer trails. Brown dots with a yellow rim are likely beds. White arrows show the wind, which carries your scent. Tap any of them and Esau tells you what it is, or tap the ? button for the full key.",
