@@ -40,8 +40,8 @@ describe("map key", () => {
     const [r1, g1, b1] = thermalRgba(ThermalState.Rising, 1, 0);
     const [r2, g2, b2] = thermalRgba(ThermalState.Sinking, 1, 0);
     expect(shade.swatch).toEqual({ kind: "fill", colors: [`rgb(${r1},${g1},${b1})`, `rgb(${r2},${g2},${b2})`] });
-    expect(shade.says).toMatch(/Light blue is warm air rising/);
-    expect(shade.says).toMatch(/Dark red is cool air sinking/);
+    expect(shade.says).toMatch(/Dark red is warm air rising/);
+    expect(shade.says).toMatch(/Light blue is cool air sinking/);
   });
 });
 

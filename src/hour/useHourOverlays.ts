@@ -116,7 +116,7 @@ function ensureLayers(map: MLMap) {
       type: 'line',
       source: 'hour-ticks',
       paint: {
-        // Match the shading: light blue rising, red sinking; purple where cold air pools.
+        // Match the shading: red rising, light blue sinking; purple where cold air pools.
         'line-color': ['match', ['get', 'state'], 1, TICK_COLORS.rising, 3, TICK_COLORS.pooling, TICK_COLORS.sinking],
         'line-width': 1.6,
         'line-opacity': 0.9,

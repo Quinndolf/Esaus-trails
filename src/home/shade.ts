@@ -9,10 +9,10 @@ export function windFade(mph: number): number {
   return Math.max(0, Math.min(1, 1 - (mph - WIND_OVERRIDE_MPH) / FADE_SPAN_MPH));
 }
 
-const RISING: [number, number, number] = [120, 200, 255]; // light blue
-const SINKING: [number, number, number] = [150, 20, 30]; // dark red
+const RISING: [number, number, number] = [150, 20, 30]; // dark red: warm air
+const SINKING: [number, number, number] = [120, 200, 255]; // light blue: cold air
 
-/** RGBA for one cell: dark red where air pulls down, light blue where it rises, clear where settled. */
+/** RGBA for one cell: dark red where warm air rises, light blue where cold air sinks or pools, clear where settled. */
 export function thermalRgba(state: ThermalState, strength: number, windMph: number): [number, number, number, number] {
   if (state === ThermalState.Settled) return [0, 0, 0, 0];
   const [r, g, b] = state === ThermalState.Rising ? RISING : SINKING;

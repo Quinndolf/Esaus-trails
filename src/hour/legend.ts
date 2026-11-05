@@ -20,8 +20,8 @@ export interface LegendItem {
   says: string;
 }
 
-/** Thermal tick colors by state. Rising and sinking match the shading (light blue up, red down). */
-export const TICK_COLORS = { rising: '#bfe6ff', sinking: '#ff9c8f', pooling: '#c9a3ff' } as const;
+/** Thermal tick colors by state. Rising and sinking match the shading (red up, light blue down). */
+export const TICK_COLORS = { rising: '#ff9c8f', sinking: '#bfe6ff', pooling: '#c9a3ff' } as const;
 export const WIND_COLORS = { normal: '#ffffff', eddy: '#ff7a59' } as const;
 export const TRAIL_COLOR = '#f2c14e';
 export const BED_COLORS = { fill: '#8b5a2b', ring: '#f2c14e' } as const;
@@ -42,15 +42,15 @@ export function legendItems(scope: HourScope | null, opts: LegendOpts): LegendIt
     items.push(
       {
         id: 'thermal-shade',
-        swatch: { kind: 'fill', colors: ['rgb(120,200,255)', 'rgb(150,20,30)'] },
-        name: 'Blue and red shading: air moving along the ground',
-        says: 'Light blue is warm air rising uphill, usually mid-morning to afternoon on sunny slopes. Dark red is cool air sinking downhill or pooling in low ground, in the evening, at night and early morning. No shading means the air is settled, and the shading fades out when the wind is over about 15 mph, because then the wind moves the air. Your scent rides this air when the wind is light. Turn it off with Thermals on the hour bar.',
+        swatch: { kind: 'fill', colors: ['rgb(150,20,30)', 'rgb(120,200,255)'] },
+        name: 'Red and blue shading: air moving along the ground',
+        says: 'Dark red is warm air rising uphill, usually mid-morning to afternoon on sunny slopes. Light blue is cool air sinking downhill or pooling in low ground, in the evening, at night and early morning. No shading means the air is settled, and the shading fades out when the wind is over about 15 mph, because then the wind moves the air. Your scent rides this air when the wind is light. Turn it off with Thermals on the hour bar.',
       },
       {
         id: 'thermal-ticks',
         swatch: { kind: 'tick', color: TICK_COLORS.rising, color2: TICK_COLORS.sinking },
         name: 'Short ticks: which way that air slides',
-        says: 'Each little hooked tick points the way the air is sliding. Light blue ticks go uphill, red ticks go downhill, and purple ticks mean cold air is pooling in low ground.',
+        says: 'Each little hooked tick points the way the air is sliding. Red ticks go uphill, light blue ticks go downhill, and purple ticks mean cold air is pooling in low ground.',
       },
     );
   }
