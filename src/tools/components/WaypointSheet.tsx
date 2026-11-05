@@ -22,6 +22,7 @@ function Editor({ wp }: { wp: Waypoint }) {
   const [notes, setNotes] = useState(wp.notes);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const camera = useRef<HTMLInputElement>(null);
   const roll = useRef<HTMLInputElement>(null);
 
@@ -35,7 +36,14 @@ function Editor({ wp }: { wp: Waypoint }) {
   const onFiles = async (input: HTMLInputElement) => {
     const files = Array.from(input.files ?? []);
     input.value = '';
-    for (const f of files) await addWaypointPhoto(wp.id, f);
+    setPhotoError(null);
+    for (const f of files) {
+      try {
+        await addWaypointPhoto(wp.id, f);
+      } catch {
+        setPhotoError("Couldn't save that photo. Try again, or pick a different one.");
+      }
+    }
   };
 
   return (
@@ -84,6 +92,11 @@ function Editor({ wp }: { wp: Waypoint }) {
         <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void onFiles(e.currentTarget)} />
         <input ref={roll} type="file" accept="image/*" multiple hidden onChange={(e) => void onFiles(e.currentTarget)} />
       </div>
+      {photoError && (
+        <p className="hint" role="alert">
+          {photoError}
+        </p>
+      )}
 
       <dl className="wp-meta">
         <dt>Location</dt>

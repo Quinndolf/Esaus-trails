@@ -109,11 +109,15 @@ export const useTools = create<ToolsState>((set, get) => ({
     const current = get().waypoints.find((w) => w.id === id);
     if (!current) return;
     const photoId = newId();
+    // Phones hand back a File that points at a temporary file in the camera roll. Copy the bytes now so the
+    // stored photo is a real blob that is still there after the picker closes and the app reloads.
+    const type = file.type || 'image/jpeg';
+    const blob = new Blob([await readBytes(file)], { type });
     await savePhoto({
       id: photoId,
-      blob: file,
-      thumb: await makeThumbnail(file),
-      mimeType: file.type || 'image/jpeg',
+      blob,
+      thumb: await makeThumbnail(blob),
+      mimeType: type,
       fileName: file.name || 'photo.jpg',
       createdAt: now(),
     });
@@ -248,4 +252,15 @@ export const useTools = create<ToolsState>((set, get) => ({
 /** True while a tool owns map taps, so tap-to-read (Esau) should stay quiet. */
 export function isToolCapturingTaps(): boolean {
   return useTools.getState().mode !== 'none';
+}
+
+/** File bytes, with a FileReader fallback for older phone browsers that lack Blob.arrayBuffer(). */
+function readBytes(file: Blob): Promise<ArrayBuffer> {
+  if (typeof file.arrayBuffer === 'function') return file.arrayBuffer();
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as ArrayBuffer);
+    r.onerror = () => reject(r.error);
+    r.readAsArrayBuffer(file);
+  });
 }

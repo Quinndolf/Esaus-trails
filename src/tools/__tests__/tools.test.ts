@@ -55,6 +55,23 @@ describe('waypoints', () => {
     expect(await getPhoto(photoId)).toBeUndefined();
   });
 
+  it('stores a real copy of the picked photo, not the picker file', async () => {
+    const wp = await useTools.getState().addWaypoint({ position: HOME });
+    const picked = new File(['roll-bytes'], 'IMG_1.heic', { type: 'image/heic' });
+    await useTools.getState().addWaypointPhoto(wp.id, picked);
+    const stored = await getPhoto(useTools.getState().waypoints[0].photoIds[0]);
+    expect(stored!.blob).not.toBe(picked);
+    expect(stored!.mimeType).toBe('image/heic');
+  });
+
+  it('adds no photo to the waypoint when the picked file cannot be read', async () => {
+    const wp = await useTools.getState().addWaypoint({ position: HOME });
+    const broken = new File(['x'], 'a.jpg', { type: 'image/jpeg' });
+    broken.arrayBuffer = () => Promise.reject(new Error('NotReadableError'));
+    await expect(useTools.getState().addWaypointPhoto(wp.id, broken)).rejects.toThrow();
+    expect(useTools.getState().waypoints[0].photoIds).toHaveLength(0);
+  });
+
   it('drops a waypoint with a map tap and leaves tap mode', async () => {
     useTools.getState().setMode('drop-waypoint');
     expect(isToolCapturingTaps()).toBe(true);
