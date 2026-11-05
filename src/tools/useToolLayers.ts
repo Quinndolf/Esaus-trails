@@ -108,7 +108,7 @@ export function useToolLayers(map: MLMap | null) {
       el.className = `wp-marker wp-${wp.icon}`;
       el.style.setProperty('--wp-color', ICON_COLORS[wp.icon]);
       el.setAttribute('aria-label', wp.name);
-      el.innerHTML = iconSvg(wp.icon);
+      el.innerHTML = `<span class="wp-pin">${iconSvg(wp.icon)}</span>`;
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         if (justDragged() || useTools.getState().mode !== 'none') return;
