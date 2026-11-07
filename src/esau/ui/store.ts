@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { buildBrief, type EsauBrief } from '../brief';
 import { askEsau, EsauApiError } from '../client';
-import { toSitSpotQuery, type Analysis } from '../analyze';
+import { toSitSpotQuery, type Analysis, type Bounds } from '../analyze';
 import type { Weapon } from '../../rules/types';
 import { offlineRead } from '../offline';
 import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
@@ -43,6 +43,8 @@ interface EsauState {
   sit: LatLng | null;
   /** The latest area analysis: sit spots, legal read and banners. */
   analysis: Analysis | null;
+  /** The map on screen when Analyze area was pressed: sit spots are only picked inside it. */
+  view: Bounds | null;
   /** Registered by the app glue (src/esau/ui/analyzeArea.ts): works out an analysis for the slider's hour. */
   analyzer: ((sit: LatLng | null) => Analysis | null) | null;
 
@@ -117,6 +119,7 @@ export const useEsau = create<EsauState>((set, get) => ({
   weapon: savedWeapon(),
   sit: null,
   analysis: null,
+  view: null,
   analyzer: null,
   time: null,
 
@@ -209,7 +212,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   close() {
     ticket++;
-    set({ open: false, spot: null, sit: null, analysis: null, reply: null, history: [], status: 'idle', error: null });
+    set({ open: false, spot: null, sit: null, analysis: null, view: null, reply: null, history: [], status: 'idle', error: null });
   },
 }));
 

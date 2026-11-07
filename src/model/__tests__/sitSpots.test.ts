@@ -97,3 +97,50 @@ describe('top sit spots', () => {
     for (const s of run().spots) expect(s.watchBearingDeg).toBeLessThan(360);
   });
 });
+
+describe('pinch points', () => {
+  // A second trail running north to south, crossing the first at column 16.
+  const cross: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(4 + k, 16)), weight: 1 };
+
+  it('favors watching where trails meet, and says so', () => {
+    const { spots } = topSitSpots({ grid, trails: [trail, cross], beds: [], windFromDeg: () => 45, weapon: 'bow' });
+    const best = spots[0]!;
+    const meet = mid(16, 16);
+    expect(yardsBetween(best.lngLat, meet)).toBeLessThan(80);
+    expect(best.reason).toMatch(/Pinch point: 2 predicted trails meet/);
+  });
+
+  it('calls out a trail crossing a saddle', () => {
+    // A ridge running east-west with a dip at column 16: the trail crosses the ridge through the low spot.
+    const ridge = {
+      ...makeGrid(() => 0),
+      elevationM: Array.from({ length: BOX.rows * BOX.cols }, (_, i) => {
+        const r = Math.floor(i / BOX.cols), c = i % BOX.cols;
+        return 250 - Math.abs(r - 16) * 15 - (c === 16 ? 10 : 0);
+      }),
+    };
+    const midR = (r: number, c: number): LngLat => cellCenter(ridge, r * BOX.cols + c);
+    const over: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => midR(4 + k, 16)), weight: 1 };
+    const { spots } = topSitSpots({ grid: ridge, trails: [over], beds: [], windFromDeg: () => 90, weapon: 'bow' });
+    expect(spots.some((s) => /saddle/.test(s.reason))).toBe(true);
+  });
+});
+
+describe('pinch points are real junctions', () => {
+  it('two trails sharing one stretch are not a pinch, and the shared stretch is not counted twice', () => {
+    const a: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(16, 4 + k)), weight: 1 };
+    const b: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(16, 4 + k)), weight: 1 };
+    const one = topSitSpots({ grid, trails: [a], beds: [], windFromDeg: () => 0, weapon: 'bow' });
+    const two = topSitSpots({ grid, trails: [a, b], beds: [], windFromDeg: () => 0, weapon: 'bow' });
+    expect(two.spots.map((s) => s.reason)).toEqual(one.spots.map((s) => s.reason));
+    expect(two.spots.every((s) => !/Pinch/.test(s.reason))).toBe(true);
+  });
+
+  it('only picks inside the screen box, but says unsure only from what is on screen', () => {
+    const within = { west: mid(16, 20)[0], east: BOX.east, south: BOX.south, north: BOX.north };
+    const r = topSitSpots({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within });
+    expect(r.spots.length).toBeGreaterThan(0);
+    for (const s of r.spots) expect(s.lngLat[0]).toBeGreaterThanOrEqual(within.west);
+    expect(r.spots[0]!.score).toBe(1);
+  });
+});

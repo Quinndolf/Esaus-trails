@@ -1,4 +1,4 @@
-import { cellAt, type LngLat } from "../model/geo";
+import { cellAt, type Bounds, type LngLat } from "../model/geo";
 import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
 import { topSitSpots, type SitSpot, type Weapon } from "../model/sitSpots";
@@ -32,7 +32,11 @@ export interface AnalyzeInput {
   /** The hunter's chosen sit spot, if any. Used only for the wrong-wind banner. */
   sit: LngLat | null;
   hunter: LngLat | null;
+  /** The map on screen. Esau reads the whole grid (and around it) but only picks sit spots in here. */
+  view?: Bounds | null;
 }
+
+export type { Bounds };
 
 /**
  * Analyze the area for one hour: the ranked sit spots, the legal read, and the big banners.
@@ -43,11 +47,11 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
   const canRank = i.weapon != null && TRAIL_MODEL_SPECIES.includes(i.species);
   const squirrel =
     i.weapon != null && i.species === "squirrel" && i.grid.cover
-      ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon })
+      ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, within: i.view ?? undefined })
       : null;
   const turkey =
     i.weapon != null && i.species === "turkey" && i.grid.cover
-      ? turkeySitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon })
+      ? turkeySitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, within: i.view ?? undefined })
       : null;
   const ranked = squirrel
     ? squirrel
@@ -61,6 +65,7 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
         windFromDeg: (cell) => i.wind.fromDeg[cell] ?? 0,
         weapon: i.weapon!,
         hunter: i.hunter ?? undefined,
+        within: i.view ?? undefined,
       })
     : { spots: [], unsure: true };
 

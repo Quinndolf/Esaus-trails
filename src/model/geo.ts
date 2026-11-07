@@ -92,3 +92,12 @@ export function cellCenter(g: ElevationGrid, i: number): LngLat {
 }
 
 export const gridCenter = (g: ElevationGrid): LngLat => [(g.west + g.east) / 2, (g.south + g.north) / 2];
+
+export interface Bounds {
+  west: number;
+  east: number;
+  south: number;
+  north: number;
+}
+
+export const insideBounds = (b: Bounds, [lng, lat]: LngLat) => lng >= b.west && lng <= b.east && lat >= b.south && lat <= b.north;

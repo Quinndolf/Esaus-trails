@@ -1,4 +1,4 @@
-import { bearingBetween, cardinal, cellCenter, clamp, yardsBetween, type LngLat } from './geo';
+import { bearingBetween, cardinal, cellCenter, clamp, yardsBetween, type LngLat, insideBounds, type Bounds } from './geo';
 import { WEAPON_RANGE_YD, type SitSpot, type Weapon } from './sitSpots';
 import { sunTimes } from './sun';
 import { analyzeTerrain } from './terrain';
@@ -69,6 +69,8 @@ export interface TurkeySpotInput {
   at: Date;
   weapon: Weapon;
   max?: number;
+  /** Only pick inside this box (the map on screen). The whole grid is still read. */
+  within?: Bounds;
 }
 
 export interface TurkeySpotResult {
@@ -137,6 +139,14 @@ export function turkeySitSpots(input: TurkeySpotInput): TurkeySpotResult {
       score[i] = open[i]! > 0 ? open[i]! * (0.4 + 0.6 * gentle) * (0.5 + 0.5 * clamp(timberWide[i]! * 2.5, 0, 1)) : 0;
     }
     if (score[i]! > top) top = score[i]!;
+  }
+  // Picks, and how sure we are, come only from what is on screen.
+  if (input.within) {
+    top = 0;
+    for (let i = 0; i < n; i++) {
+      if (!insideBounds(input.within, cellCenter(grid, i) as LngLat)) score[i] = 0;
+      else if (score[i]! > top) top = score[i]!;
+    }
   }
   if (top < 0.05) return none;
 

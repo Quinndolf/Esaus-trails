@@ -148,8 +148,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
               ? `Likely roost ridge, opening ${s.yardsToTrail} yd away`
               : s.kind === "strut_zone"
                 ? `Likely strut zone, woods ${s.yardsToTrail} yd away`
-                : `Predicted trail ${s.yardsToTrail} yd away`;
-        lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. ${what}. ${s.reason}`);
+                : null; // a deer pick's reason already says how far the trail is
+        lines.push(`#${s.rank}: ${r5(s.lat)}, ${r5(s.lng)}. Face ${compass(s.watchBearingDeg)}. ${what ? `${what}. ` : ""}${s.reason}`);
       }
       lines.push("Name the best one or two as places to sit and which way to look, as predictions.");
     } else {

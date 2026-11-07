@@ -32,3 +32,14 @@ describe('groundFits', () => {
     expect(groundFits(g, around(37.05, -85.7, 0.0145, 0.018))).toBe(false);
   });
 });
+
+describe('innerBox', () => {
+  it('takes the box inside a turned screen, not the bigger box around it', async () => {
+    const { innerBox } = await import('../view');
+    // A square turned 45 degrees: corners at N, E, S, W.
+    const b = innerBox([{ lng: 0, lat: 1 }, { lng: 1, lat: 0 }, { lng: 0, lat: -1 }, { lng: -1, lat: 0 }]);
+    expect(b).toEqual({ west: -0.5, east: 0.5, south: -0.5, north: 0.5 });
+    // Not turned: the box is the screen.
+    expect(innerBox([{ lng: -1, lat: 1 }, { lng: 1, lat: 1 }, { lng: 1, lat: -1 }, { lng: -1, lat: -1 }])).toEqual({ west: -1, east: 1, south: -1, north: 1 });
+  });
+});

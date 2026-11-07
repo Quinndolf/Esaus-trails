@@ -1,4 +1,4 @@
-import { bearingBetween, cardinal, cellCenter, clamp, yardsBetween, type LngLat } from './geo';
+import { bearingBetween, cardinal, cellCenter, clamp, yardsBetween, type LngLat, insideBounds, type Bounds } from './geo';
 import { WEAPON_RANGE_YD, type SitSpot, type Weapon } from './sitSpots';
 import { sunTimes } from './sun';
 import { analyzeTerrain } from './terrain';
@@ -56,6 +56,8 @@ export interface SquirrelSpotInput {
   at: Date;
   weapon: Weapon;
   max?: number;
+  /** Only pick inside this box (the map on screen). The whole grid is still read. */
+  within?: Bounds;
 }
 
 export interface SquirrelSpotResult {
@@ -101,6 +103,14 @@ export function squirrelSitSpots(input: SquirrelSpotInput): SquirrelSpotResult {
     const pos = 1 - clamp(Math.abs(terrain.position[i]! + 0.2) / 1.2, 0, 1);
     score[i] = stand[i]! * (0.7 + 0.3 * pos);
     if (score[i]! > top) top = score[i]!;
+  }
+  // Picks, and how sure we are, come only from what is on screen.
+  if (input.within) {
+    top = 0;
+    for (let i = 0; i < n; i++) {
+      if (!insideBounds(input.within, cellCenter(grid, i) as LngLat)) score[i] = 0;
+      else if (score[i]! > top) top = score[i]!;
+    }
   }
   if (top < 0.05) return none;
 
