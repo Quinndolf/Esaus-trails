@@ -12,6 +12,7 @@ import {
   thermalPixels,
   trailLines,
   windArrows,
+  STRONG_WIND_MPH,
 } from '../overlays';
 
 describe('hour overlays', () => {
@@ -59,5 +60,12 @@ describe('hour overlays', () => {
     const b = bboxAround([-85.5, 37.5]);
     expect(b.east - b.west).toBeCloseTo(0.06);
     expect(b.north - b.south).toBeCloseTo(0.044);
+  });
+
+  it('shows wind strength by shape, not color: width grows with speed, capped', () => {
+    expect(STRONG_WIND_MPH).toBe(10);
+    const widths = windArrows(grid, hc).features.map((f) => f.properties!.width as number);
+    expect(Math.min(...widths)).toBeGreaterThan(1.7);
+    expect(Math.max(...widths)).toBeLessThanOrEqual(4.5);
   });
 });

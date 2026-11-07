@@ -117,7 +117,7 @@ describe("tutorial", () => {
     }
     expect(text).toMatch(/Yellow dashed lines are likely deer trails/);
     expect(text).toMatch(/Brown dots with a yellow rim/);
-    expect(text).toMatch(/White arrows show the wind/);
+    expect(text).toMatch(/White arrows with a dark outline show the wind/);
     expect(text).toMatch(/\? button/);
   });
 });
