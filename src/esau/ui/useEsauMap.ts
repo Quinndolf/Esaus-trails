@@ -16,6 +16,11 @@ const MARK_LABEL: Record<EsauMark['kind'], string> = {
   avoid: 'Stay off',
 };
 
+/** A tap sets spot and sit to the same point; Analyze area sets only spot. */
+export function isTapSpot(spot: { lat: number; lng: number }, sit: { lat: number; lng: number } | null): boolean {
+  return sit != null && sit.lat === spot.lat && sit.lng === spot.lng;
+}
+
 /**
  * Wires Esau into the map: a tap reads that spot (unless another tool owns the tap),
  * and his marks and the tapped spot are drawn as markers.
@@ -50,7 +55,8 @@ export function useEsauMap(map: MlMap | null, shouldSkip: () => boolean, interce
     const m = new maplibregl.Marker({ element: el }).setLngLat([spot.lng, spot.lat]).addTo(map);
     // Esau's panel covers the lower half; if the tap landed under it, slide the map so the ring stays in view.
     const h = map.getContainer().clientHeight;
-    const dy = h ? panShiftAboveSheet(map.project([spot.lng, spot.lat]).y, h, PANEL_COVER) : 0;
+    // Only a tap moves the camera. Analyze area picks its own spot and must leave the map exactly where it is.
+    const dy = h && isTapSpot(spot, useEsau.getState().sit) ? panShiftAboveSheet(map.project([spot.lng, spot.lat]).y, h, PANEL_COVER) : 0;
     if (dy) map.panBy([0, dy], { duration: 300 });
     return () => void m.remove();
   }, [map, spot]);
