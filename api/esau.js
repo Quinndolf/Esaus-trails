@@ -31076,7 +31076,9 @@ function buildBrief(q, opts = {}) {
   const g = q.grid;
   if (!g || !g.cols || !g.rows || g.elevationM?.length !== g.cols * g.rows) throw new EsauInputError("grid is missing or malformed");
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
-  const spot = readSpot(g, q.spot, { hunter: q.hunter });
+  const read = readSpot(g, q.spot, { hunter: q.hunter });
+  const v = q.view;
+  const spot = v ? { ...read, nearby: read.nearby.filter((f) => f.lat >= v.south && f.lat <= v.north && f.lng >= v.west && f.lng <= v.east) } : read;
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase2 = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
   const scores2 = species.scores(spot, conditions, phase2);
@@ -31099,6 +31101,13 @@ function buildBrief(q, opts = {}) {
     lines.push("Hunter's GPS position: unknown (they may be planning from home).");
   }
   if (q.layersHere?.length) lines.push(`Map layers here: ${q.layersHere.join("; ")}`);
+  if (v) {
+    const wYd = Math.round(distanceM({ lat: (v.south + v.north) / 2, lng: v.west }, { lat: (v.south + v.north) / 2, lng: v.east }) / 0.9144 / 10) * 10;
+    const hYd = Math.round(distanceM({ lat: v.south, lng: v.west }, { lat: v.north, lng: v.west }) / 0.9144 / 10) * 10;
+    lines.push(
+      `SCREEN: the hunter's map shows about ${wYd} by ${hYd} yd (${r5(v.south)} to ${r5(v.north)} N, ${r5(v.west)} to ${r5(v.east)} E). That is where they will hunt. Talk only about places on it; the ground beyond is background, never a place to send them.`
+    );
+  }
   lines.push("");
   lines.push("TERRAIN AT THE SPOT");
   lines.push(
@@ -37426,7 +37435,11 @@ function markAnchors(q, nearby) {
   for (const s of q.sitSpots ?? []) out.push({ lat: s.lat, lng: s.lng });
   return out;
 }
-function anchorMarks(marks, anchors, spot, bounds) {
+function anchorMarks(marks, anchors, spot, bounds, view) {
+  return place(marks, anchors, spot, bounds).filter((m) => !view || inBox(view, m));
+}
+var inBox = (b, p) => p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
+function place(marks, anchors, spot, bounds) {
   const out = [];
   for (const m of marks) {
     if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
@@ -37444,8 +37457,7 @@ function anchorMarks(marks, anchors, spot, bounds) {
       continue;
     }
     if (m.kind === "approach" || m.kind === "avoid") {
-      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
-      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
+      if (inBox(bounds, m) && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
     }
   }
   return out;
@@ -37493,10 +37505,10 @@ function checkReply(q, r, report2 = buildBrief(q).report) {
   for (const d of dates(text)) if (!known.has(d.key)) problems.push(`Gives the date "${d.said}", which is not in the field report.`);
   const n = countSentences(r.say);
   if (n > MAX_SAY) problems.push(`Short read runs ${n} sentences; the cap is ${MAX_SAY}.`);
-  const g = q.grid;
+  const g = q.view ?? q.grid;
   for (const m of r.marks) {
     const inside = Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= g.south && m.lat <= g.north && m.lng >= g.west && m.lng <= g.east;
-    if (!inside) problems.push(`Puts a ${m.kind} pin "${m.label}" off the ground he read.`);
+    if (!inside) problems.push(`Puts a ${m.kind} pin "${m.label}" off ${q.view ? "the hunter's screen" : "the ground he read"}.`);
   }
   const scentAdvice = (sentence) => /\bscent\b/i.test(sentence) && !/(eyesight|by sight|doesn't matter|does not matter|don't matter|not smell|can't smell|no matter)/i.test(sentence);
   if (q.species === "turkey" && sentencesOf(text).some(scentAdvice)) problems.push("Gives scent advice to a turkey hunter; turkeys go by eyesight.");
@@ -37553,7 +37565,7 @@ async function askWithBrief(q, brief, cfg = {}) {
   if (!out) throw new Error(`Esau's answer didn't parse (stop_reason ${res.stop_reason})`);
   const { say, overflow } = splitAnswer(out.say);
   const more = [overflow, out.more.trim()].filter(Boolean).join(" ");
-  const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid).slice(0, 4);
+  const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid, q.view).slice(0, 4);
   const reply = { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta: meta2 };
   const slips = checkReply(q, reply, brief.report);
   if (slips.length) console.warn("Esau rule check:", slips.join(" | "));
@@ -37603,6 +37615,11 @@ function validate2(body) {
   if (!q.grid || typeof q.grid !== "object") throw new EsauInputError("grid is required");
   const extra = body;
   if ("photo" in extra || "pins" in extra) throw new EsauInputError("photos and marks are never sent to Esau");
+  if (q.view !== void 0) {
+    const v = q.view;
+    const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
+    if (!ok || v.west >= v.east || v.south >= v.north) throw new EsauInputError("view must be a {west,east,south,north} box");
+  }
   if (q.question && q.question.length > 2e3) throw new EsauInputError("question is too long");
   return q;
 }

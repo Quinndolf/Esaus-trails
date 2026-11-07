@@ -37,6 +37,7 @@ function keyOf(q: SpotQuery): string {
     q.sitSpots ?? null,
     q.sitUnsure ?? null,
     q.layersHere ?? null,
+    q.view ? [q.view.west, q.view.south, q.view.east, q.view.north].map((v) => v.toFixed(4)) : null,
     // Esau is told which way the hunter faces and how good the GPS fix is.
     q.hunter?.headingDeg == null ? null : Math.round(q.hunter.headingDeg / 45) % 8,
     q.hunter?.accuracyM == null ? null : Math.round(q.hunter.accuracyM / 10),

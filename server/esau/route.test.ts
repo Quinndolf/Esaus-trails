@@ -27,3 +27,11 @@ describe("POST /api/esau privacy", () => {
     expect(r.status).toBe(400);
   });
 });
+
+describe("POST /api/esau screen bounds", () => {
+  it("refuses a broken screen box", async () => {
+    const q = SAMPLE_SPOTS[0]!.query;
+    expect((await call({ ...q, view: { west: "x", east: 1, south: 0, north: 1 } })).status).toBe(400);
+    expect((await call({ ...q, view: { west: 2, east: 1, south: 0, north: 1 } })).status).toBe(400);
+  });
+});

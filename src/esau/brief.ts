@@ -1,5 +1,5 @@
 import { localTime, readConditions, type ThermalFn } from "./conditions";
-import { compass } from "./geo";
+import { compass, distanceM } from "./geo";
 import { buildSystemPrompt } from "./persona";
 import { deerPredictionLines } from "../model/deerRead";
 import { atmosphereForGrid, modelThermal } from "../model/esau";
@@ -41,7 +41,10 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (!g || !g.cols || !g.rows || g.elevationM?.length !== g.cols * g.rows) throw new EsauInputError("grid is missing or malformed");
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
 
-  const spot = readSpot(g, q.spot, { hunter: q.hunter });
+  const read = readSpot(g, q.spot, { hunter: q.hunter });
+  // On the hunter's screen only: features off it are not where they will hunt.
+  const v = q.view;
+  const spot = v ? { ...read, nearby: read.nearby.filter((f) => f.lat >= v.south && f.lat <= v.north && f.lng >= v.west && f.lng <= v.east) } : read;
   // The wind and thermal module's model by default; tests can pass the prototype rules.
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
@@ -68,6 +71,13 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
     lines.push("Hunter's GPS position: unknown (they may be planning from home).");
   }
   if (q.layersHere?.length) lines.push(`Map layers here: ${q.layersHere.join("; ")}`);
+  if (v) {
+    const wYd = Math.round(distanceM({ lat: (v.south + v.north) / 2, lng: v.west }, { lat: (v.south + v.north) / 2, lng: v.east }) / 0.9144 / 10) * 10;
+    const hYd = Math.round(distanceM({ lat: v.south, lng: v.west }, { lat: v.north, lng: v.west }) / 0.9144 / 10) * 10;
+    lines.push(
+      `SCREEN: the hunter's map shows about ${wYd} by ${hYd} yd (${r5(v.south)} to ${r5(v.north)} N, ${r5(v.west)} to ${r5(v.east)} E). That is where they will hunt. Talk only about places on it; the ground beyond is background, never a place to send them.`,
+    );
+  }
 
   lines.push("");
   lines.push("TERRAIN AT THE SPOT");

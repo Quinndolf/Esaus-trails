@@ -40,6 +40,10 @@ describe('reply cache for repeat taps', () => {
     const spot = { rank: 1, lat: 36.75, lng: -85.7, watchBearingDeg: 90, yardsToTrail: 20, reason: 'r' };
     expect(recallReply(q({ sitSpots: [spot] }), T0)).toBeNull();
   });
+  it('asks again for another screen', () => {
+    rememberReply(q({ view: { west: -85.71, east: -85.69, south: 36.74, north: 36.76 } }), reply(), T0);
+    expect(recallReply(q({ view: { west: -85.72, east: -85.69, south: 36.74, north: 36.76 } }), T0)).toBeNull();
+  });
   it('asks again when the hunter moved', () => {
     rememberReply(q({ hunter: { lat: 36.74, lng: -85.71 } }), reply(), T0);
     expect(recallReply(q({ hunter: { lat: 36.76, lng: -85.71 } }), T0)).toBeNull();
