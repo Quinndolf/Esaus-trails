@@ -13,6 +13,7 @@ import {
   thermalPixels,
   thermalTicks,
   trailLines,
+  clipTrails,
   windArrows,
 } from './overlays';
 import { useEsau } from '../esau/ui/store';
@@ -221,6 +222,8 @@ function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: bool
 export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing: number | null = null) {
   const { grid, conditions, movement, date, open, status, showFood, showThermals } = useHour();
   const species = useEsau((st) => st.species);
+  // The hunter's screen (kept current as they pan and zoom): trails and beds are drawn only on it.
+  const view = useEsau((st) => st.view);
   const scope = useMemo(() => hourScope(species), [species]);
   const show = open && status === 'ready' && !!scope;
 
@@ -254,13 +257,13 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing
     });
     (map.getSource('hour-wind') as GeoJSONSource).setData(windArrows(grid, frame.hc));
     (map.getSource('hour-ticks') as GeoJSONSource).setData(thermalTicks(grid, frame.hc));
-    (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m));
-    (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m));
+    (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m, view));
+    (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m, view));
     (map.getSource('hour-facing') as GeoJSONSource).setData(
-      facing != null && hunter ? trailsInView(frame.m.trails, hunter, facing) : { type: 'FeatureCollection', features: [] },
+      facing != null && hunter ? trailsInView(view ? clipTrails(frame.m.trails, view) : frame.m.trails, hunter, facing) : { type: 'FeatureCollection', features: [] },
     );
     (map.getSource('hour-scent') as GeoJSONSource).setData(plumePolygon(frame.plume));
-  }, [map, frame, show, grid, scope, showFood, showThermals, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
+  }, [map, frame, show, grid, view, scope, showFood, showThermals, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
 
   return frame;
 }
