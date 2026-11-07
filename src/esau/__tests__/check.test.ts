@@ -34,8 +34,17 @@ describe("checkReply: the rules every Esau answer must keep", () => {
     const far = reply("Sit here.", { marks: [{ kind: "stand", label: "x", lat: g.north + 1, lng: g.west } as never] });
     expect(checkReply(q(), far).join(" ")).toMatch(/pin/i);
   });
-  it("flags wind or scent advice to a turkey hunter", () => {
+  it("flags scent advice to a turkey hunter", () => {
     expect(checkReply(q({ species: "turkey", weapon: "shotgun" }), reply("Keep your scent off the roost.")).join(" ")).toMatch(/scent/i);
+  });
+  it("does not mistake verbs or another animal's sign for talk about that animal", () => {
+    expect(checkReply(q({ species: "squirrel", weapon: "pellet" }), reply("Feeding does the trick here. That wind bears watching."))).toEqual([]);
+    expect(checkReply(q({ species: "turkey", weapon: "shotgun" }), reply("Watch the deer trail for birds. Scent doesn't matter; turkeys go by eyesight."))).toEqual([]);
+  });
+  it("checks ordinal days and both ends of a range", () => {
+    expect(checkReply(q({ weapon: "rifle" }), reply("Gun opens Nov. 15th.")).join(" ")).toMatch(/Nov\. 15th/);
+    expect(checkReply(q({ weapon: "rifle" }), reply("Gun runs Nov. 14-30.")).join(" ")).toMatch(/14-30/);
+    expect(checkReply(q({ weapon: "rifle" }), reply("Gun runs Nov. 14th to 29th, so wait."))).toEqual([]);
   });
   it("lets Esau name another animal's season or its hunters", () => {
     expect(checkReply(q({ species: "squirrel", weapon: "pellet" }), reply("Squirrel season pauses for deer gun season. Wear orange; deer hunters are out."))).toEqual([]);
