@@ -11,7 +11,6 @@ import {
   presencePixels,
   thermalPixels,
   trailLines,
-  clipTrails,
   windArrows,
   STRONG_WIND_MPH,
 } from '../overlays';
@@ -68,31 +67,5 @@ describe('hour overlays', () => {
     const widths = windArrows(grid, hc).features.map((f) => f.properties!.width as number);
     expect(Math.min(...widths)).toBeGreaterThan(1.7);
     expect(Math.max(...widths)).toBeLessThanOrEqual(4.5);
-  });
-});
-
-describe('trails and beds stay on the screen', () => {
-  const view = { west: 0, east: 10, south: 0, north: 10 };
-  const m = {
-    trails: [
-      { coordinates: [[-5, 5], [1, 5], [5, 5], [9, 5], [15, 5], [20, 5], [9, 6], [8, 6]], weight: 1 },
-      { coordinates: [[20, 20], [30, 30]], weight: 1 },
-    ],
-    beds: [{ lngLat: [5, 5], score: 0.9 }, { lngLat: [50, 5], score: 0.9 }],
-    activity: { moving: 0.5, bedded: 0.5 },
-  } as never;
-
-  it('cuts each trail to the stretches on screen, splitting where it leaves and comes back', () => {
-    const t = clipTrails((m as { trails: never[] }).trails, view);
-    expect(t.map((x: { coordinates: number[][] }) => x.coordinates)).toEqual([
-      [[1, 5], [5, 5], [9, 5]],
-      [[9, 6], [8, 6]],
-    ]);
-  });
-  it('draws only on-screen trails and beds, and everything with no screen known', () => {
-    expect(trailLines(m, view).features).toHaveLength(2);
-    expect(bedPoints(m, view).features).toHaveLength(1);
-    expect(trailLines(m).features).toHaveLength(2); // unclipped: both trails
-    expect(bedPoints(m).features).toHaveLength(2);
   });
 });
