@@ -182,7 +182,8 @@ export const useEsau = create<EsauState>((set, get) => ({
   async ask(question) {
     const s = get();
     if (!s.spot || !s.grid || !s.species) return;
-    const t = ticket;
+    // Each ask is the newest: a slower answer to an earlier ask can't replace it, even one served from the cache.
+    const t = ++ticket;
     const q = question?.trim();
     const an = refresh(s);
     if (an) set({ analysis: an });

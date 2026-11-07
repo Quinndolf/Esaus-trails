@@ -66,6 +66,18 @@ describe('analyzeArea', () => {
     expect(sent).toHaveLength(2);
   });
 
+  it('keeps a cached answer when an older, slower answer comes back after it', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    await analyzeArea();
+    const cached = useEsau.getState().reply!;
+    useHour.getState().setDate(useHour.getState().hours[10]!);
+    const slow = analyzeArea(); // a new hour: goes to the server
+    useHour.getState().setDate(useHour.getState().hours[0]!);
+    await analyzeArea(); // back to the first hour: answered from the phone
+    await slow;
+    expect(useEsau.getState().reply).toBe(cached);
+  });
+
   it('re-reads for the new hour when the slider moves, without refetching ground', async () => {
     useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
     await analyzeArea();

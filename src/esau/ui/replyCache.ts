@@ -30,12 +30,17 @@ function keyOf(q: SpotQuery): string {
   return JSON.stringify([
     q.species,
     q.weapon ?? null,
-    g.weather.hours[q.hourIndex ?? 0]?.at ?? q.hourIndex ?? 0,
+    g.weather.hours[q.hourIndex ?? 0] ?? q.hourIndex ?? 0,
+    g.notes ?? null,
     [g.west, g.south, g.east, g.north].map((v) => v.toFixed(4)),
     q.timeZone,
     q.sitSpots ?? null,
     q.sitUnsure ?? null,
     q.wider ?? null,
+    q.layersHere ?? null,
+    // Esau is told which way the hunter faces and how good the GPS fix is.
+    q.hunter?.headingDeg == null ? null : Math.round(q.hunter.headingDeg / 45) % 8,
+    q.hunter?.accuracyM == null ? null : Math.round(q.hunter.accuracyM / 10),
   ]);
 }
 

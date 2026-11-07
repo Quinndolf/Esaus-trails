@@ -45,6 +45,18 @@ describe('reply cache for repeat taps', () => {
     rememberReply(q({ hunter: { lat: 36.74, lng: -85.71 } }), reply(), T0);
     expect(recallReply(q({ hunter: { lat: 36.76, lng: -85.71 } }), T0)).toBeNull();
   });
+  it('asks again when the hunter turns, or the GPS fix comes or goes', () => {
+    rememberReply(q({ hunter: { lat: 36.74, lng: -85.71, headingDeg: 10 } }), reply(), T0);
+    expect(recallReply(q({ hunter: { lat: 36.74, lng: -85.71, headingDeg: 15 } }), T0)).not.toBeNull();
+    expect(recallReply(q({ hunter: { lat: 36.74, lng: -85.71, headingDeg: 190 } }), T0)).toBeNull();
+    expect(recallReply(q(), T0)).toBeNull();
+  });
+  it('asks again when the forecast for that hour changed', () => {
+    rememberReply(q(), reply(), T0);
+    const hours = grid.weather.hours.map((h, i) => (i === 2 ? { ...h, windMph: h.windMph + 7 } : h));
+    expect(recallReply(q({ grid: { ...grid, weather: { ...grid.weather, hours } } }), T0)).toBeNull();
+    expect(recallReply(q({ grid: { ...grid, notes: ['No signal: showing the last read.'] } as typeof grid }), T0)).toBeNull();
+  });
   it('forgets after half an hour', () => {
     rememberReply(q(), reply(), T0);
     expect(recallReply(q(), T0 + REUSE_MS + 1)).toBeNull();
