@@ -26,9 +26,4 @@ describe("POST /api/esau privacy", () => {
     const r = await call({ ...SAMPLE_SPOTS[0]!.query, pins: [{ id: "a" }] });
     expect(r.status).toBe(400);
   });
-  it("refuses wider-country lines that aren't a short list of short strings", async () => {
-    expect((await call({ ...SAMPLE_SPOTS[0]!.query, wider: "x" })).status).toBe(400);
-    expect((await call({ ...SAMPLE_SPOTS[0]!.query, wider: new Array(13).fill("x") })).status).toBe(400);
-    expect((await call({ ...SAMPLE_SPOTS[0]!.query, wider: ["x".repeat(401)] })).status).toBe(400);
-  });
 });

@@ -48,8 +48,6 @@ interface EsauState {
   view: Bounds | null;
   /** Registered by the app glue (src/esau/ui/analyzeArea.ts): works out an analysis for the slider's hour. */
   analyzer: ((sit: LatLng | null) => Analysis | null) | null;
-  /** Registered with the analyzer: lines about the country for miles around the screen, when read. */
-  wider: (() => string[] | null) | null;
 
   setWeapon(w: Weapon | null): void;
   setHunter(h: Hunter | null): void;
@@ -123,7 +121,6 @@ export const useEsau = create<EsauState>((set, get) => ({
   sit: null,
   analysis: null,
   view: null,
-  wider: null,
   analyzer: null,
   time: null,
 
@@ -198,7 +195,6 @@ export const useEsau = create<EsauState>((set, get) => ({
       timeZone: TZ,
       question: q || undefined,
       history: s.history.length ? s.history : undefined,
-      wider: s.wider?.() ?? undefined,
     };
     // A follow-up keeps Esau's earlier words in front of him.
     const history: Turn[] = [...s.history];

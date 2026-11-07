@@ -69,12 +69,3 @@ describe("field report", () => {
     expect(b.system).not.toMatch(/90 m elevation model/);
   });
 });
-
-describe("wider country", () => {
-  it("goes into Esau's field report when the app sends it", async () => {
-    const { buildBrief } = await import("../brief");
-    const { SAMPLE_SPOTS } = await import("../fixtures/spots");
-    const q = { ...SAMPLE_SPOTS[0]!.query, wider: ["WIDER COUNTRY (test)", "Around the screen: north: mostly woods."] };
-    expect(buildBrief(q).report).toContain("Around the screen: north: mostly woods.");
-  });
-});

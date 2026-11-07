@@ -35,11 +35,10 @@ describe('reply cache for repeat taps', () => {
     expect(recallReply(q({ species: 'squirrel' }), T0)).toBeNull();
     expect(recallReply(q({ weapon: 'crossbow' }), T0)).toBeNull();
   });
-  it('asks again when the sit spots changed or the wide read arrived', () => {
+  it('asks again when the sit spots changed', () => {
     rememberReply(q(), reply(), T0);
     const spot = { rank: 1, lat: 36.75, lng: -85.7, watchBearingDeg: 90, yardsToTrail: 20, reason: 'r' };
     expect(recallReply(q({ sitSpots: [spot] }), T0)).toBeNull();
-    expect(recallReply(q({ wider: ['WIDER COUNTRY'] }), T0)).toBeNull();
   });
   it('asks again when the hunter moved', () => {
     rememberReply(q({ hunter: { lat: 36.74, lng: -85.71 } }), reply(), T0);

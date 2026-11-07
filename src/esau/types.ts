@@ -105,8 +105,6 @@ export interface SpotQuery {
   question?: string;
   /** Prior turns about this same spot, oldest first. */
   history?: { role: "hunter" | "esau"; text: string }[];
-  /** Plain lines about the country for miles around the screen (land, cover, predicted beds and corridors only). */
-  wider?: string[];
 }
 
 /** Terrain read for one spot, all in hunter units (feet, yards, degrees). */

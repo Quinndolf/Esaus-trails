@@ -31142,7 +31142,6 @@ function buildBrief(q, opts = {}) {
       "Next hours: " + conditions.outlook.map((o) => `${o.localTime.replace(/^\w+, \w+ \d+, /, "")} ${o.windMph} mph ${o.windFromCompass}, ${o.thermal}`).join("; ")
     );
   }
-  if (q.wider?.length) lines.push("", ...q.wider.slice(0, 12).map((l) => String(l).slice(0, 400)));
   if (species.id === "whitetail") {
     const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at));
     if (pred.length) lines.push("", ...pred);
@@ -37605,8 +37604,6 @@ function validate2(body) {
   const extra = body;
   if ("photo" in extra || "pins" in extra) throw new EsauInputError("photos and marks are never sent to Esau");
   if (q.question && q.question.length > 2e3) throw new EsauInputError("question is too long");
-  if (q.wider !== void 0 && (!Array.isArray(q.wider) || q.wider.length > 12 || q.wider.some((l) => typeof l !== "string" || l.length > 400)))
-    throw new EsauInputError("wider must be up to 12 short lines");
   return q;
 }
 async function handleEsau(req, res, cfg = {}) {
