@@ -1,11 +1,13 @@
 // Runs Esau against the sample spots on the synthetic hollow and writes a transcript.
 //   npm run esau:spots            calls Claude (needs ANTHROPIC_API_KEY)
 //   npm run esau:spots -- --dry   writes only the field reports Esau would hear
+// Each answer is run through the rule check (src/esau/check.ts): right animal, dates only from the report, short read, real pins.
 import { writeFileSync } from "node:fs";
 import { buildBrief } from "../../src/esau/brief";
 import { SAMPLE_SPOTS } from "../../src/esau/fixtures/spots";
 import { offlineRead } from "../../src/esau/offline";
 import { askClaude } from "./ask";
+import { checkReply } from "../../src/esau/check";
 
 const dry = process.argv.includes("--dry") || !process.env.ANTHROPIC_API_KEY;
 const outArg = process.argv.indexOf("--out");
@@ -20,6 +22,7 @@ for (const s of SAMPLE_SPOTS) {
     const r = await askClaude(s.query);
     parts.push(
       `**Esau (${r.confidence}, ${r.spotRole}):** ${r.say}\n\n*${r.headline}* · would change his mind: ${r.wouldChangeMyMind.join("; ")}\n\n` +
+        `Rule check: ${checkReply(s.query, r, b.report).join(" ") || "ok"}\n\n` +
         `Marks: ${r.marks.map((m) => `${m.kind} "${m.label}"`).join(", ") || "none"} · ${r.meta.servedBy}, ${r.meta.ms} ms, ${r.meta.inputTokens} in / ${r.meta.outputTokens} out\n`,
     );
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import { SAMPLE_SPOTS } from "../../src/esau/fixtures/spots";
 import { askClaude } from "./ask";
@@ -48,6 +48,15 @@ describe("askClaude", () => {
     expect(r.marks).toHaveLength(4);
     expect(r.wouldChangeMyMind).toHaveLength(3);
     expect(r.meta.inputTokens).toBe(3900);
+  });
+  it("logs a rule slip, like talking turkey to a deer hunter, without changing the answer", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const parsed = { say: "Watch for gobblers on the ridge.", more: "", headline: "h", confidence: "fair", spotRole: "travel", marks: [], wouldChangeMyMind: [] };
+    const { client } = fakeClient({ parsed_output: parsed });
+    const r = await askClaude(SAMPLE_SPOTS[0]!.query, { client });
+    expect(r.say).toBe("Watch for gobblers on the ridge.");
+    expect(warn).toHaveBeenCalledWith("Esau rule check:", expect.stringMatching(/turkey/));
+    warn.mockRestore();
   });
   it("thinks harder when the hunter asks a question", async () => {
     const { client, calls } = fakeClient({});
