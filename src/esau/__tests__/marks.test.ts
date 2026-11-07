@@ -93,4 +93,22 @@ describe("field report", () => {
     }
     expect(buildBrief(q).report).not.toMatch(/SCREEN:/);
   });
+  it("names no bed, trail, food, water or feature off the screen", async () => {
+    const { readSpot } = await import("../terrain");
+    const { deerPredictionLines } = await import("../../model/deerRead");
+    const { SAMPLE_SPOTS } = await import("../fixtures/spots");
+    const q = SAMPLE_SPOTS[0]!.query;
+    const g = q.grid;
+    const at = new Date(g.weather.hours[q.hourIndex ?? 0]!.at);
+    const open = deerPredictionLines(g, [q.spot.lng, q.spot.lat], at);
+    expect(open.join(" ")).toMatch(/Likely bedding:|Nearest predicted trail/);
+    // A screen that holds none of the loaded ground's cells.
+    const nowhere = { west: g.east + 1, east: g.east + 2, south: g.south, north: g.north };
+    const lines = deerPredictionLines(g, [q.spot.lng, q.spot.lat], at, [], nowhere).join(" ");
+    expect(lines).toMatch(/No strong bedding stands out/);
+    expect(lines).not.toMatch(/Nearest predicted trail|Nearest likely oak mast/);
+    const r = readSpot(g, q.spot, { within: nowhere });
+    expect(r.nearby).toEqual([]);
+    expect([r.nearestFoodYd, r.nearestWaterYd, r.nearestEdgeYd]).toEqual([null, null, null]);
+  });
 });

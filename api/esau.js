@@ -28236,69 +28236,6 @@ var GridGeom = class {
   }
 };
 
-// src/esau/landcover.ts
-var C2 = (name, canopy, flags = {}) => ({
-  name,
-  canopy,
-  woody: false,
-  open: false,
-  water: false,
-  developed: false,
-  ...flags
-});
-var NLCD = {
-  11: C2("open water", 0, { water: true }),
-  12: C2("ice or snow", 0, { open: true }),
-  21: C2("developed open space (yards, parks)", 0.12, { open: true, developed: true }),
-  22: C2("low-density development", 0.08, { open: true, developed: true }),
-  23: C2("medium-density development", 0.04, { open: true, developed: true }),
-  24: C2("high-density development", 0.02, { open: true, developed: true }),
-  31: C2("barren ground", 0.02, { open: true }),
-  41: C2("deciduous forest", 0.72, { woody: true }),
-  42: C2("evergreen forest", 0.84, { woody: true }),
-  43: C2("mixed forest", 0.76, { woody: true }),
-  52: C2("shrub and young growth", 0.34, { woody: true }),
-  71: C2("grassland", 0.08, { open: true }),
-  81: C2("pasture or hay", 0.14, { open: true }),
-  82: C2("cultivated crops", 0.06, { open: true }),
-  90: C2("woody wetland", 0.66, { woody: true }),
-  95: C2("emergent herbaceous wetland", 0.1, {})
-};
-var UNKNOWN = C2("unclassified", 0.2);
-function coverClass(code) {
-  return NLCD[code] ?? UNKNOWN;
-}
-var CDL = {
-  1: { name: "corn", food: 1 },
-  4: { name: "sorghum", food: 0.9 },
-  5: { name: "soybeans", food: 0.95 },
-  21: { name: "barley", food: 0.75 },
-  24: { name: "winter wheat", food: 0.85 },
-  26: { name: "wheat double-cropped with soybeans", food: 0.9 },
-  27: { name: "rye", food: 0.7 },
-  28: { name: "oats", food: 0.75 },
-  36: { name: "alfalfa", food: 0.88 },
-  37: { name: "hay", food: 0.62 },
-  59: { name: "sod or grass seed", food: 0.3 },
-  61: { name: "fallow or idle cropland", food: 0.35 },
-  176: { name: "pasture", food: 0.38 },
-  205: { name: "triticale", food: 0.75 },
-  225: { name: "winter wheat then corn", food: 0.9 },
-  236: { name: "winter wheat then sorghum", food: 0.88 },
-  241: { name: "corn and soybeans", food: 0.95 }
-};
-function cropClass(code) {
-  if (!code) return null;
-  return CDL[code] ?? null;
-}
-function foodScore(cover, crop) {
-  const c = cropClass(crop);
-  if (c) return c.food;
-  if (cover === 82) return 0.72;
-  if (cover === 81) return 0.45;
-  return 0;
-}
-
 // src/map/geo.ts
 function normalizeBearing(deg) {
   return (deg % 360 + 360) % 360;
@@ -28367,6 +28304,70 @@ function cellCenter(g, i) {
   return [g.west + (col + 0.5) * (g.east - g.west) / g.cols, g.north - (row + 0.5) * (g.north - g.south) / g.rows];
 }
 var gridCenter = (g) => [(g.west + g.east) / 2, (g.south + g.north) / 2];
+var insideBounds = (b, [lng, lat]) => lng >= b.west && lng <= b.east && lat >= b.south && lat <= b.north;
+
+// src/esau/landcover.ts
+var C2 = (name, canopy, flags = {}) => ({
+  name,
+  canopy,
+  woody: false,
+  open: false,
+  water: false,
+  developed: false,
+  ...flags
+});
+var NLCD = {
+  11: C2("open water", 0, { water: true }),
+  12: C2("ice or snow", 0, { open: true }),
+  21: C2("developed open space (yards, parks)", 0.12, { open: true, developed: true }),
+  22: C2("low-density development", 0.08, { open: true, developed: true }),
+  23: C2("medium-density development", 0.04, { open: true, developed: true }),
+  24: C2("high-density development", 0.02, { open: true, developed: true }),
+  31: C2("barren ground", 0.02, { open: true }),
+  41: C2("deciduous forest", 0.72, { woody: true }),
+  42: C2("evergreen forest", 0.84, { woody: true }),
+  43: C2("mixed forest", 0.76, { woody: true }),
+  52: C2("shrub and young growth", 0.34, { woody: true }),
+  71: C2("grassland", 0.08, { open: true }),
+  81: C2("pasture or hay", 0.14, { open: true }),
+  82: C2("cultivated crops", 0.06, { open: true }),
+  90: C2("woody wetland", 0.66, { woody: true }),
+  95: C2("emergent herbaceous wetland", 0.1, {})
+};
+var UNKNOWN = C2("unclassified", 0.2);
+function coverClass(code) {
+  return NLCD[code] ?? UNKNOWN;
+}
+var CDL = {
+  1: { name: "corn", food: 1 },
+  4: { name: "sorghum", food: 0.9 },
+  5: { name: "soybeans", food: 0.95 },
+  21: { name: "barley", food: 0.75 },
+  24: { name: "winter wheat", food: 0.85 },
+  26: { name: "wheat double-cropped with soybeans", food: 0.9 },
+  27: { name: "rye", food: 0.7 },
+  28: { name: "oats", food: 0.75 },
+  36: { name: "alfalfa", food: 0.88 },
+  37: { name: "hay", food: 0.62 },
+  59: { name: "sod or grass seed", food: 0.3 },
+  61: { name: "fallow or idle cropland", food: 0.35 },
+  176: { name: "pasture", food: 0.38 },
+  205: { name: "triticale", food: 0.75 },
+  225: { name: "winter wheat then corn", food: 0.9 },
+  236: { name: "winter wheat then sorghum", food: 0.88 },
+  241: { name: "corn and soybeans", food: 0.95 }
+};
+function cropClass(code) {
+  if (!code) return null;
+  return CDL[code] ?? null;
+}
+function foodScore(cover, crop) {
+  const c = cropClass(crop);
+  if (c) return c.food;
+  if (cover === 82) return 0.72;
+  if (cover === 81) return 0.45;
+  return 0;
+}
 
 // src/model/terrain.ts
 var D8 = [
@@ -28604,7 +28605,7 @@ var bearing = ([lng1, lat1], [lng2, lat2]) => {
   return (Math.atan2(y, x) / DEG + 360) % 360;
 };
 var COMPASS2 = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
-function readFood(grid, spot, date2) {
+function readFood(grid, spot, date2, within2) {
   const i = cellAt(grid, spot);
   if (i == null) return null;
   const f = foodForGrid(grid);
@@ -28615,6 +28616,7 @@ function readFood(grid, spot, date2) {
   let best = null;
   for (let j = 0; j < f.mast.length; j++) {
     if (f.mast[j] < 0.5 || f.oak[j] < 0.5) continue;
+    if (within2 && !insideBounds(within2, cellCenter(grid, j))) continue;
     const d = yardsBetween(spot, cellCenter(grid, j));
     if (!best || d < best.d) best = { i: j, d };
   }
@@ -28846,6 +28848,7 @@ function readSpot(grid, spot, opts = {}) {
       const j = geom.idx(rr, cc);
       if (j === i) continue;
       const p = geom.center(rr, cc);
+      if (opts.within && !insideBounds(opts.within, [p.lng, p.lat])) continue;
       const d = yd(p);
       const brg = bearingDeg(spot, p);
       if (m.food[j] >= 0.55 && (nearestFoodYd === null || d < nearestFoodYd)) {
@@ -30037,7 +30040,7 @@ function bearing2([lng1, lat1], [lng2, lat2]) {
   return (Math.atan2(y, x) / r + 360) % 360;
 }
 var where = (from, to) => `${Math.round(yardsBetween(from, to))} yd ${COMPASS3[Math.round(bearing2(from, to) / 45) % 8]}`;
-function deerPredictionLines(grid, spot, date2, pins = []) {
+function deerPredictionLines(grid, spot, date2, pins = [], within2) {
   try {
     const hc = conditionsForGrid(grid).at(date2);
     let model = pins.length ? null : models2.get(grid);
@@ -30047,14 +30050,16 @@ function deerPredictionLines(grid, spot, date2, pins = []) {
     }
     const m = model.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor, date2);
     const lines = [];
-    lines.push(...readFood(grid, spot, date2)?.lines ?? []);
+    lines.push(...readFood(grid, spot, date2, within2)?.lines ?? []);
     lines.push("");
     lines.push("PREDICTED BEDS AND TRAILS (modelled from food, terrain, wind and thermals; a prediction, not sign on the ground)");
-    const beds = [...m.beds].sort((a, b) => yardsBetween(spot, a.lngLat) - yardsBetween(spot, b.lngLat)).slice(0, 3);
+    const on = (p) => !within2 || insideBounds(within2, p);
+    const beds = [...m.beds].filter((b) => on(b.lngLat)).sort((a, b) => yardsBetween(spot, a.lngLat) - yardsBetween(spot, b.lngLat)).slice(0, 3);
     if (beds.length) lines.push(`Likely bedding: ${beds.map((b) => `${where(spot, b.lngLat)} (score ${Math.round(b.score * 100)})`).join("; ")}.`);
     else lines.push("No strong bedding stands out on this map.");
     let nearTrail = null;
     for (const t of m.trails) for (const p of t.coordinates) {
+      if (!on(p)) continue;
       const yd = yardsBetween(spot, p);
       if (!nearTrail || yd < nearTrail.yd) nearTrail = { yd, at: p };
     }
@@ -31076,9 +31081,8 @@ function buildBrief(q, opts = {}) {
   const g = q.grid;
   if (!g || !g.cols || !g.rows || g.elevationM?.length !== g.cols * g.rows) throw new EsauInputError("grid is missing or malformed");
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
-  const read = readSpot(g, q.spot, { hunter: q.hunter });
   const v = q.view;
-  const spot = v ? { ...read, nearby: read.nearby.filter((f) => f.lat >= v.south && f.lat <= v.north && f.lng >= v.west && f.lng <= v.east) } : read;
+  const spot = readSpot(g, q.spot, { hunter: q.hunter, within: v });
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase2 = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
   const scores2 = species.scores(spot, conditions, phase2);
@@ -31117,7 +31121,7 @@ function buildBrief(q, opts = {}) {
   if (Number.isFinite(cellYd) && cellYd > 0) lines.push(`Grid: ${g.cols} by ${g.rows} cells, each about ${cellYd} yd across; anything smaller is averaged away.`);
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
   if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover and forest data; unconfirmed on the ground).`);
-  const near = (yd, what) => yd === null ? `no ${what} on this map` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`;
+  const near = (yd, what) => yd === null ? `no ${what} on ${v ? "the screen" : "this map"}` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`;
   lines.push(
     `Nearest: ${near(spot.nearestFoodYd, "food")}${spot.nearestFoodWhat && spot.nearestFoodYd ? ` (${spot.nearestFoodWhat})` : ""}; ${near(spot.nearestWaterYd, "water")}; ${near(spot.nearestEdgeYd, "cover edge")}.`
   );
@@ -31152,7 +31156,7 @@ function buildBrief(q, opts = {}) {
     );
   }
   if (species.id === "whitetail") {
-    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at));
+    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at), [], v);
     if (pred.length) lines.push("", ...pred);
   }
   lines.push("");

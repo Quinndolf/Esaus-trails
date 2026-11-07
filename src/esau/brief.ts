@@ -41,10 +41,9 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (!g || !g.cols || !g.rows || g.elevationM?.length !== g.cols * g.rows) throw new EsauInputError("grid is missing or malformed");
   if (!g.weather?.hours?.length) throw new EsauInputError("grid has no weather hours");
 
-  const read = readSpot(g, q.spot, { hunter: q.hunter });
   // On the hunter's screen only: features off it are not where they will hunt.
   const v = q.view;
-  const spot = v ? { ...read, nearby: read.nearby.filter((f) => f.lat >= v.south && f.lat <= v.north && f.lng >= v.west && f.lng <= v.east) } : read;
+  const spot = readSpot(g, q.spot, { hunter: q.hunter, within: v });
   // The wind and thermal module's model by default; tests can pass the prototype rules.
   const conditions = readConditions(g, q.spot, q.hourIndex ?? 0, { timeZone: q.timeZone, thermal: opts.thermal ?? modelThermal });
   const phase = species.phase(new Date(conditions.at), q.spot.lat, opts.rutPeak);
@@ -88,7 +87,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   if (Number.isFinite(cellYd) && cellYd > 0) lines.push(`Grid: ${g.cols} by ${g.rows} cells, each about ${cellYd} yd across; anything smaller is averaged away.`);
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
   if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover and forest data; unconfirmed on the ground).`);
-  const near = (yd: number | null, what: string) => (yd === null ? `no ${what} on this map` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`);
+  const near = (yd: number | null, what: string) => (yd === null ? `no ${what} on ${v ? "the screen" : "this map"}` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`);
   lines.push(
     `Nearest: ${near(spot.nearestFoodYd, "food")}${spot.nearestFoodWhat && spot.nearestFoodYd ? ` (${spot.nearestFoodWhat})` : ""}; ${near(spot.nearestWaterYd, "water")}; ${near(spot.nearestEdgeYd, "cover edge")}.`,
   );
@@ -127,7 +126,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   }
 
   if (species.id === "whitetail") {
-    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at));
+    const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at), [], v);
     if (pred.length) lines.push("", ...pred);
   }
 

@@ -1,7 +1,7 @@
 import type { GroundGrid, Pin } from '../esau/types';
 import { conditionsForGrid } from './esau';
 import { readFood } from './food';
-import { cellAt, yardsBetween, type LngLat } from './geo';
+import { cellAt, insideBounds, yardsBetween, type Bounds, type LngLat } from './geo';
 import { createMovementModel, type MovementModel } from './movement';
 
 const models = new WeakMap<GroundGrid, MovementModel>();
@@ -19,9 +19,10 @@ const where = (from: LngLat, to: LngLat) =>
 /**
  * The deer model's predictions around a tapped spot, as lines for Esau's field report:
  * predicted food, the nearest predicted beds, predicted trails, and what deer are doing this hour.
+ * With `within` (the hunter's screen), only beds, trails and oak ground on it are named.
  * Returns [] if the model cannot run (no usable forecast hour).
  */
-export function deerPredictionLines(grid: GroundGrid, spot: LngLat, date: Date, pins: Pin[] = []): string[] {
+export function deerPredictionLines(grid: GroundGrid, spot: LngLat, date: Date, pins: Pin[] = [], within?: Bounds): string[] {
   try {
     const hc = conditionsForGrid(grid).at(date);
     let model = pins.length ? null : models.get(grid);
@@ -31,14 +32,16 @@ export function deerPredictionLines(grid: GroundGrid, spot: LngLat, date: Date, 
     }
     const m = model.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor, date);
     const lines: string[] = [];
-    lines.push(...(readFood(grid, spot, date)?.lines ?? []));
+    lines.push(...(readFood(grid, spot, date, within)?.lines ?? []));
     lines.push('');
     lines.push('PREDICTED BEDS AND TRAILS (modelled from food, terrain, wind and thermals; a prediction, not sign on the ground)');
-    const beds = [...m.beds].sort((a, b) => yardsBetween(spot, a.lngLat) - yardsBetween(spot, b.lngLat)).slice(0, 3);
+    const on = (p: LngLat) => !within || insideBounds(within, p);
+    const beds = [...m.beds].filter((b) => on(b.lngLat)).sort((a, b) => yardsBetween(spot, a.lngLat) - yardsBetween(spot, b.lngLat)).slice(0, 3);
     if (beds.length) lines.push(`Likely bedding: ${beds.map((b) => `${where(spot, b.lngLat)} (score ${Math.round(b.score * 100)})`).join('; ')}.`);
     else lines.push('No strong bedding stands out on this map.');
     let nearTrail: { yd: number; at: LngLat } | null = null;
     for (const t of m.trails) for (const p of t.coordinates) {
+      if (!on(p)) continue;
       const yd = yardsBetween(spot, p);
       if (!nearTrail || yd < nearTrail.yd) nearTrail = { yd, at: p };
     }

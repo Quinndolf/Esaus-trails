@@ -132,6 +132,16 @@ describe('analyzeArea', () => {
     expect(useEsau.getState().view).toBeNull();
   });
 
+  it('reads the middle of the screen, not of the wider loaded ground, when there is no pick', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    const view = { west: grid.west, east: (grid.west + grid.east) / 2, south: grid.south, north: (grid.south + grid.north) / 2 };
+    useEsau.setState({ species: 'elk', view }); // elk has no sit spots
+    await analyzeArea();
+    const s = useEsau.getState().spot!;
+    expect(s.lat).toBeCloseTo((view.north + view.south) / 2, 6);
+    expect(s.lng).toBeCloseTo((view.west + view.east) / 2, 6);
+  });
+
   it('treats a map tap as where the hunter will sit', async () => {
     await useEsau.getState().tapSpot({ lat: 37.5, lng: -85.5 }).catch(() => {});
     expect(useEsau.getState().sit).toEqual({ lat: 37.5, lng: -85.5 });

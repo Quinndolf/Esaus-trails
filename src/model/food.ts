@@ -1,6 +1,6 @@
 import { coverClass, cropClass, foodScore } from '../esau/landcover';
 import type { GroundGrid } from '../esau/types';
-import { cellAt, cellCenter, clamp, DEG, yardsBetween, type LngLat } from './geo';
+import { cellAt, cellCenter, clamp, DEG, insideBounds, yardsBetween, type Bounds, type LngLat } from './geo';
 import { analyzeTerrain, type Terrain } from './terrain';
 
 /**
@@ -217,7 +217,8 @@ const bearing = ([lng1, lat1]: LngLat, [lng2, lat2]: LngLat) => {
 const COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
 
 /** What the model predicts for food at a tapped spot. Honest about being a prediction. */
-export function readFood(grid: VegetationGrid, spot: LngLat, date: Date): FoodRead | null {
+/** `within`: only oak ground inside this box counts as the nearest (the hunter's screen). */
+export function readFood(grid: VegetationGrid, spot: LngLat, date: Date, within?: Bounds): FoodRead | null {
   const i = cellAt(grid, spot);
   if (i == null) return null;
   const f = foodForGrid(grid);
@@ -229,6 +230,7 @@ export function readFood(grid: VegetationGrid, spot: LngLat, date: Date): FoodRe
   let best: { i: number; d: number } | null = null;
   for (let j = 0; j < f.mast.length; j++) {
     if (f.mast[j]! < 0.5 || f.oak[j]! < 0.5) continue;
+    if (within && !insideBounds(within, cellCenter(grid, j))) continue;
     const d = yardsBetween(spot, cellCenter(grid, j));
     if (!best || d < best.d) best = { i: j, d };
   }
