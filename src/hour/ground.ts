@@ -28,26 +28,6 @@ export function viewBbox(view: Bbox): Bbox {
   return { west: lng - halfLng, east: lng + halfLng, south: lat - halfLat, north: lat + halfLat };
 }
 
-/** How far a hunter on foot works from the middle of the screen: the hunt area is at most this wide and tall. */
-export const REACH_MI = 1;
-
-/**
- * The part of the screen a hunter can actually walk and hunt: the screen itself, or when zoomed out wider than
- * REACH_MI, a REACH_MI box at its middle. Trails, beds, sit spots and Esau's talk all stay inside it.
- */
-export function huntBox(view: Bbox): Bbox {
-  const lat = (view.south + view.north) / 2;
-  const lng = (view.west + view.east) / 2;
-  const halfLat = REACH_MI / MI_PER_DEG_LAT / 2;
-  const halfLng = REACH_MI / (MI_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180)) / 2;
-  return {
-    west: Math.max(view.west, lng - halfLng),
-    east: Math.min(view.east, lng + halfLng),
-    south: Math.max(view.south, lat - halfLat),
-    north: Math.min(view.north, lat + halfLat),
-  };
-}
-
 /** Is a loaded grid still the right read for this view? Same ground (center inside it) and about the same scale. */
 export function groundFits(grid: Bbox, want: Bbox): boolean {
   const cx = (want.west + want.east) / 2;

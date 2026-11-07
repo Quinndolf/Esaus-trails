@@ -3,7 +3,6 @@ import type { Map as MLMap } from 'maplibre-gl';
 import { analyzeArea } from '../esau/ui/analyzeArea';
 import { useEsau } from '../esau/ui/store';
 import { ensureGroundForView, visibleBox } from '../hour/view';
-import { huntBox } from '../hour/ground';
 import './home.css';
 
 /**
@@ -24,7 +23,7 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
         if (!map) return;
         // Esau reads all the ground loaded around here, but picks and talks only about what is on screen.
         void ensureGroundForView(map).then(() => {
-          useEsau.setState({ view: huntBox(visibleBox(map)) });
+          useEsau.setState({ view: visibleBox(map) });
           return analyzeArea();
         });
       }}
@@ -35,13 +34,13 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
 }
 
 /**
- * Keeps Esau's idea of the screen (cut to walking range, see huntBox) current as the hunter pans and zooms, so a tap or a follow-up question
+ * Keeps Esau's idea of the screen current as the hunter pans and zooms, so a tap or a follow-up question
  * is read against the map they are looking at now, never an earlier, bigger one.
  */
 export function useScreenView(map: MLMap | null) {
   useEffect(() => {
     if (!map) return;
-    const update = () => useEsau.setState({ view: huntBox(visibleBox(map)) });
+    const update = () => useEsau.setState({ view: visibleBox(map) });
     update();
     map.on('moveend', update);
     return () => void map.off('moveend', update);

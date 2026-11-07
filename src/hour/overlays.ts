@@ -115,43 +115,17 @@ export function thermalTicks(g: ElevationGrid, hc: HourConditions, every = 3): F
   return { type: 'FeatureCollection', features };
 }
 
-type Box = { west: number; east: number; south: number; north: number };
-const onBox = (b: Box, [lng, lat]: readonly number[]) => lng! >= b.west && lng! <= b.east && lat! >= b.south && lat! <= b.north;
-
-/**
- * The stretches of each trail that are on the hunter's screen. A trail that leaves the screen and comes back
- * becomes two pieces; a piece too short to draw is dropped. The screen is where they hunt, so nothing is drawn past it.
- */
-export function clipTrails<T extends { coordinates: LngLat[] }>(trails: T[], view: Box): T[] {
-  const out: T[] = [];
-  for (const t of trails) {
-    let run: LngLat[] = [];
-    const flush = () => {
-      if (run.length >= 2) out.push({ ...t, coordinates: run });
-      run = [];
-    };
-    for (const p of t.coordinates) {
-      if (onBox(view, p)) run.push(p);
-      else flush();
-    }
-    flush();
-  }
-  return out;
-}
-
-/** `view`: the hunter's screen; trails are cut to it. */
-export function trailLines(m: MovementHour, view?: Box | null): FC {
+export function trailLines(m: MovementHour): FC {
   return {
     type: 'FeatureCollection',
-    features: (view ? clipTrails(m.trails, view) : m.trails).map((t) => line(t.coordinates, { weight: t.weight * (0.35 + 0.65 * m.activity.moving * 2) })),
+    features: m.trails.map((t) => line(t.coordinates, { weight: t.weight * (0.35 + 0.65 * m.activity.moving * 2) })),
   };
 }
 
-/** `view`: the hunter's screen; beds off it are left out. */
-export function bedPoints(m: MovementHour, view?: Box | null): FC {
+export function bedPoints(m: MovementHour): FC {
   return {
     type: 'FeatureCollection',
-    features: m.beds.filter((b) => !view || onBox(view, b.lngLat)).map((b) => ({
+    features: m.beds.map((b) => ({
       type: 'Feature',
       properties: { score: Math.round(b.score * 100), bedded: m.activity.bedded },
       geometry: { type: 'Point', coordinates: b.lngLat },
