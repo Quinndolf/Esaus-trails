@@ -123,6 +123,8 @@ export function recenterOn(map: { getZoom(): number; flyTo(o: object): unknown }
 export function panShiftAboveSheet(y: number, mapHeight: number, cover: number): number {
   const stripBottom = mapHeight * (1 - cover);
   const margin = 48;
+  // Off screen entirely (Esau's pick from analyze area, not a tap): never swing the camera to it.
+  if (y < 0 || y > mapHeight) return 0;
   if (y >= 0 && y <= stripBottom - margin) return 0;
   return y - stripBottom / 2;
 }
