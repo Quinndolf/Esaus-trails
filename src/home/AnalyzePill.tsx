@@ -2,6 +2,9 @@ import type { Map as MLMap } from 'maplibre-gl';
 import { analyzeArea } from '../esau/ui/analyzeArea';
 import { useEsau } from '../esau/ui/store';
 import { ensureGroundForView, visibleBox } from '../hour/view';
+import { useWide } from '../hour/wide';
+
+const WIDE_WAIT_MS = 8000;
 import './home.css';
 
 /**
@@ -21,10 +24,14 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
         if (!map) return;
         // Esau reads all the ground loaded around here, but picks sit spots only on screen.
         const view = visibleBox(map);
-        void ensureGroundForView(map).then(() => {
-          useEsau.setState({ view });
-          return analyzeArea();
-        });
+        // The wide read (miles around) loads alongside; Esau waits a few seconds for it, then goes without.
+        const wide = useWide.getState().load(view);
+        void ensureGroundForView(map)
+          .then(() => Promise.race([wide, new Promise((r) => setTimeout(r, WIDE_WAIT_MS))]))
+          .then(() => {
+            useEsau.setState({ view });
+            return analyzeArea();
+          });
       }}
     >
       Analyze area

@@ -116,6 +116,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
     );
   }
 
+  if (q.wider?.length) lines.push("", ...q.wider.slice(0, 12).map((l) => String(l).slice(0, 400)));
+
   if (species.id === "whitetail") {
     const pred = deerPredictionLines(g, [q.spot.lng, q.spot.lat], new Date(conditions.at));
     if (pred.length) lines.push("", ...pred);

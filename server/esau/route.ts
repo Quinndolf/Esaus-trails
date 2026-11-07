@@ -55,6 +55,8 @@ function validate(body: unknown): SpotQuery {
   const extra = body as Record<string, unknown>;
   if ("photo" in extra || "pins" in extra) throw new EsauInputError("photos and marks are never sent to Esau");
   if (q.question && q.question.length > 2000) throw new EsauInputError("question is too long");
+  if (q.wider !== undefined && (!Array.isArray(q.wider) || q.wider.length > 12 || q.wider.some((l) => typeof l !== "string" || l.length > 400)))
+    throw new EsauInputError("wider must be up to 12 short lines");
   return q as SpotQuery;
 }
 

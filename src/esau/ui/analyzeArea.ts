@@ -3,6 +3,7 @@ import { analyzeHour, type Analysis } from '../analyze';
 import { nearestHour, useEsau } from './store';
 import { useHour } from '../../hour/store';
 import type { LngLat } from '../../model/geo';
+import { corridorsIn, useWide, wideMovementAt, wideSummary } from '../../hour/wide';
 
 /** Works out sit spots, the legal read and banners for the hour the slider points at. Null until the ground is loaded. */
 export function analysisForSlider(sit: LatLng | null): Analysis | null {
@@ -11,9 +12,12 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
   if (!h.grid || !h.conditions || !h.movement || !e.species) return null;
   const hc = h.conditions.at(h.date);
   const mv = h.movement.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor, h.date);
+  // Deer walking in from beyond the screen: the wide read's corridors, where they cross this ground.
+  const wide = e.view ? wideMovementAt(h.date) : null;
+  const trails = wide ? [...mv.trails, ...corridorsIn(wide.trails, h.grid)] : mv.trails;
   return analyzeHour({
     grid: h.grid,
-    movement: mv,
+    movement: { ...mv, trails },
     wind: hc.wind,
     species: e.species,
     weapon: e.weapon,
@@ -26,7 +30,17 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
 
 /** Make the Esau store ask the slider for an analysis on every read. Call once at app start. */
 export function registerAnalyzer() {
-  useEsau.setState({ analyzer: analysisForSlider });
+  useEsau.setState({ analyzer: analysisForSlider, wider: widerForSlider });
+}
+
+/** Esau's lines about the country around the screen, for the slider's hour. Null until the wide read is in. */
+export function widerForSlider(): string[] | null {
+  const w = useWide.getState();
+  const e = useEsau.getState();
+  if (w.status !== 'ready' || !w.grid || !e.view) return null;
+  const deer = e.species === 'whitetail' || e.species === 'mule_deer';
+  const move = deer ? wideMovementAt(useHour.getState().date) : null;
+  return wideSummary(w.grid, move ?? { beds: [], trails: [] }, e.view);
 }
 
 /**
