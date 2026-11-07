@@ -13,7 +13,7 @@ function Probe({ map }: { map: never }) {
 import { useEsau } from '../../esau/ui/store';
 
 function fakeMap() {
-  let box = { w: -85.71, e: -85.69, s: 36.74, n: 36.76 };
+  let box = { w: -85.705, e: -85.695, s: 36.745, n: 36.755 };
   const handlers: Record<string, () => void> = {};
   return {
     pan(next: typeof box) {
@@ -38,10 +38,23 @@ describe('useScreenView', () => {
     const root = createRoot(document.createElement('div'));
     await act(async () => root.render(createElement(Probe, { map: f.map as never })));
     const unmount = () => act(() => root.unmount());
-    expect(useEsau.getState().view).toEqual({ west: -85.71, east: -85.69, south: 36.74, north: 36.76 });
+    expect(useEsau.getState().view).toEqual({ west: -85.705, east: -85.695, south: 36.745, north: 36.755 });
     act(() => f.pan({ w: -85.705, e: -85.7, s: 36.745, n: 36.75 })); // zoomed in
     expect(useEsau.getState().view).toEqual({ west: -85.705, east: -85.7, south: 36.745, north: 36.75 });
     unmount();
     expect(f.handlers.moveend).toBeUndefined();
+  });
+});
+
+describe('useScreenView when zoomed out', () => {
+  it('keeps Esau to a walkable box at the middle of a wide screen', async () => {
+    const { REACH_MI } = await import('../../hour/ground');
+    const f = fakeMap();
+    const wide = { ...f.map, getBounds: () => ({ getWest: () => -86, getEast: () => -85, getSouth: () => 36.5, getNorth: () => 37 }) };
+    const root = createRoot(document.createElement('div'));
+    await act(async () => root.render(createElement(Probe, { map: wide as never })));
+    const v = useEsau.getState().view!;
+    expect((v.north - v.south) * 69).toBeCloseTo(REACH_MI, 1);
+    act(() => root.unmount());
   });
 });

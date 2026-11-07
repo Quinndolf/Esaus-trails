@@ -43,3 +43,17 @@ describe('innerBox', () => {
     expect(innerBox([{ lng: -1, lat: 1 }, { lng: 1, lat: 1 }, { lng: 1, lat: -1 }, { lng: -1, lat: -1 }])).toEqual({ west: -1, east: 1, south: -1, north: 1 });
   });
 });
+
+describe('huntBox', () => {
+  it('is the screen when the screen is walkable, and a 1 mi box at its middle when zoomed out', async () => {
+    const { huntBox, REACH_MI } = await import('../ground');
+    const small = { west: -85.705, east: -85.695, south: 36.745, north: 36.755 }; // about 0.55 by 0.7 mi
+    expect(huntBox(small)).toEqual(small);
+    const wide = { west: -85.8, east: -85.6, south: 36.7, north: 36.8 }; // about 11 by 7 mi
+    const h = huntBox(wide);
+    expect((h.north - h.south) * 69).toBeCloseTo(REACH_MI, 1);
+    expect((h.east - h.west) * 69 * Math.cos((36.75 * Math.PI) / 180)).toBeCloseTo(REACH_MI, 1);
+    expect((h.west + h.east) / 2).toBeCloseTo(-85.7, 6);
+    expect((h.south + h.north) / 2).toBeCloseTo(36.75, 6);
+  });
+});

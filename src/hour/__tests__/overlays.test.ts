@@ -92,7 +92,7 @@ describe('trails and beds stay on the screen', () => {
   it('draws only on-screen trails and beds, and everything with no screen known', () => {
     expect(trailLines(m, view).features).toHaveLength(2);
     expect(bedPoints(m, view).features).toHaveLength(1);
-    expect(trailLines(m).features).toHaveLength(2 + 0); // unclipped: both trails
+    expect(trailLines(m).features).toHaveLength(2); // unclipped: both trails
     expect(bedPoints(m).features).toHaveLength(2);
   });
 });
