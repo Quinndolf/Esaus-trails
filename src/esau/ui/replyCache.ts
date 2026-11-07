@@ -36,7 +36,6 @@ function keyOf(q: SpotQuery): string {
     q.timeZone,
     q.sitSpots ?? null,
     q.sitUnsure ?? null,
-    q.wider ?? null,
     q.layersHere ?? null,
     // Esau is told which way the hunter faces and how good the GPS fix is.
     q.hunter?.headingDeg == null ? null : Math.round(q.hunter.headingDeg / 45) % 8,
