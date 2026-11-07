@@ -28,6 +28,12 @@ describe("analyzeHour", () => {
     const a = analyzeHour({ ...base, wind: wind(180), sit }); // wind from the south carries scent north, onto the trail
     expect(a.advisories.map((x) => x.kind)).toContain("wrong_wind");
   });
+  it("warns before the forecast wind turns onto the trail at a chosen sit spot", () => {
+    const sit = mid(17, 16); // just south of the trail
+    const a = analyzeHour({ ...base, wind: wind(0), sit, windLater: [{ hoursAhead: 1, wind: wind(0) }, { hoursAhead: 2, wind: wind(180) }] });
+    expect(a.advisories.map((x) => x.kind)).toEqual(["wind_shift"]);
+    expect(a.advisories[0]!.title).toContain("2 hours");
+  });
   it("raises out-of-season for a crossbow before Sept 19 and still returns spots", () => {
     const a = analyzeHour({ ...base, wind: wind(0), weapon: "crossbow", at: new Date("2026-09-10T12:00:00Z") });
     expect(a.advisories[0]!.kind).toBe("out_of_season");

@@ -3,6 +3,7 @@ import { analyzeHour, type Analysis } from '../analyze';
 import { nearestHour, useEsau } from './store';
 import { useHour } from '../../hour/store';
 import type { LngLat } from '../../model/geo';
+import type { WindField } from '../../model/wind';
 import { corridorsIn, covers, useWide, wideMovementAt, wideSummary } from '../../hour/wide';
 
 /** Works out sit spots, the legal read and banners for the hour the slider points at. Null until the ground is loaded. */
@@ -25,8 +26,23 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
     sit: sit ? ([sit.lng, sit.lat] as LngLat) : null,
     hunter: e.hunter ? ([e.hunter.lng, e.hunter.lat] as LngLat) : null,
     view: e.view,
+    // With a sit spot chosen, look a few hours ahead so Esau can warn before the wind turns on you.
+    windLater: sit ? windAhead(h.conditions, h.date) : undefined,
   });
 }
+
+/**
+ * The wind for the next few hours, past the forecast's end left out.
+ * Checked against this hour's trails: near dawn and dusk the trails shift, so the warning is a guide, not a promise.
+ */
+function windAhead(c: { at(d: Date): { weather: { extrapolated: boolean }; wind: WindField } }, from: Date) {
+  return LOOK_AHEAD.flatMap((k) => {
+    const hc = c.at(new Date(from.getTime() + k * 3_600_000));
+    return hc.weather.extrapolated ? [] : [{ hoursAhead: k, wind: hc.wind }];
+  });
+}
+
+const LOOK_AHEAD = [1, 2, 3];
 
 /** Make the Esau store ask the slider for an analysis on every read. Call once at app start. */
 export function registerAnalyzer() {

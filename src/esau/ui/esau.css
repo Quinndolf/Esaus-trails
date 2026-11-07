@@ -58,6 +58,6 @@
 
 .esau-advisory { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin: 0 0 8px; border-radius: 12px; background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(180, 30, 30, 0.35); color: #7a1414; backdrop-filter: blur(8px); }
 .esau-advisory strong { font-size: 15px; }
-.esau-advisory.is-wrong_wind { border-color: rgba(190, 110, 0, 0.4); color: #7a4a00; }
+.esau-advisory.is-wrong_wind, .esau-advisory.is-wind_shift { border-color: rgba(190, 110, 0, 0.4); color: #7a4a00; }
 .esau-safety { margin: 0 0 6px; font-size: 12px; opacity: 0.8; }
 .esau-hint { margin: 0 0 8px; font-size: 13px; opacity: 0.75; }

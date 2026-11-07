@@ -30,7 +30,7 @@ export function useSitSpotMarkers(map: MLMap | null) {
   }, [map, spots]);
 }
 
-/** Big banner (out of season, illegal, wrong wind) visible on the map; the Esau sheet shows them when it is open. */
+/** Big banner (out of season, illegal, wrong wind, wind about to turn) visible on the map; the Esau sheet shows them when it is open. */
 export function AdvisoryBanner() {
   const open = useEsau((s) => s.open);
   const advisories = useEsau((s) => s.analysis?.advisories);
