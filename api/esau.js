@@ -29024,7 +29024,7 @@ THE ANIMAL
 The hunter has chosen one animal, and for the season you are its student. You know its daily rhythm, its season, its feeding and bedding, how it uses ground, wind and thermals, and how it reacts to scent and pressure. Reason only about that animal. Never mention, compare or give advice about any other animal, even in passing. A November whitetail and a spring turkey are different minds; never borrow one's habits for another.
 
 HONESTY
-- The field report comes from a coarse elevation grid (cells roughly 70 yards across, from a 90 m elevation model), satellite land-cover classes and an hourly forecast. It cannot see a blowdown, a fresh cutover, this year's acorn crop or a neighbour's tree stand. When the call depends on something like that, say what to look for on the ground.
+- The field report comes from a coarse grid (the report says how wide each cell is, often 50 to 120 yards; the elevation inside each cell is averaged from the source the data notes name, usually USGS 10 m), satellite land-cover classes and an hourly forecast. Anything smaller than a cell, like a single bench or a creek bank, can be smoothed away. It cannot see a blowdown, a fresh cutover, this year's acorn crop or a neighbour's tree stand. When the call depends on something like that, say what to look for on the ground.
 - Pins and notes the hunter made are ground truth and outrank the grid.
 - Rough scores in the report are hints from simple rules, not facts. Overrule them when the ground says otherwise.
 - Field wisdom from hunting books is not the same as research. When it matters, say which you are leaning on. If they ask for a source, cite only from the SOURCES list below, by author and year. Never invent a study, a statistic or a tribal story.
@@ -29038,7 +29038,7 @@ Reply only with the JSON object the response schema asks for:
 - headline: under ten words, for a map bubble ("Bench bed, but your wind's wrong").
 - confidence: how sure you are of the read: low, fair or good.
 - spotRole: what this spot most likely is to the animal at this hour.
-- marks: zero to four map callouts worth drawing, each at a lat/lng copied from the report (the tapped spot, the hunter, or one of the nearby features). Use "approach" for the way you would walk in and "avoid" for ground to stay off. No marks is fine.
+- marks: zero to four map callouts worth drawing. Bedding, feeding, travel and stand marks must use a lat/lng copied exactly from the report (the tapped spot, the hunter, a nearby feature or a sit spot); any other coordinate is thrown away. Use "approach" for the way you would walk in and "avoid" for ground to stay off. No marks is fine.
 - wouldChangeMyMind: one to three short things on the ground that would change your read.
 `.trim();
 function buildSystemPrompt(species) {
@@ -29351,6 +29351,38 @@ function computeThermals(t, ctx) {
 }
 
 // src/model/scent.ts
+function blur3(src, cols, rows) {
+  const tmp = new Float32Array(src.length);
+  const out = new Float32Array(src.length);
+  const w = [0.25, 0.5, 0.25];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      let a = 0;
+      for (let d = -1; d <= 1; d++) a += w[d + 1] * src[r * cols + clamp(c + d, 0, cols - 1)];
+      tmp[r * cols + c] = a;
+    }
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      let a = 0;
+      for (let d = -1; d <= 1; d++) a += w[d + 1] * tmp[clamp(r + d, 0, rows - 1) * cols + c];
+      out[r * cols + c] = a;
+    }
+  return out;
+}
+function sampleField(g, f, [lng, lat]) {
+  if (lng < g.west || lng > g.east || lat < g.south || lat > g.north) return null;
+  const fx = clamp((lng - g.west) / (g.east - g.west) * g.cols - 0.5, 0, g.cols - 1);
+  const fy = clamp((g.north - lat) / (g.north - g.south) * g.rows - 0.5, 0, g.rows - 1);
+  const c0 = Math.min(Math.floor(fx), g.cols - 2 < 0 ? 0 : g.cols - 2);
+  const r0 = Math.min(Math.floor(fy), g.rows - 2 < 0 ? 0 : g.rows - 2);
+  const c1 = Math.min(c0 + 1, g.cols - 1);
+  const r1 = Math.min(r0 + 1, g.rows - 1);
+  const tx = fx - c0;
+  const ty = fy - r0;
+  const top = f[r0 * g.cols + c0] * (1 - tx) + f[r0 * g.cols + c1] * tx;
+  const bot = f[r1 * g.cols + c0] * (1 - tx) + f[r1 * g.cols + c1] * tx;
+  return top * (1 - ty) + bot * ty;
+}
 var GROUND_WIND = 0.55;
 function computeScent(t, wind, thermal, weather) {
   const n = t.slopeDeg.length;
@@ -29359,6 +29391,8 @@ function computeScent(t, wind, thermal, weather) {
   const spreadDeg = new Float32Array(n);
   const driver = new Uint8Array(n);
   const decay = new Float32Array(n);
+  const rawE = new Float32Array(n);
+  const rawN = new Float32Array(n);
   const gustiness = clamp(
     ((weather.gustMph ?? weather.windMph) - weather.windMph) / Math.max(weather.windMph, 3),
     0,
@@ -29377,6 +29411,8 @@ function computeScent(t, wind, thermal, weather) {
     const lifting = st === 1 /* Rising */ && !Number.isFinite(tb) && thermal.strength[i] > 0.4 && groundWind < 1.5;
     const opposed = ts > 0.7 && groundWind > 0.7 && angleDiff(tb, wind.fromDeg[i] + 180) > 120 && ts / groundWind > 0.6 && ts / groundWind < 1.6;
     const swirl = speed < 0.8 || wind.eddy[i] === 1 || opposed || lifting;
+    rawE[i] = e;
+    rawN[i] = no;
     driftBearing[i] = speed > 0.05 ? vectorBearing(e, no) : wind.fromDeg[i] + 180;
     driftMph[i] = speed;
     driver[i] = swirl ? 2 /* Swirl */ : ts > groundWind ? 1 /* Thermal */ : 0 /* Wind */;
@@ -29388,36 +29424,57 @@ function computeScent(t, wind, thermal, weather) {
     if (swirl) k += 0.3;
     decay[i] = Math.max(0.15, k);
   }
-  return { driftBearing, driftMph, spreadDeg, driver, decay };
+  const driftEast = blur3(rawE, t.grid.cols, t.grid.rows);
+  const driftNorth = blur3(rawN, t.grid.cols, t.grid.rows);
+  return { driftBearing, driftMph, spreadDeg, driver, decay, driftEast, driftNorth };
 }
 function tracePlume(t, scent, source, opts = {}) {
   const maxYards = opts.maxYards ?? 600;
   const threshold = opts.threshold ?? 0.15;
-  const step = Math.max(5, t.cellM * M_TO_YD * 0.5);
+  const step = Math.max(3, t.cellM * M_TO_YD * 0.25);
+  const g = t.grid;
   const path4 = [source];
   const along = [0];
   const halfWidth = [0];
-  const start = cellAt(t.grid, source);
+  const start = cellAt(g, source);
   const driver = start == null ? 0 /* Wind */ : scent.driver[start];
   let conc = 1;
   let dist = 0;
   let spreadSum = 0;
   let p = source;
   let end = "max";
+  let heading = start == null ? 0 : scent.driftBearing[start];
+  const flowAt = (q, prev) => {
+    const e = sampleField(g, scent.driftEast, q);
+    const nn = sampleField(g, scent.driftNorth, q);
+    if (e == null || nn == null) return null;
+    return Math.hypot(e, nn) > 0.05 ? vectorBearing(e, nn) : prev;
+  };
   while (dist < maxYards) {
-    const c = cellAt(t.grid, p);
-    if (c == null) {
+    if (cellAt(g, p) == null) {
       end = "edge";
       break;
     }
-    conc *= Math.exp(-scent.decay[c] * step / 100);
+    const decay = sampleField(g, scent.decay, p) ?? 0.4;
+    conc *= Math.exp(-decay * step / 100);
     if (conc < threshold) {
       end = "faded";
       break;
     }
-    p = stepYards(p, scent.driftBearing[c], step);
+    const h1 = flowAt(p, heading);
+    if (h1 == null) {
+      end = "edge";
+      break;
+    }
+    const h2 = flowAt(stepYards(p, h1, step / 2), h1) ?? h1;
+    if (path4.length > 1 && angleDiff(h2, heading) > 100) {
+      end = "faded";
+      break;
+    }
+    heading = h2;
+    p = stepYards(p, h2, step);
     dist += step;
-    spreadSum += scent.spreadDeg[c];
+    spreadSum += sampleField(g, scent.spreadDeg, p) ?? 60;
     const meanSpread = spreadSum / path4.length;
     path4.push(p);
     along.push(dist);
@@ -29428,9 +29485,9 @@ function tracePlume(t, scent, source, opts = {}) {
   for (let k = 0; k < path4.length; k++) {
     const a = path4[Math.max(0, k - 1)];
     const b = path4[Math.min(path4.length - 1, k + 1)];
-    const heading = a === b ? 0 : bearingBetween(a, b);
-    left.push(stepYards(path4[k], heading - 90, halfWidth[k]));
-    right.push(stepYards(path4[k], heading + 90, halfWidth[k]));
+    const heading2 = a === b ? 0 : bearingBetween(a, b);
+    left.push(stepYards(path4[k], heading2 - 90, halfWidth[k]));
+    right.push(stepYards(path4[k], heading2 + 90, halfWidth[k]));
   }
   const ring = [...left, ...right.reverse(), left[0]];
   return { path: path4, along, halfWidth, ring, reachYards: dist, end, driver };
@@ -31047,6 +31104,8 @@ function buildBrief(q, opts = {}) {
   lines.push(
     `${spot.landform}, ${spot.elevationFt} ft, ${spot.slopeDeg}\xB0 slope${spot.aspectName ? `, ${spot.aspectName}` : ""}, ${spot.reliefFt >= 0 ? `${spot.reliefFt} ft above` : `${-spot.reliefFt} ft below`} the surrounding ground.`
   );
+  const cellYd = Math.round((g.north - g.south) * 111320 / g.rows / 0.9144 / 5) * 5;
+  if (Number.isFinite(cellYd) && cellYd > 0) lines.push(`Grid: ${g.cols} by ${g.rows} cells, each about ${cellYd} yd across; anything smaller is averaged away.`);
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
   if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover and forest data; unconfirmed on the ground).`);
   const near = (yd, what) => yd === null ? `no ${what} on this map` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`;
@@ -37354,6 +37413,40 @@ var EsauAnswer = object({
   wouldChangeMyMind: array(string2())
 });
 
+// src/esau/marks.ts
+var SNAP_YD = 40;
+var ROUTE_MAX_YD = 800;
+var YD = 0.9144;
+function markAnchors(q, nearby) {
+  const out = [{ lat: q.spot.lat, lng: q.spot.lng }];
+  if (q.hunter) out.push({ lat: q.hunter.lat, lng: q.hunter.lng });
+  for (const f of nearby) out.push({ lat: f.lat, lng: f.lng });
+  for (const s of q.sitSpots ?? []) out.push({ lat: s.lat, lng: s.lng });
+  return out;
+}
+function anchorMarks(marks, anchors, spot, bounds) {
+  const out = [];
+  for (const m of marks) {
+    if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
+    if (m.kind === "approach" || m.kind === "avoid") {
+      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
+      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
+      continue;
+    }
+    let best = null;
+    let bestM = Infinity;
+    for (const a of anchors) {
+      const d = distanceM(m, a);
+      if (d < bestM) {
+        bestM = d;
+        best = a;
+      }
+    }
+    if (best && bestM <= SNAP_YD * YD) out.push({ ...m, lat: best.lat, lng: best.lng });
+  }
+  return out;
+}
+
 // server/esau/ask.ts
 var DEFAULT_MODEL = "claude-opus-5-5";
 var STEP_UP = { low: "medium", medium: "high", high: "high" };
@@ -37404,7 +37497,8 @@ async function askWithBrief(q, brief, cfg = {}) {
   if (!out) throw new Error(`Esau's answer didn't parse (stop_reason ${res.stop_reason})`);
   const { say, overflow } = splitAnswer(out.say);
   const more = [overflow, out.more.trim()].filter(Boolean).join(" ");
-  return { ...out, say, more, marks: out.marks.slice(0, 4), wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta: meta2 };
+  const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid).slice(0, 4);
+  return { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta: meta2 };
 }
 
 // server/esau/route.ts
