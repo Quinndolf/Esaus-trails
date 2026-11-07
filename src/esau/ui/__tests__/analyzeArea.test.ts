@@ -95,4 +95,13 @@ describe('analyzeArea', () => {
     useHour.getState().setDate(useHour.getState().hours[12]!);
     expect(useEsau.getState().analysis).not.toBe(before);
   });
+
+  it('reads the area in view, not an old tapped spot far away, when Esau has no sit spots', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    useEsau.setState({ species: 'elk', sit: { lat: 38.4, lng: -85.0 } }); // elk has no sit spots
+    await analyzeArea();
+    const s = useEsau.getState().spot!;
+    expect(s.lat).toBeCloseTo((grid.north + grid.south) / 2, 4);
+    expect(s.lng).toBeCloseTo((grid.west + grid.east) / 2, 4);
+  });
 });

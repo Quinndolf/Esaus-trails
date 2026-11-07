@@ -27,4 +27,9 @@ describe('tapped spot stays visible above a bottom panel', () => {
   it('lifts a spot that sits too close to the panel edge', () => {
     expect(panShiftAboveSheet(370, 800, 0.52)).toBeGreaterThan(0);
   });
+  it('never swings the map to a spot that is off screen', () => {
+    // a spot well north or south of the view (Esau's pick from analyze area) must not move the camera
+    expect(panShiftAboveSheet(-3000, 800, 0.52)).toBe(0);
+    expect(panShiftAboveSheet(5000, 800, 0.52)).toBe(0);
+  });
 });

@@ -43,9 +43,11 @@ export async function analyzeArea(): Promise<void> {
   }
   const an = analysisForSlider(e.sit);
   const best = an?.spots[0];
+  // Esau's best pick, else the middle of the area just read (which is the view). Never an old tap or the GPS dot,
+  // which can be far from what is on screen.
   const centre: LatLng = best
     ? { lat: best.lngLat[1], lng: best.lngLat[0] }
-    : e.sit ?? (e.hunter ? { lat: e.hunter.lat, lng: e.hunter.lng } : { lat: (h.grid.north + h.grid.south) / 2, lng: (h.grid.west + h.grid.east) / 2 });
+    : { lat: (h.grid.north + h.grid.south) / 2, lng: (h.grid.west + h.grid.east) / 2 };
   useEsau.setState({
     open: true,
     spot: centre,
