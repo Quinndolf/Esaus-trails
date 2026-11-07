@@ -15,11 +15,13 @@ import { hollowGrid } from '../../fixtures/hollow';
 import { useHour } from '../../../hour/store';
 import { analyzeArea, registerAnalyzer } from '../analyzeArea';
 import { useEsau } from '../store';
+import { clearReplies } from '../replyCache';
 
 const grid = hollowGrid();
 
 beforeEach(() => {
   sent.length = 0;
+  clearReplies();
   localStorage.clear();
   useEsau.setState({ species: 'whitetail', weapon: 'bow', sit: null, analysis: null, reply: null, spot: null, grid: null, open: false, status: 'idle', hunter: null, view: null });
   registerAnalyzer();
@@ -49,6 +51,19 @@ describe('analyzeArea', () => {
     expect(Object.keys(sent[0]!)).not.toContain('pins');
     expect(Object.keys(sent[0]!)).not.toContain('photo');
     expect(useEsau.getState().analysis?.legal.status).toBe('open');
+  });
+
+  it('answers a repeat read of the same spot and hour from the phone, without a new call', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    await analyzeArea();
+    const first = useEsau.getState().reply;
+    useEsau.setState({ reply: null });
+    await analyzeArea();
+    expect(sent).toHaveLength(1);
+    expect(useEsau.getState().reply).toBe(first);
+    expect(useEsau.getState().status).toBe('ready');
+    await useEsau.getState().ask('why there?'); // a question always goes to Esau
+    expect(sent).toHaveLength(2);
   });
 
   it('re-reads for the new hour when the slider moves, without refetching ground', async () => {

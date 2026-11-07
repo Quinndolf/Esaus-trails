@@ -6,6 +6,7 @@ import type { Weapon } from '../../rules/types';
 import { offlineRead } from '../offline';
 import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
 import { groundFor } from './ground';
+import { recallReply, rememberReply } from './replyCache';
 
 export interface Hunter {
   lat: number;
@@ -202,9 +203,16 @@ export const useEsau = create<EsauState>((set, get) => ({
     const history: Turn[] = [...s.history];
     if (s.reply && q) history.push({ role: 'esau', text: s.reply.say });
     if (q) history.push({ role: 'hunter', text: q });
+    // A repeat tap on the same spot, hour and gear gets the answer already given, at once.
+    const again = recallReply(base);
+    if (again) {
+      set({ reply: again, replyHour: s.hourIndex, history, status: 'ready', error: null });
+      return;
+    }
     set({ status: 'asking', error: null });
     try {
       const reply = await askEsau(base);
+      rememberReply(base, reply);
       if (t !== ticket) return;
       set({ reply, replyHour: s.hourIndex, history, status: 'ready' });
     } catch (err) {
