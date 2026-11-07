@@ -1,7 +1,7 @@
 import type { Map as MLMap } from 'maplibre-gl';
 import { analyzeArea } from '../esau/ui/analyzeArea';
 import { useEsau } from '../esau/ui/store';
-import { ensureGroundForView } from '../hour/view';
+import { ensureGroundForView, visibleBox } from '../hour/view';
 import './home.css';
 
 /**
@@ -20,9 +20,11 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
         // Read what's on screen (walkable size), then analyze it.
         if (!map) return;
         // Esau reads all the ground loaded around here, but picks sit spots only on screen.
-        const b = map.getBounds();
-        useEsau.setState({ view: { west: b.getWest(), east: b.getEast(), south: b.getSouth(), north: b.getNorth() } });
-        void ensureGroundForView(map).then(() => analyzeArea());
+        const view = visibleBox(map);
+        void ensureGroundForView(map).then(() => {
+          useEsau.setState({ view });
+          return analyzeArea();
+        });
       }}
     >
       Analyze area

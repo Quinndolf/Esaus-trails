@@ -212,7 +212,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   close() {
     ticket++;
-    set({ open: false, spot: null, sit: null, analysis: null, reply: null, history: [], status: 'idle', error: null });
+    set({ open: false, spot: null, sit: null, analysis: null, view: null, reply: null, history: [], status: 'idle', error: null });
   },
 }));
 

@@ -125,3 +125,22 @@ describe('pinch points', () => {
     expect(spots.some((s) => /saddle/.test(s.reason))).toBe(true);
   });
 });
+
+describe('pinch points are real junctions', () => {
+  it('two trails sharing one stretch are not a pinch, and the shared stretch is not counted twice', () => {
+    const a: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(16, 4 + k)), weight: 1 };
+    const b: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(16, 4 + k)), weight: 1 };
+    const one = topSitSpots({ grid, trails: [a], beds: [], windFromDeg: () => 0, weapon: 'bow' });
+    const two = topSitSpots({ grid, trails: [a, b], beds: [], windFromDeg: () => 0, weapon: 'bow' });
+    expect(two.spots.map((s) => s.reason)).toEqual(one.spots.map((s) => s.reason));
+    expect(two.spots.every((s) => !/Pinch/.test(s.reason))).toBe(true);
+  });
+
+  it('only picks inside the screen box, but says unsure only from what is on screen', () => {
+    const within = { west: mid(16, 20)[0], east: BOX.east, south: BOX.south, north: BOX.north };
+    const r = topSitSpots({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within });
+    expect(r.spots.length).toBeGreaterThan(0);
+    for (const s of r.spots) expect(s.lngLat[0]).toBeGreaterThanOrEqual(within.west);
+    expect(r.spots[0]!.score).toBe(1);
+  });
+});

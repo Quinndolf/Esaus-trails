@@ -1,4 +1,4 @@
-import { angleDiff, bearingBetween, cardinal, cellAt, stepYards, yardsBetween, type LngLat } from './geo';
+import { angleDiff, bearingBetween, cardinal, cellAt, cellCenter, insideBounds, stepYards, yardsBetween, type Bounds, type LngLat } from './geo';
 import type { Bed, Trail } from './movement';
 import type { ElevationGrid } from './types';
 
@@ -31,8 +31,6 @@ export const BED_BUST_YD = 150;
 const MIN_SPACING_YD = 100;
 /** Animals this close to the hunter are on top of the stand, not in range. */
 const TOO_CLOSE_YD = 8;
-/** Trail points closer than this are the same point for ranking; keeps the work small. */
-const THIN_YD = 25;
 /** Deer smelling the hunter still count a little, never a lot. */
 const SMELLED_FACTOR = 0.1;
 /** A bed within this distance is busted by a hunter even with the wind right. */
@@ -44,9 +42,11 @@ const APPROACH_FACTOR = 0.6;
 /** Best total traffic below this is "not sure": under half of one trail point at ideal range and full weight. */
 export const UNSURE_BELOW = 0.5;
 const BEARINGS = [0, 45, 90, 135, 180, 225, 270, 315];
-/** Trails this close together at a point squeeze deer through the same spot: a pinch point. */
-const PINCH_YD = 45;
-/** Each extra trail meeting at a point adds this much to its traffic, up to two extra. */
+/** Trails crossing one cell at headings this far apart (as lines, 0-90) come from different directions. */
+const PINCH_DEG = 35;
+/** A saddle needs this much rise (m) on each side, so flat-ground noise is not a saddle. */
+const SADDLE_MIN_M = 1.5;
+/** Each extra direction meeting at a point adds this much to its traffic, up to two extra. */
 const PINCH_BONUS = 0.6;
 /** A trail crossing a saddle carries more deer than its weight says. */
 const SADDLE_BONUS = 1.3;
@@ -58,7 +58,10 @@ export function isSaddle(grid: ElevationGrid, i: number): boolean {
   if (r < 1 || c < 1 || r >= rows - 1 || c >= cols - 1) return false;
   const z = grid.elevationM;
   const a = z[i]!, w = z[i - 1]!, e = z[i + 1]!, no = z[i - cols]!, s = z[i + cols]!;
-  return (a < no && a < s && a > w && a > e) || (a > no && a > s && a < w && a < e);
+  const m = SADDLE_MIN_M;
+  return (
+    (Math.min(no, s) - a >= m && a - Math.max(w, e) >= m) || (a - Math.max(no, s) >= m && Math.min(w, e) - a >= m)
+  );
 }
 
 export interface SitSpot {
@@ -85,6 +88,8 @@ export interface SitSpotInput {
   /** If given, an approach that walks scent over a bed is marked down. */
   hunter?: LngLat;
   max?: number;
+  /** Only pick inside this box (the map on screen). Traffic from the whole grid still counts. */
+  within?: Bounds;
 }
 
 export interface SitSpotResult {
@@ -96,7 +101,7 @@ export interface SitSpotResult {
 export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const { grid, trails, beds, weapon } = input;
   const { ideal, max: reach } = WEAPON_RANGE_YD[weapon];
-  const points = pinch(thin(trails), grid);
+  const points = pinch(trails, grid);
   const flat = trails.flatMap((t) => t.coordinates);
   const limit = Math.max(0, Math.floor(input.max ?? 3));
   if (!points.length || !limit) return { spots: [], unsure: true };
@@ -141,6 +146,10 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
       cands.push({ at, traffic, best, wind: (toward + 180) % 360 });
     }
   }
+  if (input.within) {
+    const box = input.within;
+    for (let k = cands.length - 1; k >= 0; k--) if (!insideBounds(box, cands[k]!.at)) cands.splice(k, 1);
+  }
   if (!cands.length) return { spots: [], unsure: true };
 
   cands.sort((a, b) => b.traffic - a.traffic);
@@ -172,34 +181,38 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
   return { spots, unsure: top < UNSURE_BELOW };
 }
 
-/** Keep one point per THIN_YD of trail, so a dense line does not cost more than a sparse one. */
-function thin(trails: Trail[]): { p: LngLat; w: number; t: number }[] {
-  const out: { p: LngLat; w: number; t: number }[] = [];
-  trails.forEach((tr, t) => {
-    let last: LngLat | null = null;
-    for (const p of tr.coordinates) {
-      if (last && yardsBetween(last, p) < THIN_YD) continue;
-      out.push({ p, w: tr.weight, t });
-      last = p;
-    }
+/**
+ * One point per grid cell any predicted trail crosses, so trails sharing a stretch don't count it twice.
+ * A pinch point is a cell where trails come in from different directions (a junction or a crossing),
+ * or where a trail crosses a saddle: more deer pass there than one trail's weight says.
+ */
+function pinch(trails: Trail[], grid: ElevationGrid) {
+  const cells = new Map<number, { p: LngLat; w: number; headings: number[] }>();
+  for (const t of trails) {
+    const cs = t.coordinates;
+    cs.forEach((p, k) => {
+      const i = cellAt(grid, p);
+      if (i == null) return;
+      const a = cs[Math.max(0, k - 1)]!, b = cs[Math.min(cs.length - 1, k + 1)]!;
+      const heading = a === b ? null : bearingBetween(a, b) % 180; // a trail is a line: N and S are the same way
+      const c = cells.get(i) ?? { p: cellCenter(grid, i) as LngLat, w: 0, headings: [] };
+      c.w = Math.max(c.w, t.weight);
+      if (heading != null && !c.headings.some((h) => axial(h, heading) < PINCH_DEG)) c.headings.push(heading);
+      cells.set(i, c);
+    });
+  }
+  return [...cells.entries()].map(([i, c]) => {
+    const saddle = isSaddle(grid, i);
+    const meet = Math.max(1, c.headings.length);
+    const w = c.w * (1 + PINCH_BONUS * Math.min(2, meet - 1)) * (saddle ? SADDLE_BONUS : 1);
+    return { p: c.p, w, meet, saddle };
   });
-  return out;
 }
 
-/**
- * Pinch points: where several predicted trails squeeze through one spot, or a trail crosses a saddle,
- * more deer pass than any one trail's weight says. Weights each point up and remembers why.
- */
-function pinch(points: { p: LngLat; w: number; t: number }[], grid: ElevationGrid) {
-  return points.map((q) => {
-    const near = new Set<number>([q.t]);
-    for (const o of points) if (o.t !== q.t && yardsBetween(q.p, o.p) <= PINCH_YD) near.add(o.t);
-    const i = cellAt(grid, q.p);
-    const saddle = i != null && isSaddle(grid, i);
-    const meet = near.size;
-    const w = q.w * (1 + PINCH_BONUS * Math.min(2, meet - 1)) * (saddle ? SADDLE_BONUS : 1);
-    return { p: q.p, w, meet, saddle };
-  });
+/** Difference between two line headings, 0-90. */
+function axial(a: number, b: number): number {
+  const d = Math.abs(a - b) % 180;
+  return Math.min(d, 180 - d);
 }
 
 /**

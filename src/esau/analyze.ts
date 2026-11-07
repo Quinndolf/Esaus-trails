@@ -1,4 +1,4 @@
-import { cellAt, type LngLat } from "../model/geo";
+import { cellAt, type Bounds, type LngLat } from "../model/geo";
 import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
 import { topSitSpots, type SitSpot, type Weapon } from "../model/sitSpots";
@@ -36,26 +36,7 @@ export interface AnalyzeInput {
   view?: Bounds | null;
 }
 
-export interface Bounds {
-  west: number;
-  east: number;
-  south: number;
-  north: number;
-}
-
-/** Ask the rankers for more than three, so there are still three after the screen filter. */
-const POOL = 12;
-
-const inside = (b: Bounds, [lng, lat]: LngLat) => lng >= b.west && lng <= b.east && lat >= b.south && lat <= b.north;
-
-/** Keep the picks on screen, renumbered from 1 and scored against the best one left. */
-function onScreen(r: { spots: SitSpot[]; unsure: boolean }, view: Bounds | null | undefined, keep = 3) {
-  if (!view) return { spots: r.spots.slice(0, keep), unsure: r.unsure };
-  const kept = r.spots.filter((s) => inside(view, s.lngLat)).slice(0, keep);
-  if (!kept.length) return { spots: [], unsure: true };
-  const top = kept[0]!.score || 1;
-  return { spots: kept.map((s, k) => ({ ...s, rank: k + 1, score: s.score / top })), unsure: r.unsure };
-}
+export type { Bounds };
 
 /**
  * Analyze the area for one hour: the ranked sit spots, the legal read, and the big banners.
@@ -66,13 +47,13 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
   const canRank = i.weapon != null && TRAIL_MODEL_SPECIES.includes(i.species);
   const squirrel =
     i.weapon != null && i.species === "squirrel" && i.grid.cover
-      ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, max: POOL })
+      ? squirrelSitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, within: i.view ?? undefined })
       : null;
   const turkey =
     i.weapon != null && i.species === "turkey" && i.grid.cover
-      ? turkeySitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, max: POOL })
+      ? turkeySitSpots({ grid: i.grid, cover: i.grid.cover, forestType: i.grid.forestType, at: i.at, weapon: i.weapon, within: i.view ?? undefined })
       : null;
-  const pooled = squirrel
+  const ranked = squirrel
     ? squirrel
     : turkey
     ? turkey
@@ -84,10 +65,9 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
         windFromDeg: (cell) => i.wind.fromDeg[cell] ?? 0,
         weapon: i.weapon!,
         hunter: i.hunter ?? undefined,
-        max: POOL,
+        within: i.view ?? undefined,
       })
     : { spots: [], unsure: true };
-  const ranked = onScreen(pooled, i.view);
 
   let windHere = { mph: 0, fromDeg: 0 };
   if (i.sit) {
