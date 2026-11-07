@@ -4,6 +4,7 @@ import { buildBrief, type EsauBrief } from "../../src/esau/brief";
 import type { EsauReply, SpotQuery } from "../../src/esau/types";
 import { splitAnswer } from "../../src/esau/answer";
 import { EsauAnswer } from "./schema";
+import { anchorMarks, markAnchors } from "../../src/esau/marks";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 
@@ -69,5 +70,7 @@ export async function askWithBrief(q: SpotQuery, brief: EsauBrief, cfg: AskConfi
   // The short read stays short: anything past four sentences moves behind "Teach me more".
   const { say, overflow } = splitAnswer(out.say);
   const more = [overflow, out.more.trim()].filter(Boolean).join(" ");
-  return { ...out, say, more, marks: out.marks.slice(0, 4), wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta };
+  // Pins only where the read put something real (see src/esau/marks.ts).
+  const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid).slice(0, 4);
+  return { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta };
 }

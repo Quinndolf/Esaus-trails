@@ -6,6 +6,7 @@ import { atmosphereForGrid, modelThermal } from "../model/esau";
 import { speciesBrain } from "./species";
 import type { SeasonPhase, SpeciesBrain, SpotScores } from "./species/types";
 import { readSpot } from "./terrain";
+import { cellSize } from "../model/geo";
 import { legalToday } from "../rules/kentucky";
 import type { Legal } from "../rules/types";
 import type { ConditionsReading, SpotQuery, SpotReading } from "./types";
@@ -73,6 +74,8 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   lines.push(
     `${spot.landform}, ${spot.elevationFt} ft, ${spot.slopeDeg}° slope${spot.aspectName ? `, ${spot.aspectName}` : ""}, ${spot.reliefFt >= 0 ? `${spot.reliefFt} ft above` : `${-spot.reliefFt} ft below`} the surrounding ground.`,
   );
+  const cellYd = Math.round(cellSize(g).cellM / 0.9144 / 5) * 5;
+  if (Number.isFinite(cellYd) && cellYd > 0) lines.push(`Grid: ${g.cols} by ${g.rows} cells, each about ${cellYd} yd across; anything smaller is averaged away.`);
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
   if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover and forest data; unconfirmed on the ground).`);
   const near = (yd: number | null, what: string) => (yd === null ? `no ${what} on this map` : yd === 0 ? `${what} right here` : `${what} ${yd} yd`);
