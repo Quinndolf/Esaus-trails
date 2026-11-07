@@ -93,6 +93,8 @@ export interface SpotQuery {
   hourIndex?: number;
   /** Names of map layers covering the spot ("Public access: Daniel Boone NF", "Private: J. Smith"). */
   layersHere?: string[];
+  /** The map on the hunter's screen. Esau talks only about places on it and pins only inside it. */
+  view?: { west: number; east: number; south: number; north: number };
   /** What the hunter carries; drives range and the legal read. */
   weapon?: Weapon;
   /** Ranked sit spots predicted from the trail model, wind and the weapon's range. Predictions, not sign. */

@@ -61,10 +61,11 @@ export function checkReply(q: SpotQuery, r: EsauReply, report = buildBrief(q).re
   const n = countSentences(r.say);
   if (n > MAX_SAY) problems.push(`Short read runs ${n} sentences; the cap is ${MAX_SAY}.`);
 
-  const g = q.grid;
+  // Pins belong on the hunter's screen when it is known, else on the ground he read.
+  const g = q.view ?? q.grid;
   for (const m of r.marks) {
     const inside = Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= g.south && m.lat <= g.north && m.lng >= g.west && m.lng <= g.east;
-    if (!inside) problems.push(`Puts a ${m.kind} pin "${m.label}" off the ground he read.`);
+    if (!inside) problems.push(`Puts a ${m.kind} pin "${m.label}" off ${q.view ? "the hunter's screen" : "the ground he read"}.`);
   }
 
   // Saying scent doesn't matter to a turkey is the right lesson; telling the hunter to work the wind for scent is not.

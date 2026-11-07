@@ -101,6 +101,7 @@ describe('analyzeArea', () => {
     useEsau.setState({ view: { west: midLng, east: grid.east, south: grid.south, north: grid.north } });
     await analyzeArea();
     for (const s of useEsau.getState().analysis!.spots) expect(s.lngLat[0]).toBeGreaterThanOrEqual(midLng);
+    expect(sent.at(-1)!.view).toEqual(useEsau.getState().view); // Esau is told the screen, so he talks only about it
     // A screen with nothing in it: no picks, and Esau says he's not sure.
     useEsau.setState({ view: { west: grid.east + 1, east: grid.east + 2, south: grid.south, north: grid.north } });
     await analyzeArea();
@@ -120,6 +121,25 @@ describe('analyzeArea', () => {
     await analyzeArea();
     expect(offsets()).toEqual([0, 1, 2, 3]);
     spy.mockRestore();
+  });
+
+  it('forgets the analyzed screen when the hunter taps off it', async () => {
+    const view = { west: -85.6, east: -85.4, south: 37.4, north: 37.6 };
+    useEsau.setState({ view });
+    await useEsau.getState().tapSpot({ lat: 37.5, lng: -85.5 }).catch(() => {});
+    expect(useEsau.getState().view).toEqual(view);
+    await useEsau.getState().tapSpot({ lat: 38.5, lng: -85.5 }).catch(() => {});
+    expect(useEsau.getState().view).toBeNull();
+  });
+
+  it('reads the middle of the screen, not of the wider loaded ground, when there is no pick', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    const view = { west: grid.west, east: (grid.west + grid.east) / 2, south: grid.south, north: (grid.south + grid.north) / 2 };
+    useEsau.setState({ species: 'elk', view }); // elk has no sit spots
+    await analyzeArea();
+    const s = useEsau.getState().spot!;
+    expect(s.lat).toBeCloseTo((view.north + view.south) / 2, 6);
+    expect(s.lng).toBeCloseTo((view.west + view.east) / 2, 6);
   });
 
   it('treats a map tap as where the hunter will sit', async () => {

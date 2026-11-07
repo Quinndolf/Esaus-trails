@@ -1,4 +1,5 @@
 import { GridGeom, FT_PER_M, M_PER_YD, angleBetween, bearingDeg, compass, compassWord, distanceM, toDeg } from "./geo";
+import { insideBounds, type Bounds } from "../model/geo";
 import { treeHint } from "./trees";
 import { coverClass, cropClass, foodScore } from "./landcover";
 import type { GroundGrid, LatLng, Landform, NearbyFeature, Pin, SpotReading } from "./types";
@@ -203,7 +204,8 @@ const LANDFORM_FEATURES: Partial<Record<Landform, NearbyFeature["kind"]>> = {
 };
 
 /** Read one spot on the grid, in the words and units a hunter uses. */
-export function readSpot(grid: GroundGrid, spot: LatLng, opts: { hunter?: LatLng; pins?: Pin[] } = {}): SpotReading {
+/** `within`: only ground inside this box counts for nearest food, water, edge and nearby features (the hunter's screen). */
+export function readSpot(grid: GroundGrid, spot: LatLng, opts: { hunter?: LatLng; pins?: Pin[]; within?: Bounds } = {}): SpotReading {
   const m = terrainModel(grid);
   const { geom } = m;
   const { r, c } = geom.cellOf(spot);
@@ -233,6 +235,7 @@ export function readSpot(grid: GroundGrid, spot: LatLng, opts: { hunter?: LatLng
       const j = geom.idx(rr, cc);
       if (j === i) continue;
       const p = geom.center(rr, cc);
+      if (opts.within && !insideBounds(opts.within, [p.lng, p.lat])) continue;
       const d = yd(p);
       const brg = bearingDeg(spot, p);
       if (m.food[j]! >= 0.55 && (nearestFoodYd === null || d < nearestFoodYd)) {

@@ -37,6 +37,12 @@ describe("anchorMarks", () => {
     expect(out).toEqual([m("approach", 36.76, -85.69)]);
   });
 
+  it("drops any pin off the hunter's screen, even one on a real place", () => {
+    const view = { west: -85.7015, east: -85.699, south: 36.749, north: 36.7515 }; // the spot, not the bench
+    const out = anchorMarks([m("bedding", 36.752, -85.701), m("stand", 36.75, -85.7), m("approach", 36.7495, -85.7005)], anchors, spot, bounds, view);
+    expect(out.map((x) => x.kind)).toEqual(["stand", "approach"]);
+  });
+
   it("drops pins with broken numbers", () => {
     expect(anchorMarks([m("bedding", NaN, -85.7)], anchors, spot, bounds)).toEqual([]);
   });
@@ -67,5 +73,42 @@ describe("field report", () => {
     const b = buildBrief(q);
     expect(b.report).toMatch(/Grid: \d+ by \d+ cells, each about \d+ yd across/);
     expect(b.system).not.toMatch(/90 m elevation model/);
+  });
+  it("keeps Esau to the hunter's screen: says how big it is and lists only features on it", async () => {
+    const { buildBrief } = await import("../brief");
+    const { SAMPLE_SPOTS } = await import("../fixtures/spots");
+    const q = SAMPLE_SPOTS[0]!.query;
+    const all = buildBrief(q).spot.nearby;
+    expect(all.length).toBeGreaterThan(0);
+    const d = 0.002; // a small screen around the spot
+    const view = { west: q.spot.lng - d, east: q.spot.lng + d, south: q.spot.lat - d, north: q.spot.lat + d };
+    const b = buildBrief({ ...q, view });
+    expect(b.report).toMatch(/SCREEN: the hunter's map shows about \d+ by \d+ yd/);
+    expect(b.report).toMatch(/only about places on it/i);
+    for (const f of b.spot.nearby) {
+      expect(f.lat).toBeGreaterThanOrEqual(view.south);
+      expect(f.lat).toBeLessThanOrEqual(view.north);
+      expect(f.lng).toBeGreaterThanOrEqual(view.west);
+      expect(f.lng).toBeLessThanOrEqual(view.east);
+    }
+    expect(buildBrief(q).report).not.toMatch(/SCREEN:/);
+  });
+  it("names no bed, trail, food, water or feature off the screen", async () => {
+    const { readSpot } = await import("../terrain");
+    const { deerPredictionLines } = await import("../../model/deerRead");
+    const { SAMPLE_SPOTS } = await import("../fixtures/spots");
+    const q = SAMPLE_SPOTS[0]!.query;
+    const g = q.grid;
+    const at = new Date(g.weather.hours[q.hourIndex ?? 0]!.at);
+    const open = deerPredictionLines(g, [q.spot.lng, q.spot.lat], at);
+    expect(open.join(" ")).toMatch(/Likely bedding:|Nearest predicted trail/);
+    // A screen that holds none of the loaded ground's cells.
+    const nowhere = { west: g.east + 1, east: g.east + 2, south: g.south, north: g.north };
+    const lines = deerPredictionLines(g, [q.spot.lng, q.spot.lat], at, [], nowhere).join(" ");
+    expect(lines).toMatch(/No strong bedding stands out/);
+    expect(lines).not.toMatch(/Nearest predicted trail|Nearest likely oak mast/);
+    const r = readSpot(g, q.spot, { within: nowhere });
+    expect(r.nearby).toEqual([]);
+    expect([r.nearestFoodYd, r.nearestWaterYd, r.nearestEdgeYd]).toEqual([null, null, null]);
   });
 });

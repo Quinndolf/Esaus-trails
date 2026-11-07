@@ -44,7 +44,7 @@ interface EsauState {
   sit: LatLng | null;
   /** The latest area analysis: sit spots, legal read and banners. */
   analysis: Analysis | null;
-  /** The map on screen when Analyze area was pressed: sit spots are only picked inside it. */
+  /** The map on screen, kept current as the hunter pans (src/home/AnalyzePill.tsx). Sit spots, Esau's talk and pins stay inside it. */
   view: Bounds | null;
   /** Registered by the app glue (src/esau/ui/analyzeArea.ts): works out an analysis for the slider's hour. */
   analyzer: ((sit: LatLng | null) => Analysis | null) | null;
@@ -163,7 +163,10 @@ export const useEsau = create<EsauState>((set, get) => ({
     if (!get().species) return;
     const t = ++ticket;
     // A tap says where you will sit, and Esau reads that spot.
-    set({ open: true, spot, sit: spot, reply: null, history: [], status: 'loading-ground', error: null });
+    // A tap off the last analyzed screen means the hunter has moved the map: that old screen no longer applies.
+    const v = get().view;
+    const onView = v && spot.lat >= v.south && spot.lat <= v.north && spot.lng >= v.west && spot.lng <= v.east;
+    set({ open: true, spot, sit: spot, view: onView ? v : null, reply: null, history: [], status: 'loading-ground', error: null });
     try {
       const grid = await groundFor(spot);
       if (t !== ticket) return;
@@ -195,6 +198,7 @@ export const useEsau = create<EsauState>((set, get) => ({
       timeZone: TZ,
       question: q || undefined,
       history: s.history.length ? s.history : undefined,
+      view: s.view ?? undefined,
     };
     // A follow-up keeps Esau's earlier words in front of him.
     const history: Turn[] = [...s.history];
@@ -221,7 +225,7 @@ export const useEsau = create<EsauState>((set, get) => ({
 
   close() {
     ticket++;
-    set({ open: false, spot: null, sit: null, analysis: null, view: null, reply: null, history: [], status: 'idle', error: null });
+    set({ open: false, spot: null, sit: null, analysis: null, reply: null, history: [], status: 'idle', error: null });
   },
 }));
 

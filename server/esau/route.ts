@@ -54,6 +54,11 @@ function validate(body: unknown): SpotQuery {
   if (!q.grid || typeof q.grid !== "object") throw new EsauInputError("grid is required");
   const extra = body as Record<string, unknown>;
   if ("photo" in extra || "pins" in extra) throw new EsauInputError("photos and marks are never sent to Esau");
+  if (q.view !== undefined) {
+    const v = q.view as Record<string, unknown> | null;
+    const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
+    if (!ok || (v.west as number) >= (v.east as number) || (v.south as number) >= (v.north as number)) throw new EsauInputError("view must be a {west,east,south,north} box");
+  }
   if (q.question && q.question.length > 2000) throw new EsauInputError("question is too long");
   return q as SpotQuery;
 }

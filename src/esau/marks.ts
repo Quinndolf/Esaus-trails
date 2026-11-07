@@ -25,8 +25,17 @@ export function anchorMarks(
   marks: EsauMark[],
   anchors: LatLng[],
   spot: LatLng,
-  bounds: { west: number; east: number; south: number; north: number },
+  bounds: Box,
+  /** The hunter's screen: no pin lands off it. */
+  view?: Box,
 ): EsauMark[] {
+  return place(marks, anchors, spot, bounds).filter((m) => !view || inBox(view, m));
+}
+
+type Box = { west: number; east: number; south: number; north: number };
+const inBox = (b: Box, p: LatLng) => p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
+
+function place(marks: EsauMark[], anchors: LatLng[], spot: LatLng, bounds: Box): EsauMark[] {
   const out: EsauMark[] = [];
   for (const m of marks) {
     if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
@@ -44,8 +53,7 @@ export function anchorMarks(
       continue;
     }
     if (m.kind === "approach" || m.kind === "avoid") {
-      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
-      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
+      if (inBox(bounds, m) && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
     }
   }
   return out;
