@@ -34,6 +34,8 @@ export interface AnalyzeInput {
   hunter: LngLat | null;
   /** The map on screen. Esau reads the whole grid (and around it) but only picks sit spots in here. */
   view?: Bounds | null;
+  /** The wind for the next few hours, soonest first, to warn before it turns onto the trail. */
+  windLater?: { hoursAhead: number; wind: WindField }[];
 }
 
 export type { Bounds };
@@ -69,11 +71,9 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
       })
     : { spots: [], unsure: true };
 
-  let windHere = { mph: 0, fromDeg: 0 };
-  if (i.sit) {
-    const cell = cellAt(i.grid, i.sit);
-    if (cell != null) windHere = { mph: i.wind.mph[cell] ?? 0, fromDeg: i.wind.fromDeg[cell] ?? 0 };
-  }
+  const sitCell = i.sit ? cellAt(i.grid, i.sit) : null;
+  const windAtSit = (w: WindField) => (sitCell != null ? { mph: w.mph[sitCell] ?? 0, fromDeg: w.fromDeg[sitCell] ?? 0 } : { mph: 0, fromDeg: 0 });
+  const windHere = windAtSit(i.wind);
   return {
     spots: ranked.spots,
     unsure: ranked.unsure,
@@ -82,6 +82,7 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
       legal,
       wind: windHere,
       sit: i.sit ? { lngLat: i.sit } : null,
+      later: i.windLater?.map((l) => ({ hoursAhead: l.hoursAhead, wind: windAtSit(l.wind) })),
       targets: [...i.movement.trails.flatMap((t) => t.coordinates.map((lngLat) => ({ lngLat }))), ...i.movement.beds.map((b) => ({ lngLat: b.lngLat }))],
     }),
   };

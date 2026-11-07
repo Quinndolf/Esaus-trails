@@ -25,8 +25,12 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
     sit: sit ? ([sit.lng, sit.lat] as LngLat) : null,
     hunter: e.hunter ? ([e.hunter.lng, e.hunter.lat] as LngLat) : null,
     view: e.view,
+    // With a sit spot chosen, look a few hours ahead so Esau can warn before the wind turns on you.
+    windLater: sit ? LOOK_AHEAD.map((k) => ({ hoursAhead: k, wind: h.conditions!.at(new Date(h.date.getTime() + k * 3_600_000)).wind })) : undefined,
   });
 }
+
+const LOOK_AHEAD = [1, 2, 3];
 
 /** Make the Esau store ask the slider for an analysis on every read. Call once at app start. */
 export function registerAnalyzer() {

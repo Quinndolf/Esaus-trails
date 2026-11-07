@@ -107,6 +107,14 @@ describe('analyzeArea', () => {
     expect(useEsau.getState().analysis).toMatchObject({ spots: [], unsure: true });
   });
 
+  it('reads the wind a few hours ahead for a chosen sit spot without breaking the read', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    useEsau.setState({ sit: { lat: (grid.north + grid.south) / 2, lng: (grid.west + grid.east) / 2 } });
+    await analyzeArea();
+    const kinds = useEsau.getState().analysis!.advisories.map((a) => a.kind);
+    expect(kinds.filter((k) => k === 'wrong_wind' || k === 'wind_shift').length).toBeLessThanOrEqual(1);
+  });
+
   it('treats a map tap as where the hunter will sit', async () => {
     await useEsau.getState().tapSpot({ lat: 37.5, lng: -85.5 }).catch(() => {});
     expect(useEsau.getState().sit).toEqual({ lat: 37.5, lng: -85.5 });

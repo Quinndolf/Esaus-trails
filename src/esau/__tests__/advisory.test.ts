@@ -37,4 +37,33 @@ describe("advisories", () => {
     const a = advisories({ legal: { status: "closed", note: "x" }, wind: { mph: 8, fromDeg: 270 }, sit: { lngLat: sit }, targets: [{ lngLat: targetEast }] });
     expect(a.map((x) => x.kind)).toEqual(["out_of_season", "wrong_wind"]);
   });
+
+  it("warns ahead when the wind will turn onto the trail in the next few hours", () => {
+    const a = advisories({
+      legal: open,
+      wind: { mph: 8, fromDeg: 90 }, // fine now: scent blows west, away from the trail
+      sit: { lngLat: sit },
+      targets: [{ lngLat: targetEast }],
+      later: [
+        { hoursAhead: 1, wind: { mph: 8, fromDeg: 80 } },
+        { hoursAhead: 2, wind: { mph: 9, fromDeg: 270 } }, // turns west: scent onto the trail
+        { hoursAhead: 3, wind: { mph: 9, fromDeg: 270 } },
+      ],
+    });
+    expect(a.map((x) => x.kind)).toEqual(["wind_shift"]);
+    expect(a[0]!.title).toMatch(/2 hours/);
+    expect(a[0]!.detail).toMatch(/west/i);
+  });
+  it("says an hour, not 1 hours", () => {
+    const a = advisories({ legal: open, wind: { mph: 8, fromDeg: 90 }, sit: { lngLat: sit }, targets: [{ lngLat: targetEast }], later: [{ hoursAhead: 1, wind: { mph: 8, fromDeg: 270 } }] });
+    expect(a[0]!.title).toMatch(/an hour/);
+  });
+  it("gives no shift warning when the wind is already wrong, stays good, or goes calm", () => {
+    const wrongNow = advisories({ legal: open, wind: { mph: 8, fromDeg: 270 }, sit: { lngLat: sit }, targets: [{ lngLat: targetEast }], later: [{ hoursAhead: 1, wind: { mph: 8, fromDeg: 270 } }] });
+    expect(wrongNow.map((x) => x.kind)).toEqual(["wrong_wind"]);
+    const steady = advisories({ legal: open, wind: { mph: 8, fromDeg: 90 }, sit: { lngLat: sit }, targets: [{ lngLat: targetEast }], later: [{ hoursAhead: 1, wind: { mph: 8, fromDeg: 100 } }] });
+    expect(steady).toEqual([]);
+    const calm = advisories({ legal: open, wind: { mph: 8, fromDeg: 90 }, sit: { lngLat: sit }, targets: [{ lngLat: targetEast }], later: [{ hoursAhead: 1, wind: { mph: 1, fromDeg: 270 } }] });
+    expect(calm).toEqual([]);
+  });
 });
