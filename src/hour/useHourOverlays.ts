@@ -20,7 +20,7 @@ import { hourScope, type HourScope } from './scope';
 import { likelihoodField } from './likelihood';
 import { trailsInView } from './facing';
 import { useHour } from './store';
-import { TICK_COLORS } from './legend';
+import { TICK_COLORS, WIND_COLORS } from './legend';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 const BLANK_PNG =
@@ -35,7 +35,9 @@ export const HOUR_LAYER_IDS = [
   'hour-trails',
   'hour-facing',
   'hour-ticks',
+  'hour-wind-casing',
   'hour-wind',
+  'hour-wind-eddy',
   'hour-scent-fill',
   'hour-scent-line',
   'hour-beds',
@@ -124,13 +126,37 @@ function ensureLayers(map: MLMap) {
     },
     before,
   );
+  // Wind is white with a dark outline, never red or blue, so it can't be mistaken for the thermal shading.
+  // Stronger wind = thicker arrow with a second arrowhead (see windArrows).
+  map.addLayer(
+    {
+      id: 'hour-wind-casing',
+      type: 'line',
+      source: 'hour-wind',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': WIND_COLORS.casing, 'line-width': ['+', 3.2, ['get', 'width']], 'line-opacity': 0.75 },
+    },
+    before,
+  );
   map.addLayer(
     {
       id: 'hour-wind',
       type: 'line',
       source: 'hour-wind',
+      filter: ['!=', ['get', 'eddy'], true],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ['case', ['get', 'eddy'], '#ff7a59', '#ffffff'], 'line-width': 2, 'line-opacity': 0.85 },
+      paint: { 'line-color': WIND_COLORS.normal, 'line-width': ['get', 'width'], 'line-opacity': 0.95 },
+    },
+    before,
+  );
+  map.addLayer(
+    {
+      id: 'hour-wind-eddy',
+      type: 'line',
+      source: 'hour-wind',
+      filter: ['==', ['get', 'eddy'], true],
+      layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      paint: { 'line-color': WIND_COLORS.normal, 'line-width': ['get', 'width'], 'line-opacity': 0.95, 'line-dasharray': [1.2, 1.2] },
     },
     before,
   );

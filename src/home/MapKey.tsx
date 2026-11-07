@@ -45,9 +45,34 @@ export function SwatchIcon({ s }: { s: Swatch }) {
           <line x1="3" y1="9" x2="31" y2="9" stroke={s.color} strokeWidth="3.5" strokeLinecap="round" strokeDasharray={s.kind === 'dash' ? '7 4' : undefined} />
         </svg>
       );
-    case 'arrow':
+    case 'arrow': {
+      // Wind: white with a dark outline. Left = light wind, middle = strong (fat, double head), right = swirl (dashed).
+      const o = s.outline ?? '#14202e';
+      const arrow = (x: number, w: number, dash?: string, double = false) => {
+        const parts = (stroke: string, sw: number) => (
+          <g stroke={stroke} strokeWidth={sw} fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <line x1={x} y1="13" x2={x + 8} y2="5" strokeDasharray={dash} />
+            <polyline points={`${x + 3.5},4.5 ${x + 8},5 ${x + 7},9.5`} />
+            {double && <polyline points={`${x + 1},6.5 ${x + 5.5},7 ${x + 4.5},11.5`} />}
+          </g>
+        );
+        return (
+          <>
+            {parts(o, w + 2.4)}
+            {parts(s.color, w)}
+          </>
+        );
+      };
+      return (
+        <svg {...box} style={{ background: '#4a5a46', borderRadius: 4 }}>
+          {arrow(3, 1.6)}
+          {arrow(14, 3, undefined, true)}
+          {arrow(25, 1.8, '2 2')}
+        </svg>
+      );
+    }
     case 'tick': {
-      const w = s.kind === 'arrow' ? 2.2 : 1.8;
+      const w = 1.8;
       const one = (x: number, c: string) => (
         <g stroke={c} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round">
           <line x1={x} y1="13" x2={x + 11} y2="5" />

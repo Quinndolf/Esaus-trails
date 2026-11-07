@@ -67,6 +67,8 @@ const line = (coordinates: LngLat[], properties: Record<string, unknown> = {}): 
   geometry: { type: 'LineString', coordinates },
 });
 
+export const STRONG_WIND_MPH = 10;
+
 /** Downwind arrows on a coarse lattice, length by local speed, flagged where the lee eddies. */
 export function windArrows(g: ElevationGrid, hc: HourConditions, every = 4): FC {
   const features: GeoJSON.Feature[] = [];
@@ -82,9 +84,14 @@ export function windArrows(g: ElevationGrid, hc: HourConditions, every = 4): FC 
       const tail = stepYards(center, toward + 180, len / 2);
       const tip = stepYards(center, toward, len / 2);
       const head = len * 0.32;
-      const props = { mph: Math.round(mph), eddy: hc.wind.eddy[i] === 1 };
+      // Strength reads by shape, not color: thicker shaft, and a second arrowhead from STRONG_WIND_MPH up.
+      const props = { mph: Math.round(mph), eddy: hc.wind.eddy[i] === 1, width: Math.min(4.5, 1.8 + mph * 0.22) };
       features.push(line([tail, tip], props));
       features.push(line([stepYards(tip, toward + 150, head), tip, stepYards(tip, toward - 150, head)], props));
+      if (mph >= STRONG_WIND_MPH) {
+        const back = stepYards(tip, toward + 180, head * 1.1);
+        features.push(line([stepYards(back, toward + 150, head), back, stepYards(back, toward - 150, head)], props));
+      }
     }
   }
   return { type: 'FeatureCollection', features };

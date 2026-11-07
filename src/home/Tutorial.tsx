@@ -9,7 +9,7 @@ const STEPS = [
   { title: 'Slide the hour', body: 'The bar at the bottom moves the day, and the map changes with it. Red shading is warm air rising uphill, blue is cold air sinking downhill.' },
   {
     title: 'Read the map',
-    body: "Yellow dashed lines are likely deer trails. Brown dots with a yellow rim are likely beds. White arrows show the wind, which carries your scent. Tap any of them and Esau tells you what it is, or tap the ? button for the full key.",
+    body: "Yellow dashed lines are likely deer trails. Brown dots with a yellow rim are likely beds. White arrows with a dark outline show the wind, which carries your scent. Tap any of them and Esau tells you what it is, or tap the ? button for the full key.",
   },
   { title: 'Tools, Layers, My Location', body: 'Tools (bottom) holds calls, photos, marks and your tracker. Layers and My Location are on the right.' },
 ];
