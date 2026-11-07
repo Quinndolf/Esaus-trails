@@ -37390,6 +37390,8 @@ function sentences(text) {
   const parts = guarded.match(/[^.!?]+[.!?]*\s*/g) ?? [];
   return parts.map((p) => p.replaceAll(DOT, ".").trim()).filter(Boolean);
 }
+var countSentences = (text) => sentences(text).length;
+var sentencesOf = sentences;
 function splitAnswer(text, max = MAX_SAY_SENTENCES) {
   const s = sentences(text);
   if (s.length <= max) return { say: text.trim(), overflow: "" };
@@ -37450,6 +37452,58 @@ function anchorMarks(marks, anchors, spot, bounds) {
   return out;
 }
 
+// src/esau/check.ts
+var MAX_SAY = 4;
+var ANIMAL_WORDS = {
+  // Nouns only: "does" and "bears" are also verbs, and "boars" are bear talk too.
+  deer: /\b(deer|bucks?|fawns?|whitetails?)\b/i,
+  turkey: /\b(turkeys?|gobblers?|jakes?)\b/i,
+  squirrel: /\bsquirrels?\b/i,
+  elk: /\belk\b/i,
+  bear: /\bblack bears?\b/i,
+  hog: /\b(hogs?|feral pigs?|wild pigs?)\b/i,
+  ginseng: /\b(ginseng|'?seng)\b/i
+};
+var GROUP = {
+  whitetail: "deer",
+  mule_deer: "deer",
+  turkey: "turkey",
+  squirrel: "squirrel",
+  elk: "elk",
+  black_bear: "bear",
+  hog: "hog",
+  ginseng: "ginseng"
+};
+var MONTH = /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.? (\d{1,2})(?:st|nd|rd|th)?(?:\s?[-\u2013]\s?(\d{1,2})(?:st|nd|rd|th)?)?\b/g;
+var MONTH_KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+function dates(text) {
+  return [...text.matchAll(MONTH)].flatMap((m) => {
+    const month = MONTH_KEYS.indexOf(m[1].slice(0, 3).toLowerCase());
+    return [m[2], m[3]].filter(Boolean).map((day) => ({ key: `${month}-${Number(day)}`, said: m[0] }));
+  });
+}
+function checkReply(q, r, report2 = buildBrief(q).report) {
+  const problems = [];
+  const text = [r.say, r.more, r.headline, ...r.wouldChangeMyMind].join(" ");
+  const mine = GROUP[q.species];
+  const talk = text.replace(/\b\w+ (?:(?:gun|archery|crossbow|muzzleloader) )?(?:seasons?|hunters?|trails?|stands?|sign|tracks?|rubs?|scrapes?|beds?)\b/gi, " ");
+  for (const [group, re2] of Object.entries(ANIMAL_WORDS)) {
+    if (group !== mine && re2.test(talk)) problems.push(`Talks about ${group}, but the hunter is after ${mine}.`);
+  }
+  const known = new Set(dates(report2).map((d) => d.key));
+  for (const d of dates(text)) if (!known.has(d.key)) problems.push(`Gives the date "${d.said}", which is not in the field report.`);
+  const n = countSentences(r.say);
+  if (n > MAX_SAY) problems.push(`Short read runs ${n} sentences; the cap is ${MAX_SAY}.`);
+  const g = q.grid;
+  for (const m of r.marks) {
+    const inside = Number.isFinite(m.lat) && Number.isFinite(m.lng) && m.lat >= g.south && m.lat <= g.north && m.lng >= g.west && m.lng <= g.east;
+    if (!inside) problems.push(`Puts a ${m.kind} pin "${m.label}" off the ground he read.`);
+  }
+  const scentAdvice = (sentence) => /\bscent\b/i.test(sentence) && !/(eyesight|by sight|doesn't matter|does not matter|don't matter|not smell|can't smell|no matter)/i.test(sentence);
+  if (q.species === "turkey" && sentencesOf(text).some(scentAdvice)) problems.push("Gives scent advice to a turkey hunter; turkeys go by eyesight.");
+  return problems;
+}
+
 // server/esau/ask.ts
 var DEFAULT_MODEL = "claude-opus-5-5";
 var STEP_UP = { low: "medium", medium: "high", high: "high" };
@@ -37501,7 +37555,10 @@ async function askWithBrief(q, brief, cfg = {}) {
   const { say, overflow } = splitAnswer(out.say);
   const more = [overflow, out.more.trim()].filter(Boolean).join(" ");
   const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid).slice(0, 4);
-  return { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta: meta2 };
+  const reply = { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta: meta2 };
+  const slips = checkReply(q, reply, brief.report);
+  if (slips.length) console.warn("Esau rule check:", slips.join(" | "));
+  return reply;
 }
 
 // server/esau/route.ts

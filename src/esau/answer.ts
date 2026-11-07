@@ -15,6 +15,7 @@ function sentences(text: string): string[] {
 }
 
 export const countSentences = (text: string) => sentences(text).length;
+export const sentencesOf = sentences;
 
 /** Esau's short read is at most four sentences; the rest belongs behind "Teach me more". */
 export function splitAnswer(text: string, max = MAX_SAY_SENTENCES): { say: string; overflow: string } {

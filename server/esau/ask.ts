@@ -5,6 +5,7 @@ import type { EsauReply, SpotQuery } from "../../src/esau/types";
 import { splitAnswer } from "../../src/esau/answer";
 import { EsauAnswer } from "./schema";
 import { anchorMarks, markAnchors } from "../../src/esau/marks";
+import { checkReply } from "../../src/esau/check";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 
@@ -72,5 +73,9 @@ export async function askWithBrief(q: SpotQuery, brief: EsauBrief, cfg: AskConfi
   const more = [overflow, out.more.trim()].filter(Boolean).join(" ");
   // Pins only where the read put something real (see src/esau/marks.ts).
   const marks = anchorMarks(out.marks, markAnchors(q, brief.spot.nearby.slice(0, 10)), q.spot, q.grid).slice(0, 4);
-  return { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta };
+  const reply = { ...out, say, more, marks, wouldChangeMyMind: out.wouldChangeMyMind.slice(0, 3), meta };
+  // Log any rule Esau slipped on (wrong animal, a date not in the report), so it shows in the server logs.
+  const slips = checkReply(q, reply, brief.report);
+  if (slips.length) console.warn("Esau rule check:", slips.join(" | "));
+  return reply;
 }
