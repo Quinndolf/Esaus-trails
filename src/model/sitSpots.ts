@@ -44,6 +44,22 @@ const APPROACH_FACTOR = 0.6;
 /** Best total traffic below this is "not sure": under half of one trail point at ideal range and full weight. */
 export const UNSURE_BELOW = 0.5;
 const BEARINGS = [0, 45, 90, 135, 180, 225, 270, 315];
+/** Trails this close together at a point squeeze deer through the same spot: a pinch point. */
+const PINCH_YD = 45;
+/** Each extra trail meeting at a point adds this much to its traffic, up to two extra. */
+const PINCH_BONUS = 0.6;
+/** A trail crossing a saddle carries more deer than its weight says. */
+const SADDLE_BONUS = 1.3;
+
+/** Low one way and high the other, like the movement model's saddles. Interior cells only. */
+export function isSaddle(grid: ElevationGrid, i: number): boolean {
+  const { cols, rows } = grid;
+  const r = Math.floor(i / cols), c = i % cols;
+  if (r < 1 || c < 1 || r >= rows - 1 || c >= cols - 1) return false;
+  const z = grid.elevationM;
+  const a = z[i]!, w = z[i - 1]!, e = z[i + 1]!, no = z[i - cols]!, s = z[i + cols]!;
+  return (a < no && a < s && a > w && a > e) || (a > no && a > s && a < w && a < e);
+}
 
 export interface SitSpot {
   rank: number;
@@ -80,7 +96,7 @@ export interface SitSpotResult {
 export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const { grid, trails, beds, weapon } = input;
   const { ideal, max: reach } = WEAPON_RANGE_YD[weapon];
-  const points = thin(trails);
+  const points = pinch(thin(trails), grid);
   const flat = trails.flatMap((t) => t.coordinates);
   const limit = Math.max(0, Math.floor(input.max ?? 3));
   if (!points.length || !limit) return { spots: [], unsure: true };
@@ -92,7 +108,8 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const bedDownwind = (at: LngLat, toward: number) =>
     beds.some((b) => yardsBetween(at, b.lngLat) <= BED_BUST_YD && angleDiff(bearingBetween(at, b.lngLat), toward) <= SCENT_CONE_DEG);
 
-  type Cand = { at: LngLat; traffic: number; best: { p: LngLat; gain: number }; wind: number };
+  type Pt = (typeof points)[number];
+  type Cand = { at: LngLat; traffic: number; best: { p: LngLat; gain: number; pt: Pt }; wind: number };
   const cands: Cand[] = [];
   const seen = new Set<string>();
   for (const { p } of points) {
@@ -104,7 +121,7 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
       const toward = towardOf(at);
       if (toward == null || bedDownwind(at, toward)) continue;
       let traffic = 0;
-      let best = { p, gain: 0 };
+      let best = { p, gain: 0, pt: points[0]! };
       for (const q of points) {
         const d = yardsBetween(at, q.p);
         if (d > reach) continue;
@@ -113,7 +130,7 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
         const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
         const gain = q.w * quality * (smelled ? SMELLED_FACTOR : 1);
         traffic += gain;
-        if (gain > best.gain) best = { p: q.p, gain };
+        if (gain > best.gain) best = { p: q.p, gain, pt: q };
       }
       if (traffic <= 0) continue;
       // Too close to a bed busts it even with the wind right.
@@ -143,24 +160,46 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
       watchBearingDeg: Math.round(watch) % 360,
       score: c.traffic / top,
       yardsToTrail: yards,
-      reason: `Predicted trail ${yards} yd ${cardinal(watch)}; wind from the ${cardinal(c.wind)} carries your scent away from it.`,
+      reason: `${
+        c.best.pt.meet >= 2
+          ? `Pinch point: ${c.best.pt.meet} predicted trails meet ${yards} yd ${cardinal(watch)}${c.best.pt.saddle ? ' in a saddle' : ''}`
+          : c.best.pt.saddle
+            ? `Predicted trail crosses a saddle ${yards} yd ${cardinal(watch)}`
+            : `Predicted trail ${yards} yd ${cardinal(watch)}`
+      }; wind from the ${cardinal(c.wind)} carries your scent away from it.`,
     };
   });
   return { spots, unsure: top < UNSURE_BELOW };
 }
 
 /** Keep one point per THIN_YD of trail, so a dense line does not cost more than a sparse one. */
-function thin(trails: Trail[]): { p: LngLat; w: number }[] {
-  const out: { p: LngLat; w: number }[] = [];
-  for (const t of trails) {
+function thin(trails: Trail[]): { p: LngLat; w: number; t: number }[] {
+  const out: { p: LngLat; w: number; t: number }[] = [];
+  trails.forEach((tr, t) => {
     let last: LngLat | null = null;
-    for (const p of t.coordinates) {
+    for (const p of tr.coordinates) {
       if (last && yardsBetween(last, p) < THIN_YD) continue;
-      out.push({ p, w: t.weight });
+      out.push({ p, w: tr.weight, t });
       last = p;
     }
-  }
+  });
   return out;
+}
+
+/**
+ * Pinch points: where several predicted trails squeeze through one spot, or a trail crosses a saddle,
+ * more deer pass than any one trail's weight says. Weights each point up and remembers why.
+ */
+function pinch(points: { p: LngLat; w: number; t: number }[], grid: ElevationGrid) {
+  return points.map((q) => {
+    const near = new Set<number>([q.t]);
+    for (const o of points) if (o.t !== q.t && yardsBetween(q.p, o.p) <= PINCH_YD) near.add(o.t);
+    const i = cellAt(grid, q.p);
+    const saddle = i != null && isSaddle(grid, i);
+    const meet = near.size;
+    const w = q.w * (1 + PINCH_BONUS * Math.min(2, meet - 1)) * (saddle ? SADDLE_BONUS : 1);
+    return { p: q.p, w, meet, saddle };
+  });
 }
 
 /**

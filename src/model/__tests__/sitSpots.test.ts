@@ -97,3 +97,31 @@ describe('top sit spots', () => {
     for (const s of run().spots) expect(s.watchBearingDeg).toBeLessThan(360);
   });
 });
+
+describe('pinch points', () => {
+  // A second trail running north to south, crossing the first at column 16.
+  const cross: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => mid(4 + k, 16)), weight: 1 };
+
+  it('favors watching where trails meet, and says so', () => {
+    const { spots } = topSitSpots({ grid, trails: [trail, cross], beds: [], windFromDeg: () => 45, weapon: 'bow' });
+    const best = spots[0]!;
+    const meet = mid(16, 16);
+    expect(yardsBetween(best.lngLat, meet)).toBeLessThan(80);
+    expect(best.reason).toMatch(/Pinch point: 2 predicted trails meet/);
+  });
+
+  it('calls out a trail crossing a saddle', () => {
+    // A ridge running east-west with a dip at column 16: the trail crosses the ridge through the low spot.
+    const ridge = {
+      ...makeGrid(() => 0),
+      elevationM: Array.from({ length: BOX.rows * BOX.cols }, (_, i) => {
+        const r = Math.floor(i / BOX.cols), c = i % BOX.cols;
+        return 250 - Math.abs(r - 16) * 15 - (c === 16 ? 10 : 0);
+      }),
+    };
+    const midR = (r: number, c: number): LngLat => cellCenter(ridge, r * BOX.cols + c);
+    const over: Trail = { coordinates: Array.from({ length: 24 }, (_, k) => midR(4 + k, 16)), weight: 1 };
+    const { spots } = topSitSpots({ grid: ridge, trails: [over], beds: [], windFromDeg: () => 90, weapon: 'bow' });
+    expect(spots.some((s) => /saddle/.test(s.reason))).toBe(true);
+  });
+});

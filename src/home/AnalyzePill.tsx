@@ -19,6 +19,9 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
       onClick={() => {
         // Read what's on screen (walkable size), then analyze it.
         if (!map) return;
+        // Esau reads all the ground loaded around here, but picks sit spots only on screen.
+        const b = map.getBounds();
+        useEsau.setState({ view: { west: b.getWest(), east: b.getEast(), south: b.getSouth(), north: b.getNorth() } });
         void ensureGroundForView(map).then(() => analyzeArea());
       }}
     >

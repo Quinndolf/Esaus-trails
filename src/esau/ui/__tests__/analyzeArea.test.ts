@@ -21,7 +21,7 @@ const grid = hollowGrid();
 beforeEach(() => {
   sent.length = 0;
   localStorage.clear();
-  useEsau.setState({ species: 'whitetail', weapon: 'bow', sit: null, analysis: null, reply: null, spot: null, grid: null, open: false, status: 'idle', hunter: null });
+  useEsau.setState({ species: 'whitetail', weapon: 'bow', sit: null, analysis: null, reply: null, spot: null, grid: null, open: false, status: 'idle', hunter: null, view: null });
   registerAnalyzer();
 });
 
@@ -61,6 +61,23 @@ describe('analyzeArea', () => {
     expect(sent).toHaveLength(2);
     expect(sent[1]!.hourIndex).not.toBe(sent[0]!.hourIndex);
     expect(useEsau.getState().analysis).not.toBe(first);
+  });
+
+  it('picks sit spots only inside the map on screen', async () => {
+    useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    useHour.getState().setDate(useHour.getState().hours[6]!); // midday: deer on the move in this fixture
+    await analyzeArea();
+    const all = useEsau.getState().analysis!.spots;
+    expect(all.length).toBeGreaterThan(0);
+    // Put the screen on the east half of the ground: every pick must be in it.
+    const midLng = (grid.west + grid.east) / 2;
+    useEsau.setState({ view: { west: midLng, east: grid.east, south: grid.south, north: grid.north } });
+    await analyzeArea();
+    for (const s of useEsau.getState().analysis!.spots) expect(s.lngLat[0]).toBeGreaterThanOrEqual(midLng);
+    // A screen with nothing in it: no picks, and Esau says he's not sure.
+    useEsau.setState({ view: { west: grid.east + 1, east: grid.east + 2, south: grid.south, north: grid.north } });
+    await analyzeArea();
+    expect(useEsau.getState().analysis).toMatchObject({ spots: [], unsure: true });
   });
 
   it('treats a map tap as where the hunter will sit', async () => {

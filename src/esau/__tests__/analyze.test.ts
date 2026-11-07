@@ -116,4 +116,20 @@ describe("answer cap on dates", () => {
     expect(r.say).toContain("Nov. 14");
     expect(r.overflow).toBe("Last one.");
   });
+
+  it("only picks spots inside the part of the map on screen, re-ranked from 1", () => {
+    // The trail runs across the whole grid; the screen shows only its east end.
+    const view = { west: mid(16, 20)[0], east: BOX.east, south: BOX.south, north: BOX.north };
+    const a = analyzeHour({ ...base, wind: wind(0), view });
+    expect(a.spots.length).toBeGreaterThan(0);
+    a.spots.forEach((s, k) => {
+      expect(s.rank).toBe(k + 1);
+      expect(s.lngLat[0]).toBeGreaterThanOrEqual(view.west);
+    });
+    expect(a.spots[0]!.score).toBe(1);
+  });
+  it("says unsure when nothing on screen is worth a sit", () => {
+    const view = { west: BOX.west, east: mid(0, 2)[0], south: BOX.south, north: mid(2, 0)[1] }; // a corner far from the trail
+    expect(analyzeHour({ ...base, wind: wind(0), view })).toMatchObject({ spots: [], unsure: true });
+  });
 });

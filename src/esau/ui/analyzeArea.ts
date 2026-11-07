@@ -20,6 +20,7 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
     at: h.date,
     sit: sit ? ([sit.lng, sit.lat] as LngLat) : null,
     hunter: e.hunter ? ([e.hunter.lng, e.hunter.lat] as LngLat) : null,
+    view: e.view,
   });
 }
 
