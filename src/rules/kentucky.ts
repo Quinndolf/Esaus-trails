@@ -34,7 +34,7 @@ const DEER: Partial<Record<Weapon, Window[]>> = {
 
 /** Squirrel seasons, from KDFWR's squirrel page. The fall season pauses the first weekend of deer gun season. */
 const SQUIRREL: Window[] = [
-  { from: "2026-05-16", to: "2026-06-21", label: "spring squirrel season (May 16 to June 21, 2026)" },
+  { from: "2026-05-16", to: "2026-06-19", label: "spring squirrel season (May 16 to June 19, 2026)" },
   { from: "2026-08-15", to: "2026-11-13", label: "fall squirrel season (Aug 15 to Nov 13, 2026)" },
   { from: "2026-11-16", to: "2027-02-28", label: "fall squirrel season (Nov 16, 2026 to Feb 28, 2027)" },
 ];

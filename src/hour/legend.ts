@@ -8,7 +8,7 @@ import { ThermalState } from '../model/types';
  */
 
 export type Swatch =
-  | { kind: 'dash' | 'line' | 'arrow' | 'tick'; color: string; color2?: string }
+  | { kind: 'dash' | 'line' | 'arrow' | 'tick'; color: string; color2?: string; outline?: string }
   | { kind: 'dot'; color: string; ring: string }
   | { kind: 'fill'; colors: string[] }
   | { kind: 'ring'; label?: string };
@@ -22,7 +22,7 @@ export interface LegendItem {
 
 /** Thermal tick colors by state. Rising and sinking match the shading (red up, light blue down). */
 export const TICK_COLORS = { rising: '#ff9c8f', sinking: '#bfe6ff', pooling: '#c9a3ff' } as const;
-export const WIND_COLORS = { normal: '#ffffff', eddy: '#ff7a59' } as const;
+export const WIND_COLORS = { normal: '#ffffff', casing: '#14202e' } as const;
 export const TRAIL_COLOR = '#f2c14e';
 export const BED_COLORS = { fill: '#8b5a2b', ring: '#f2c14e' } as const;
 export const SCENT_COLOR = '#c8f560';
@@ -56,9 +56,9 @@ export function legendItems(scope: HourScope | null, opts: LegendOpts): LegendIt
   }
   items.push({
     id: 'wind',
-    swatch: { kind: 'arrow', color: WIND_COLORS.normal, color2: WIND_COLORS.eddy },
-    name: 'White arrows: the wind',
-    says: 'Each arrow points where the wind is blowing to, and your scent goes the same way. Longer arrows mean stronger wind. Orange arrows mark spots where the wind rolls over a steep slope and swirls, so scent can go any way there.',
+    swatch: { kind: 'arrow', color: WIND_COLORS.normal, outline: WIND_COLORS.casing },
+    name: 'White arrows with a dark outline: the wind',
+    says: 'Each arrow points where the wind is blowing to, and your scent goes the same way. Fatter arrows with a double arrowhead mean stronger wind (10 mph and up). Dashed white arrows mark spots where the wind rolls over a steep slope and swirls, so scent can go any way there. Wind is never red or blue, so it cannot be mixed up with the air shading.',
   });
   if (scope.movement) {
     items.push(
@@ -138,7 +138,8 @@ export function explainFeature(layer: string, props: Record<string, unknown>, no
         title: 'Trail ahead of you',
         text: 'With the compass on, Esau brightens the trails in the direction you are facing, so you know what you are looking at.',
       };
-    case 'hour-wind': {
+    case 'hour-wind':
+    case 'hour-wind-eddy': {
       const mph = Number(props.mph);
       const speed = Number.isFinite(mph) && mph > 0 ? ` at about ${Math.round(mph)} mph here` : '';
       if (props.eddy === true) {
@@ -188,6 +189,7 @@ export const EXPLAINABLE: { id: string; slop: number }[] = [
   { id: 'hour-trails-casing', slop: 6 },
   { id: 'hour-ticks', slop: 4 },
   { id: 'hour-wind', slop: 4 },
+  { id: 'hour-wind-eddy', slop: 4 },
   { id: 'hour-scent-line', slop: 4 },
 ];
 export const EXPLAINABLE_LAYERS = EXPLAINABLE.map((e) => e.id);
