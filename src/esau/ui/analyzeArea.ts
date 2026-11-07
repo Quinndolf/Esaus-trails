@@ -3,7 +3,7 @@ import { analyzeHour, type Analysis } from '../analyze';
 import { nearestHour, useEsau } from './store';
 import { useHour } from '../../hour/store';
 import type { LngLat } from '../../model/geo';
-import { corridorsIn, useWide, wideMovementAt, wideSummary } from '../../hour/wide';
+import { corridorsIn, covers, useWide, wideMovementAt, wideSummary } from '../../hour/wide';
 
 /** Works out sit spots, the legal read and banners for the hour the slider points at. Null until the ground is loaded. */
 export function analysisForSlider(sit: LatLng | null): Analysis | null {
@@ -13,8 +13,8 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
   const hc = h.conditions.at(h.date);
   const mv = h.movement.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor, h.date);
   // Deer walking in from beyond the screen: the wide read's corridors, where they cross this ground.
-  const wide = e.view ? wideMovementAt(h.date) : null;
-  const trails = wide ? [...mv.trails, ...corridorsIn(wide.trails, h.grid)] : mv.trails;
+  const wide = e.view ? wideMovementAt(h.date, e.view) : null;
+  const trails = wide ? [...mv.trails, ...corridorsIn(wide.trails, h.grid, { grid: h.grid, trails: mv.trails })] : mv.trails;
   return analyzeHour({
     grid: h.grid,
     movement: { ...mv, trails },
@@ -37,9 +37,9 @@ export function registerAnalyzer() {
 export function widerForSlider(): string[] | null {
   const w = useWide.getState();
   const e = useEsau.getState();
-  if (w.status !== 'ready' || !w.grid || !e.view) return null;
+  if (w.status !== 'ready' || !w.grid || !e.view || !covers(w.grid, e.view)) return null;
   const deer = e.species === 'whitetail' || e.species === 'mule_deer';
-  const move = deer ? wideMovementAt(useHour.getState().date) : null;
+  const move = deer ? wideMovementAt(useHour.getState().date, e.view) : null;
   return wideSummary(w.grid, move ?? { beds: [], trails: [] }, e.view);
 }
 

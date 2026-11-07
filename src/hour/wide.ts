@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { GroundGrid } from '../esau/types';
 import { coverClass } from '../esau/landcover';
-import { compassWord, insideBounds, yardsBetween, bearingBetween, cellCenter, type Bounds, type LngLat } from '../model/geo';
+import { compassWord, insideBounds, yardsBetween, bearingBetween, cellAt, cellCenter, type Bounds, type LngLat } from '../model/geo';
+import type { ElevationGrid } from '../model/types';
 import type { ConditionsModel } from '../model/conditions';
 import { conditionsForGrid } from '../model/esau';
 import { createMovementModel, type Bed, type MovementModel, type Trail } from '../model/movement';
@@ -30,8 +31,29 @@ export function wideBox(view: Bounds): Bounds {
   return { west: lng - halfLng, east: lng + halfLng, south: lat - halfLat, north: lat + halfLat };
 }
 
-/** The parts of the wide read's trails that run through `box` (the fine grid), as lighter trails. */
-export function corridorsIn(trails: Trail[], box: Bounds): Trail[] {
+/**
+ * The parts of the wide read's trails that run through `box` (the fine grid), as lighter trails.
+ * Where the fine read already has a trail in that cell or next to it, the corridor is the same deer path
+ * seen coarser: it is left out there, so it isn't counted twice or mistaken for a pinch point.
+ */
+export function corridorsIn(trails: Trail[], box: Bounds, fine?: { grid: ElevationGrid; trails: Trail[] }): Trail[] {
+  let taken: Set<number> | null = null;
+  if (fine) {
+    const { grid } = fine;
+    const near = new Set<number>();
+    for (const t of fine.trails)
+      for (const p of t.coordinates) {
+        const i = cellAt(grid, p);
+        if (i == null) continue;
+        const r = Math.floor(i / grid.cols), c = i % grid.cols;
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++) {
+            const rr = r + dr, cc = c + dc;
+            if (rr >= 0 && cc >= 0 && rr < grid.rows && cc < grid.cols) near.add(rr * grid.cols + cc);
+          }
+      }
+    taken = near;
+  }
   const out: Trail[] = [];
   for (const t of trails) {
     let run: LngLat[] = [];
@@ -40,7 +62,9 @@ export function corridorsIn(trails: Trail[], box: Bounds): Trail[] {
       run = [];
     };
     for (const p of t.coordinates) {
-      if (insideBounds(box, p)) run.push(p);
+      const cell = fine ? cellAt(fine.grid, p) : null;
+      const free = !taken || cell == null || !taken.has(cell);
+      if (insideBounds(box, p) && free) run.push(p);
       else flush();
     }
     flush();
@@ -60,7 +84,7 @@ function coverWord(code: number): string | null {
   return null;
 }
 
-/** Edge of the screen a corridor crosses into it on, as a compass word from the screen's center. */
+/** Edge of the screen a corridor crosses, as a compass word from the screen's center. */
 function entrySide(t: Trail, view: Bounds): string | null {
   const cs = t.coordinates;
   for (let k = 1; k < cs.length; k++) {
@@ -111,8 +135,8 @@ export function wideSummary(grid: GroundGrid, move: { beds: Bed[]; trails: Trail
   }
   if (sides.size) {
     const list = [...sides.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => `${n} from the ${s}`);
-    lines.push(`Predicted travel corridors entering the screen: ${list.join(', ')}. Deer coming from off screen walk these.`);
-  } else lines.push('No predicted travel corridors cross into the screen at this hour.');
+    lines.push(`Predicted travel corridors crossing the screen's edge: ${list.join(', ')} side. Deer moving between bedding and food beyond the screen walk these.`);
+  } else lines.push("No predicted travel corridors cross the screen's edge at this hour.");
   return lines;
 }
 
@@ -138,15 +162,17 @@ export const useWide = create<WideState>((set, get) => ({
   async load(view) {
     const box = wideBox(view);
     const have = get().grid;
-    // Same country: keep it, just remember the new screen.
-    if (have && insideBounds(have, center(view)) && Math.abs((have.north - have.south) - (box.north - box.south)) < (box.north - box.south) * 0.3) {
+    // Same country, already read: keep it, just remember the new screen. Anything else (loading elsewhere,
+    // or a failed read) starts a fresh read.
+    if (get().status === 'ready' && have && covers(have, view) && Math.abs((have.north - have.south) - (box.north - box.south)) < (box.north - box.south) * 0.3) {
+      inflight?.abort();
       set({ view });
       return;
     }
     inflight?.abort();
     const ac = new AbortController();
     inflight = ac;
-    set({ status: 'loading', view });
+    set({ status: 'loading', view, grid: null, conditions: null, movement: null });
     try {
       const grid = await fetchGround(box, { signal: ac.signal, cells: WIDE_CELLS });
       if (ac.signal.aborted) return;
@@ -163,10 +189,13 @@ export const useWide = create<WideState>((set, get) => ({
   },
 }));
 
-/** The wide read's trails and beds for one hour, or null if it isn't loaded. */
-export function wideMovementAt(date: Date): { trails: Trail[]; beds: Bed[] } | null {
+/** Does the wide read cover this screen's center? */
+export const covers = (grid: Bounds, view: Bounds) => insideBounds(grid, center(view));
+
+/** The wide read's trails and beds for one hour, or null if it isn't loaded or is for other country. */
+export function wideMovementAt(date: Date, view: Bounds): { trails: Trail[]; beds: Bed[] } | null {
   const w = useWide.getState();
-  if (w.status !== 'ready' || !w.conditions || !w.movement) return null;
+  if (w.status !== 'ready' || !w.conditions || !w.movement || !w.grid || !covers(w.grid, view)) return null;
   const hc = w.conditions.at(date);
   const m = w.movement.at(hc.sun, hc.weather, hc.wind, hc.atmosphere.movementFactor, date);
   return { trails: m.trails, beds: m.beds };

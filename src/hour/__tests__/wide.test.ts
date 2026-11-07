@@ -44,10 +44,24 @@ describe('wideSummary', () => {
     expect(lines).toMatch(/east: mostly crop fields/);
     expect(lines).toMatch(/Likely bedding beyond the screen: \d+ yd northwest/);
     expect(lines).toMatch(/Likely bedding beyond the screen: \d+ yd northwest \(/); // the bed on screen isn't listed
-    expect(lines).toMatch(/corridors entering the screen: 1 from the west/);
+    expect(lines).toMatch(/corridors crossing the screen.s edge: 1 from the west/);
   });
 
   it('says so when no corridor comes in', () => {
-    expect(wideSummary(grid, { beds: [], trails: [] }, view).join('\n')).toMatch(/No predicted travel corridors/);
+    expect(wideSummary(grid, { beds: [], trails: [] }, view).join('\n')).toMatch(/No predicted travel corridors cross/);
+  });
+});
+
+describe('corridors next to fine trails', () => {
+  it('drops corridor points in or beside a cell the fine read already has a trail in', async () => {
+    const { makeGrid, BOX } = await import('../../model/__tests__/fixtures');
+    const { cellCenter } = await import('../../model/geo');
+    const g = makeGrid(() => 250);
+    const at = (r: number, c: number) => cellCenter(g, r * BOX.cols + c) as [number, number];
+    const fine = { weight: 1, coordinates: Array.from({ length: 10 }, (_, k) => at(10, 5 + k)) };
+    // A corridor running alongside one row over (same path, coarser), then going on its own way.
+    const wide = { weight: 1, coordinates: [...Array.from({ length: 10 }, (_, k) => at(11, 5 + k)), at(14, 16), at(18, 16), at(22, 16)] };
+    const out = corridorsIn([wide], g, { grid: g, trails: [fine] });
+    expect(out.flatMap((t) => t.coordinates)).toEqual([at(14, 16), at(18, 16), at(22, 16)]);
   });
 });
