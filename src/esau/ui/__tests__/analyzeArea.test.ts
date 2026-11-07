@@ -107,12 +107,19 @@ describe('analyzeArea', () => {
     expect(useEsau.getState().analysis).toMatchObject({ spots: [], unsure: true });
   });
 
-  it('reads the wind a few hours ahead for a chosen sit spot without breaking the read', async () => {
+  it('reads the wind 1 to 3 hours ahead for a chosen sit spot, and only then', async () => {
     useHour.getState().useGrid(grid, new Date('2026-11-08T11:00:00Z'));
+    const c = useHour.getState().conditions!;
+    const spy = vi.spyOn(c, 'at');
+    const now = useHour.getState().date.getTime();
+    await analyzeArea();
+    const offsets = () => [...new Set(spy.mock.calls.map(([d]) => (d.getTime() - now) / 3_600_000))];
+    expect(offsets()).toEqual([0]);
+    spy.mockClear();
     useEsau.setState({ sit: { lat: (grid.north + grid.south) / 2, lng: (grid.west + grid.east) / 2 } });
     await analyzeArea();
-    const kinds = useEsau.getState().analysis!.advisories.map((a) => a.kind);
-    expect(kinds.filter((k) => k === 'wrong_wind' || k === 'wind_shift').length).toBeLessThanOrEqual(1);
+    expect(offsets()).toEqual([0, 1, 2, 3]);
+    spy.mockRestore();
   });
 
   it('treats a map tap as where the hunter will sit', async () => {
