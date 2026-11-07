@@ -31,6 +31,12 @@ describe("anchorMarks", () => {
     expect(anchorMarks([m("avoid", 36.769, -85.719)], anchors, spot, bounds)).toEqual([]);
   });
 
+  it("keeps a walk-in pin on the hunter's own position even when the hunter is far off", () => {
+    const hunter = { lat: 36.76, lng: -85.69 }; // about 1,500 yd away
+    const out = anchorMarks([m("approach", 36.76, -85.69)], [...anchors, hunter], spot, bounds);
+    expect(out).toEqual([m("approach", 36.76, -85.69)]);
+  });
+
   it("drops pins with broken numbers", () => {
     expect(anchorMarks([m("bedding", NaN, -85.7)], anchors, spot, bounds)).toEqual([]);
   });

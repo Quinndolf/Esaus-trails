@@ -31104,7 +31104,7 @@ function buildBrief(q, opts = {}) {
   lines.push(
     `${spot.landform}, ${spot.elevationFt} ft, ${spot.slopeDeg}\xB0 slope${spot.aspectName ? `, ${spot.aspectName}` : ""}, ${spot.reliefFt >= 0 ? `${spot.reliefFt} ft above` : `${-spot.reliefFt} ft below`} the surrounding ground.`
   );
-  const cellYd = Math.round((g.north - g.south) * 111320 / g.rows / 0.9144 / 5) * 5;
+  const cellYd = Math.round(cellSize(g).cellM / 0.9144 / 5) * 5;
   if (Number.isFinite(cellYd) && cellYd > 0) lines.push(`Grid: ${g.cols} by ${g.rows} cells, each about ${cellYd} yd across; anything smaller is averaged away.`);
   lines.push(`Cover: ${spot.cover.name}${spot.crop ? `, crop: ${spot.crop.name}` : ""}; canopy about ${pct(spot.canopy)}.`);
   if (spot.trees) lines.push(`TREES: ${spot.trees} (from land cover and forest data; unconfirmed on the ground).`);
@@ -37428,11 +37428,6 @@ function anchorMarks(marks, anchors, spot, bounds) {
   const out = [];
   for (const m of marks) {
     if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
-    if (m.kind === "approach" || m.kind === "avoid") {
-      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
-      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
-      continue;
-    }
     let best = null;
     let bestM = Infinity;
     for (const a of anchors) {
@@ -37442,7 +37437,14 @@ function anchorMarks(marks, anchors, spot, bounds) {
         best = a;
       }
     }
-    if (best && bestM <= SNAP_YD * YD) out.push({ ...m, lat: best.lat, lng: best.lng });
+    if (best && bestM <= SNAP_YD * YD) {
+      out.push({ ...m, lat: best.lat, lng: best.lng });
+      continue;
+    }
+    if (m.kind === "approach" || m.kind === "avoid") {
+      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
+      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
+    }
   }
   return out;
 }

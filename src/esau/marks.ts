@@ -30,11 +30,6 @@ export function anchorMarks(
   const out: EsauMark[] = [];
   for (const m of marks) {
     if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) continue;
-    if (m.kind === "approach" || m.kind === "avoid") {
-      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
-      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
-      continue;
-    }
     let best: LatLng | null = null;
     let bestM = Infinity;
     for (const a of anchors) {
@@ -44,7 +39,14 @@ export function anchorMarks(
         best = a;
       }
     }
-    if (best && bestM <= SNAP_YD * YD) out.push({ ...m, lat: best.lat, lng: best.lng });
+    if (best && bestM <= SNAP_YD * YD) {
+      out.push({ ...m, lat: best.lat, lng: best.lng });
+      continue;
+    }
+    if (m.kind === "approach" || m.kind === "avoid") {
+      const onGround = m.lat >= bounds.south && m.lat <= bounds.north && m.lng >= bounds.west && m.lng <= bounds.east;
+      if (onGround && distanceM(m, spot) <= ROUTE_MAX_YD * YD) out.push(m);
+    }
   }
   return out;
 }
