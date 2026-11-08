@@ -30,3 +30,32 @@ describe('Suggested route button', () => {
     expect(f.features[1]!.geometry.coordinates).toEqual([1, 1]);
   });
 });
+
+describe('useRouteLine', () => {
+  it('adds the route under the GPS dot once, and clears it when switched off', async () => {
+    const { useRouteLine } = await import('../RouteToggle');
+    const sources: Record<string, { data: unknown; setData(d: unknown): void }> = {};
+    const added: { id: string; before?: string }[] = [];
+    const map = {
+      getLayer: (id: string) => (id === 'gps-accuracy' ? {} : undefined),
+      getSource: (id: string) => sources[id],
+      addSource: (id: string) => void (sources[id] = { data: null, setData(d) { this.data = d; } }),
+      addLayer: (l: { id: string }, before?: string) => void added.push({ id: l.id, before }),
+    };
+    function Probe() {
+      useRouteLine(map as never);
+      return null;
+    }
+    const route = { path: [[-85.5, 37.5], [-85.49, 37.5]] as [number, number][], yards: 960, exposedYd: 0, from: [-85.5, 37.5] as [number, number], to: [-85.49, 37.5] as [number, number] };
+    useEsau.setState({ analysis: { spots: [], unsure: false, advisories: [], legal: {} as never, route } });
+    useRouteToggle.setState({ show: true });
+    const root = createRoot(document.createElement('div'));
+    await act(async () => root.render(createElement(Probe)));
+    expect(added.every((l) => l.before === 'gps-accuracy')).toBe(true);
+    expect((sources['esau-route']!.data as { features: unknown[] }).features).toHaveLength(2);
+    await act(async () => useRouteToggle.setState({ show: false }));
+    expect((sources['esau-route']!.data as { features: unknown[] }).features).toHaveLength(0);
+    expect(added).toHaveLength(3);
+    act(() => root.unmount());
+  });
+});

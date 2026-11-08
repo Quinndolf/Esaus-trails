@@ -35,7 +35,7 @@ export const TRAIL_SMELL_YD = 100;
 const BED_NEAR_YD = 80;
 /** Narrowest scent cone (half-angle) counted, for still air that barely spreads. */
 const MIN_HALF_CONE = 25;
-/** Extra cost, in yards walked, of one step that blows scent onto a bed / onto a trail / of crossing a trail / of passing near a bed. */
+/** Extra cost, as yards of walking added per 45 yd walked, on ground that blows scent onto a bed / onto a trail / is a trail / is near a bed. */
 const BED_COST = 300;
 const TRAIL_COST = 40;
 const CROSS_COST = 20;
@@ -123,14 +123,15 @@ export function walkRoute(i: WalkRouteInput): WalkRoute | null {
   return { path, yards: Math.round(yards), exposedYd: Math.round(exposedYd) };
 }
 
-/** Drop points that sit on a straight run, so the line on the map is calm. */
+/**
+ * Drop points in the middle of a straight run, so the line on the map is calm. Each point is checked against its
+ * own neighbours, so the drawn line never cuts a corner the search went around.
+ */
 function straighten(p: LngLat[]): LngLat[] {
   if (p.length < 3) return p;
   const out = [p[0]!];
-  for (let k = 1; k < p.length - 1; k++) {
-    const a = bearingBetween(out[out.length - 1]!, p[k]!), b = bearingBetween(p[k]!, p[k + 1]!);
-    if (angleDiff(a, b) > 10) out.push(p[k]!);
-  }
+  for (let k = 1; k < p.length - 1; k++)
+    if (angleDiff(bearingBetween(p[k - 1]!, p[k]!), bearingBetween(p[k]!, p[k + 1]!)) > 1) out.push(p[k]!);
   out.push(p[p.length - 1]!);
   return out;
 }

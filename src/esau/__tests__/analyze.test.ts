@@ -184,4 +184,13 @@ describe("suggested walk in", () => {
     expect(a.route!.to).toEqual(a.spots[0]!.lngLat);
     expect(analyzeHour({ ...base, wind: wind(0), hunter }).route).toBeUndefined();
   });
+  it("on a stay, walks to your own spot; with the GPS off the ground, starts from your spot", () => {
+    const top = analyzeHour({ ...base, wind: wind(0) }).spots[0]!;
+    const hunter = mid(28, 16);
+    const stay = analyzeHour({ ...base, wind: wind(0), sit: top.lngLat, hunter, scent: scent(180) });
+    expect(stay.verdict?.stay).toBe(true);
+    expect(stay.route!.to).toEqual(top.lngLat);
+    const far = analyzeHour({ ...base, wind: wind(180), sit: mid(17, 16), hunter: [grid.east + 0.05, grid.north] as LngLat, scent: scent(0) });
+    expect(far.route!.from).toEqual(mid(17, 16));
+  });
 });
