@@ -198,13 +198,14 @@ function verdictLines(v: VerdictQuery): string[] {
   const why: Record<NonNullable<VerdictQuery["why"]>, string> = {
     out_of_range: `no predicted deer trail within the weapon's ${v.rangeYd ?? "working"} yd range${v.trailYd != null ? `; the nearest is about ${Math.round(v.trailYd / 10) * 10} yd away` : ""}`,
     bed_downwind: "the wind carries scent into a predicted bed",
+    on_trail: "the hunter is standing on the predicted trail itself; deer would walk into them, so back off to one side, downwind",
     scent_on_trail: "the wind carries scent onto the predicted trail, so deer smell the hunter before they are in range",
     near_bed: "it is very close to a predicted bed",
     on_axis: "deer would walk straight at the hunter and see them first",
   };
   const out = [
     "",
-    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct} out of 100, where 100 is the best sit found on screen. The call is ${v.stay ? "STAY" : "MOVE"}.`,
+    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct} out of 100, where 100 is the best sit found nearby. The call is ${v.stay ? "STAY" : "MOVE"}.`,
   ];
   if (!v.stay && v.why) out.push(`Main reason: ${why[v.why]}.`);
   if (!v.stay && v.betterRanks.length) out.push(`Better sits on screen: ${v.betterRanks.map((r) => `#${r}`).join(", ")}.`);

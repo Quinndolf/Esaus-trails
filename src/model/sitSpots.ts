@@ -1,4 +1,5 @@
-import { angleDiff, bearingBetween, cardinal, cellAt, cellCenter, insideBounds, stepYards, yardsBetween, type Bounds, type LngLat } from './geo';
+import { angleDiff, bearingBetween, cardinal, cellAt, cellCenter, cellSize, insideBounds, stepYards, yardsBetween, M_TO_YD, type Bounds, type LngLat } from './geo';
+import { resample } from './scent';
 import type { Bed, Trail } from './movement';
 import type { ElevationGrid } from './types';
 
@@ -58,6 +59,10 @@ const SADDLE_MIN_M = 1.5;
 const PINCH_BONUS = 0.6;
 /** A trail crossing a saddle carries more deer than its weight says. */
 const SADDLE_BONUS = 1.3;
+/** Closer than this to the trail line, you are standing on it. */
+const ON_TRAIL_YD = 10;
+/** Trail lines are checked every this many yards, so range is measured to the line, not to a cell's middle. */
+const SAMPLE_YD = 8;
 
 /** Low one way and high the other, like the movement model's saddles. Interior cells only. */
 export function isSaddle(grid: ElevationGrid, i: number): boolean {
@@ -123,6 +128,9 @@ function scorer(input: SitSpotInput) {
   const points = pinch(trails, grid);
   const flat = trails.flatMap((t) => t.coordinates);
   const up = isElevated(input.setup);
+  const cs = cellSize(grid);
+  // Past this from a cell's middle, its trail line can't be in range.
+  const give = reach + Math.hypot(cs.cellX, cs.cellY) * M_TO_YD * 0.6;
   const nearBedFactor = up ? NEAR_BED_FACTOR_UP : NEAR_BED_FACTOR;
   const towardOf = (at: LngLat) => {
     const i = cellAt(grid, at);
@@ -139,14 +147,14 @@ function scorer(input: SitSpotInput) {
     let traffic = 0;
     let best = { p: points[0]!.p, gain: 0, pt: points[0]! };
     for (const q of points) {
-      const d = yardsBetween(at, q.p);
+      const { d, p: on } = nearestOnLine(at, q, give);
       if (d > reach) continue;
       const quality = d < TOO_CLOSE_YD ? 0 : Math.max(0, 1 - Math.abs(d - ideal) / reach);
       // Deer whose nose is in your scent are not coming past.
-      const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
+      const smelled = d > 3 && angleDiff(bearingBetween(at, on), toward) <= SCENT_CONE_DEG;
       const gain = q.w * quality * (smelled ? (up && d <= UP_CLOSE_YD ? SMELLED_FACTOR_UP : SMELLED_FACTOR) : 1);
       traffic += gain;
-      if (gain > best.gain) best = { p: q.p, gain, pt: q };
+      if (gain > best.gain) best = { p: on, gain, pt: q };
     }
     if (traffic <= 0) return null;
     // Too close to a bed busts it even with the wind right.
@@ -163,11 +171,11 @@ function scorer(input: SitSpotInput) {
     let inReach = 0, smelledInReach = 0;
     const toward = towardOf(at);
     for (const q of points) {
-      const d = yardsBetween(at, q.p);
+      const { d, p: on } = nearestOnLine(at, q, Infinity);
       nearest = Math.min(nearest, d);
       if (d > reach || d < TOO_CLOSE_YD) continue;
       inReach += q.w;
-      if (toward != null && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG) smelledInReach += q.w;
+      if (toward != null && angleDiff(bearingBetween(at, on), toward) <= SCENT_CONE_DEG) smelledInReach += q.w;
     }
     const trailYd = Number.isFinite(nearest) ? Math.round(nearest) : null;
     const why: SitWeakness | null =
@@ -175,7 +183,9 @@ function scorer(input: SitSpotInput) {
         ? null
         : bedDownwind(at, toward)
           ? 'bed_downwind'
-          : inReach === 0
+          : nearest < ON_TRAIL_YD
+            ? 'on_trail'
+            : inReach === 0
             ? 'out_of_range'
             : smelledInReach >= inReach / 2
               ? 'scent_on_trail'
@@ -190,7 +200,7 @@ function scorer(input: SitSpotInput) {
 }
 
 /** Why a spot rates low: scent onto a bed, no trail in range, scent onto the trail, too near a bed, or deer walking straight at you. */
-export type SitWeakness = 'bed_downwind' | 'out_of_range' | 'scent_on_trail' | 'near_bed' | 'on_axis';
+export type SitWeakness = 'bed_downwind' | 'on_trail' | 'out_of_range' | 'scent_on_trail' | 'near_bed' | 'on_axis';
 
 /**
  * How much deer traffic a hunter sitting right here would see this hour, on the same scale `topSitSpots`
@@ -281,6 +291,7 @@ export interface SitVerdict {
  * clearly better one just off it but within `walkYd`. Null when there is no deer traffic to judge by.
  */
 export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: number } = {}): SitVerdict | null {
+  if (cellAt(input.grid, at) == null) return null; // no ground read there: nothing to judge by
   const { rate, weakness, reach: rangeYd } = scorer(input);
   const trafficAt = (p: LngLat) => rate(p)?.traffic ?? 0;
   const here = trafficAt(at);
@@ -339,12 +350,35 @@ function pinch(trails: Trail[], grid: ElevationGrid) {
       cells.set(i, c);
     });
   }
+  // Where the trail line really runs through each cell, every few yards: a bow's range is smaller than a cell.
+  const near = new Map<number, LngLat[]>();
+  for (const t of trails)
+    for (const p of resample(t.coordinates, SAMPLE_YD)) {
+      const i = cellAt(grid, p);
+      if (i == null || !cells.has(i)) continue;
+      const list = near.get(i) ?? [];
+      list.push(p);
+      near.set(i, list);
+    }
   return [...cells.entries()].map(([i, c]) => {
     const saddle = isSaddle(grid, i);
     const meet = Math.max(1, c.headings.length);
     const w = c.w * (1 + PINCH_BONUS * Math.min(2, meet - 1)) * (saddle ? SADDLE_BONUS : 1);
-    return { p: c.p, w, meet, saddle };
+    return { p: c.p, w, meet, saddle, near: near.get(i) ?? [c.p] };
   });
+}
+
+/** The nearest point of a trail cell's line to `at`, and how far it is in yards. */
+function nearestOnLine(at: LngLat, q: { p: LngLat; near: LngLat[] }, give: number): { d: number; p: LngLat } {
+  // Quick reject on the cell's middle: the line is within about half a cell diagonal of it.
+  const centre = yardsBetween(at, q.p);
+  if (centre > give) return { d: centre, p: q.p };
+  let best = { d: Infinity, p: q.p };
+  for (const s of q.near) {
+    const d = yardsBetween(at, s);
+    if (d < best.d) best = { d, p: s };
+  }
+  return best;
 }
 
 /** Difference between two line headings, 0-90. */

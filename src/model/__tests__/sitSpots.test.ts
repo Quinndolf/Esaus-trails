@@ -246,3 +246,21 @@ describe('stay or move: why a spot scores low', () => {
     expect(sitVerdict(input, best.lngLat)!.why).toBeUndefined();
   });
 });
+
+describe('stay or move: range is measured to the trail line', () => {
+  const input = { grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow' as const };
+  it('standing on the trail says so, never "no trail in range"', () => {
+    const v = sitVerdict(input, trail.coordinates[10]!)!;
+    expect(v.why).toBe('on_trail');
+  });
+  it('a sit 25 yd off the line between two cell middles still sees deer', () => {
+    const a = trail.coordinates[10]!, b = trail.coordinates[11]!;
+    const between: LngLat = [(a[0] + b[0]) / 2, a[1]];
+    const at = stepYards(between, 180, 25); // downwind side with a north wind
+    expect(rateSit(input, at)).toBeGreaterThan(0);
+    expect(sitVerdict(input, at)!.why).not.toBe('out_of_range');
+  });
+  it('gives no verdict off the ground read', () => {
+    expect(sitVerdict(input, [BOX.east + 0.05, BOX.north])).toBeNull();
+  });
+});

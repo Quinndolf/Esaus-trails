@@ -30,6 +30,15 @@ describe('stay-or-move card, in plain words', () => {
     expect(verdictWords({ ...base, pct: 12, stay: false, why: 'scent_on_trail' }).detail).toMatch(/wind carries your scent onto the trail/i);
     expect(verdictWords({ ...base, pct: 0, stay: false, why: 'bed_downwind' }).detail).toMatch(/where deer bed/i);
   });
+  it('says plainly when you are standing on the trail', () => {
+    expect(verdictWords({ ...base, pct: 0, stay: false, why: 'on_trail', trailYd: 0 }).detail).toMatch(/standing on the trail/);
+  });
+  it('never mentions "spots below" when none are listed', () => {
+    expect(verdictWords({ ...base, pct: 40, stay: false }).detail).not.toMatch(/below/);
+  });
+  it('on a stay, owns up to the wind warning instead of contradicting it', () => {
+    expect(verdictWords({ ...base, pct: 100, stay: true }, { wrongWind: true }).detail).toMatch(/wind warning/);
+  });
   it('lists the better spots with distance and direction', () => {
     const w = verdictWords({ ...base, pct: 30, stay: false, better: [spot(1, [-85.5, 37.501])], of: 'hunter' });
     expect(w.better[0]).toMatch(/^#1: \d+ yd N$/);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellCenter, type LngLat } from "../../model/geo";
+import { cellCenter, stepYards, type LngLat } from "../../model/geo";
 import type { Trail } from "../../model/movement";
 import { BOX, makeGrid } from "../../model/__tests__/fixtures";
 import { analyzeHour, toSitSpotQuery } from "../analyze";
@@ -160,6 +160,11 @@ describe("stay or move", () => {
     expect(bad.verdict!.better.length).toBeGreaterThan(0);
     const top = analyzeHour({ ...base, wind: wind(0) }).spots[0]!;
     expect(analyzeHour({ ...base, wind: wind(0), sit: top.lngLat }).verdict).toMatchObject({ stay: true });
+  });
+  it("does not blame the wind on the card when the air is calm", () => {
+    const sit = stepYards(mid(16, 16), 180, 20);
+    expect(analyzeHour({ ...base, wind: wind(180, 8), sit }).verdict?.why).toBe("scent_on_trail");
+    expect(analyzeHour({ ...base, wind: wind(180, 1), sit }).verdict?.why).toBeUndefined();
   });
   it("judges where the hunter stands when no sit is chosen, only if it is on screen", () => {
     const view = { west: grid.west, east: grid.east, south: grid.south, north: grid.north };

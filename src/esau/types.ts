@@ -93,7 +93,7 @@ export interface VerdictQuery {
   /** A clearly better sit just off the screen; the map zooms out to show it. */
   offScreen?: { yards: number; compass: string };
   /** What holds the spot back. */
-  why?: "bed_downwind" | "out_of_range" | "scent_on_trail" | "near_bed" | "on_axis";
+  why?: "bed_downwind" | "on_trail" | "out_of_range" | "scent_on_trail" | "near_bed" | "on_axis";
   /** Yards to the nearest predicted trail, and the weapon's range. */
   trailYd?: number;
   rangeYd?: number;

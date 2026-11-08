@@ -31204,13 +31204,14 @@ function verdictLines(v) {
   const why = {
     out_of_range: `no predicted deer trail within the weapon's ${v.rangeYd ?? "working"} yd range${v.trailYd != null ? `; the nearest is about ${Math.round(v.trailYd / 10) * 10} yd away` : ""}`,
     bed_downwind: "the wind carries scent into a predicted bed",
+    on_trail: "the hunter is standing on the predicted trail itself; deer would walk into them, so back off to one side, downwind",
     scent_on_trail: "the wind carries scent onto the predicted trail, so deer smell the hunter before they are in range",
     near_bed: "it is very close to a predicted bed",
     on_axis: "deer would walk straight at the hunter and see them first"
   };
   const out = [
     "",
-    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct} out of 100, where 100 is the best sit found on screen. The call is ${v.stay ? "STAY" : "MOVE"}.`
+    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct} out of 100, where 100 is the best sit found nearby. The call is ${v.stay ? "STAY" : "MOVE"}.`
   ];
   if (!v.stay && v.why) out.push(`Main reason: ${why[v.why]}.`);
   if (!v.stay && v.betterRanks.length) out.push(`Better sits on screen: ${v.betterRanks.map((r) => `#${r}`).join(", ")}.`);
@@ -37667,7 +37668,7 @@ function validate2(body) {
     const off = v?.offScreen;
     const ok = v && typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 && typeof v.stay === "boolean" && v.stay === v.pct >= STAY_AT_PCT && (v.of === "sit" || v.of === "hunter") && Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) && (off === void 0 || typeof off.yards === "number" && off.yards >= 0 && off.yards < 5e3 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass));
     const yd = (x) => x === void 0 || typeof x === "number" && x >= 0 && x < 2e4;
-    const whyOk = v?.why === void 0 || ["bed_downwind", "out_of_range", "scent_on_trail", "near_bed", "on_axis"].includes(v.why);
+    const whyOk = v?.why === void 0 || ["bed_downwind", "on_trail", "out_of_range", "scent_on_trail", "near_bed", "on_axis"].includes(v.why);
     if (!ok || !whyOk || !yd(v.trailYd) || !yd(v.rangeYd)) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?,why?,trailYd?,rangeYd?}");
   }
   if (q.question && q.question.length > 2e3) throw new EsauInputError("question is too long");

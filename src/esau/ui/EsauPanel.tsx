@@ -100,7 +100,9 @@ export function EsauPanel() {
       </header>
 
       <div className="esau-body">
-        {s.analysis?.verdict && <VerdictCard verdict={s.analysis.verdict} />}
+        {s.analysis?.verdict && (
+          <VerdictCard verdict={s.analysis.verdict} wrongWind={s.analysis.advisories.some((a) => a.kind === 'wrong_wind')} />
+        )}
         {s.analysis?.advisories.map((a) => (
           <div key={a.kind} className={`esau-advisory is-${a.kind}`} role="alert" data-testid={`advisory-${a.kind}`}>
             <strong>{a.title}</strong>
