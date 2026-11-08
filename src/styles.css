@@ -131,3 +131,21 @@ button { font: inherit; color: inherit; }
 
 /* Markers must stay absolutely positioned by MapLibre whatever order the CSS bundles in. */
 .maplibregl-canvas-container > .maplibregl-marker { position: absolute; top: 0; left: 0; }
+
+/* Light bottom sheets (onX-style): white card, soft grey tiles, bold title. Scoped to .sheet so the map controls keep their own look. */
+.sheet { --panel: #ffffff; --panel-2: #f2f3f5; --line: #e4e6ea; --text: #14181c; --muted: #6a727c; color: var(--text);
+  color-scheme: light; box-shadow: 0 -4px 28px rgba(0, 0, 0, .22); border-radius: 20px 20px 0 0; }
+.sheet .sheet-handle { background: #cfd3d8; }
+.sheet-head h2 { font-size: 19px; font-weight: 800; }
+.sheet .sheet-section { font-weight: 700; color: var(--muted); }
+.sheet .toggle { background: #d5d8dd; }
+.sheet .toggle.is-on { background: var(--green); }
+.sheet .swatch { border-color: rgba(0, 0, 0, .15); }
+.sheet .tool-tile { box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.sheet .tool-tile.is-primary { background: #fdecea; color: #7a1410; box-shadow: inset 0 0 0 2px #e53935; }
+.sheet .basemap-card.is-active { border-color: var(--green); background: #eefaf1; }
+.sheet .link-btn, .sheet .text-btn { color: #0a8f3c; }
+.sheet .primary-btn, .sheet .segmented button.is-active { color: #fff; background: #1f9d4c; }
+/* Dark-on-dark guards: things that sit on a dark fill inside a light sheet keep white text. */
+.sheet .fab, .sheet .mark-chip.is-active { color: #fff; }
+.sheet .badge { color: var(--text); }
