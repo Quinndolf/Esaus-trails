@@ -24,6 +24,8 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
     view: e.view,
     // With a sit spot chosen, look a few hours ahead so Esau can warn before the wind turns on you.
     windLater: sit ? windAhead(h.conditions, h.date) : undefined,
+    scent: hc.scent,
+    slopeDeg: h.conditions.terrain.slopeDeg,
   });
 }
 
