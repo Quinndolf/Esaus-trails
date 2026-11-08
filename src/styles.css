@@ -149,3 +149,13 @@ button { font: inherit; color: inherit; }
 /* Dark-on-dark guards: things that sit on a dark fill inside a light sheet keep white text. */
 .sheet .fab, .sheet .mark-chip.is-active { color: #fff; }
 .sheet .badge { color: var(--text); }
+
+/* Esau's read card: same light look as the bottom sheets. */
+.esau-panel { --panel: #ffffff; --panel-2: #f2f3f5; --line: #e4e6ea; --text: #14181c; --muted: #6a727c; color: var(--text); color-scheme: light;
+  border-radius: 20px 20px 0 0; box-shadow: 0 -4px 28px rgba(0, 0, 0, .22); }
+.esau-panel .esau-spot strong { font-size: 19px; font-weight: 800; }
+.esau-panel .esau-reply { background: #f6f7f9; border-left-color: var(--accent); }
+.esau-panel .link-btn, .esau-panel .text-btn { color: #0a8f3c; }
+.esau-panel .badge.conf-low { background: #fde8df; color: #8a3414; }
+.esau-panel .badge.conf-good { background: #dff5e5; color: #17622d; }
+.esau-panel .icon-btn { color: var(--muted); }
