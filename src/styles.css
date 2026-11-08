@@ -169,3 +169,4 @@ button { font: inherit; color: inherit; }
 .chip { height: 44px; font-weight: 800; }
 .hour-bar { background: rgba(255, 255, 255, .94); -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 16px; }
 .maplibregl-ctrl-top-right { top: calc(var(--safe-t) + 62px); }
+.three-d-btn { font-size: 14px; font-weight: 800; letter-spacing: .02em; }
