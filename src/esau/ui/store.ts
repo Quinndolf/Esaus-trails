@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { buildBrief, type EsauBrief } from '../brief';
 import { askEsau, EsauApiError } from '../client';
-import { toSitSpotQuery, type Analysis, type Bounds } from '../analyze';
+import { toSitSpotQuery, toVerdictQuery, type Analysis, type Bounds } from '../analyze';
 import type { Weapon } from '../../rules/types';
+import type { LngLat } from '../../model/geo';
 import { offlineRead } from '../offline';
 import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
 import { groundFor } from './ground';
@@ -48,6 +49,8 @@ interface EsauState {
   view: Bounds | null;
   /** Registered by the app glue (src/esau/ui/analyzeArea.ts): works out an analysis for the slider's hour. */
   analyzer: ((sit: LatLng | null) => Analysis | null) | null;
+  /** A spot just off the screen the map should zoom out to show (src/home/AnalyzePill.tsx clears it). */
+  showSpot: LngLat | null;
 
   setWeapon(w: Weapon | null): void;
   setHunter(h: Hunter | null): void;
@@ -122,6 +125,7 @@ export const useEsau = create<EsauState>((set, get) => ({
   analysis: null,
   view: null,
   analyzer: null,
+  showSpot: null,
   time: null,
 
   setWeapon(weapon) {
@@ -191,6 +195,7 @@ export const useEsau = create<EsauState>((set, get) => ({
       species: s.species,
       weapon: s.weapon ?? undefined,
       ...(an ? { sitSpots: an.spots.map(toSitSpotQuery), sitUnsure: an.unsure } : {}),
+      ...(an?.verdict ? { verdict: toVerdictQuery(an.verdict) } : {}),
       spot: s.spot,
       hunter: s.hunter ?? undefined,
       grid: s.grid,

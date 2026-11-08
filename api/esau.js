@@ -31182,6 +31182,7 @@ function buildBrief(q, opts = {}) {
         q.sitUnsure ? "The ground gave nothing strong to go on for sit spots here. Say so plainly and do not invent any." : "No sit spots were worked out. Do not invent any."
       );
     }
+    if (q.verdict) lines.push(...verdictLines(q.verdict));
   } else {
     lines.push("");
     lines.push("The hunter has not picked a weapon yet, so give no range or sit-spot advice.");
@@ -31197,6 +31198,20 @@ function buildBrief(q, opts = {}) {
   );
   return { species, system: buildSystemPrompt(species), report: lines.join("\n"), spot, conditions, phase: phase2, scores: scores2, legal };
 }
+function verdictLines(v) {
+  const whose = v.of === "hunter" ? "where the hunter is standing" : "the spot the hunter tapped";
+  const out = [
+    "",
+    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct}% of the best sit found, so the call is ${v.stay ? "STAY" : "MOVE"}.`
+  ];
+  if (!v.stay && v.betterRanks.length) out.push(`Better sits on screen: ${v.betterRanks.map((r) => `#${r}`).join(", ")}.`);
+  if (!v.stay && v.offScreen) out.push(`The best sit is ${v.offScreen.yards} yd ${v.offScreen.compass}, just off the screen; the map zooms out to show it.`);
+  out.push(`Open the short read with this call in plain words ("${v.stay ? "Stay here" : "Move"}" and the ${v.pct}%), then say why in one sentence. Never contradict it.`);
+  return out;
+}
+
+// src/model/sitSpots.ts
+var STAY_AT_PCT = 70;
 
 // server/esau/ask.ts
 init_sdk();
@@ -37623,6 +37638,12 @@ function validate2(body) {
     const v = q.view;
     const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
     if (!ok || v.west >= v.east || v.south >= v.north) throw new EsauInputError("view must be a {west,east,south,north} box");
+  }
+  if (q.verdict !== void 0) {
+    const v = q.verdict;
+    const off = v?.offScreen;
+    const ok = v && typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 && typeof v.stay === "boolean" && v.stay === v.pct >= STAY_AT_PCT && (v.of === "sit" || v.of === "hunter") && Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) && (off === void 0 || typeof off.yards === "number" && off.yards >= 0 && off.yards < 5e3 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass));
+    if (!ok) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?}");
   }
   if (q.question && q.question.length > 2e3) throw new EsauInputError("question is too long");
   return q;

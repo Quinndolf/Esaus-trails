@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { cellCenter, yardsBetween, stepYards, bearingBetween, angleDiff, type LngLat } from '../geo';
+import { cellCenter, yardsBetween, stepYards, bearingBetween, angleDiff, insideBounds, type LngLat } from '../geo';
 import type { Bed, Trail } from '../movement';
-import { SCENT_CONE_DEG, topSitSpots, UNSURE_BELOW } from '../sitSpots';
+import { SCENT_CONE_DEG, sitVerdict, STAY_AT_PCT, topSitSpots, UNSURE_BELOW, WALK_YD } from '../sitSpots';
 import { BOX, makeGrid } from './fixtures';
 
 const grid = makeGrid(() => 250);
@@ -142,5 +142,62 @@ describe('pinch points are real junctions', () => {
     expect(r.spots.length).toBeGreaterThan(0);
     for (const s of r.spots) expect(s.lngLat[0]).toBeGreaterThanOrEqual(within.west);
     expect(r.spots[0]!.score).toBe(1);
+  });
+});
+
+describe('stay or move verdict', () => {
+  const boxOf = (r0: number, r1: number, c0: number, c1: number) => {
+    const [w, n] = mid(r0, c0), [e, s] = mid(r1, c1);
+    return { west: w, east: e, north: n, south: s };
+  };
+
+  it('says stay, near 100%, on the top pick itself', () => {
+    const best = run().spots[0]!;
+    const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow' }, best.lngLat)!;
+    expect(v.pct).toBeGreaterThanOrEqual(99);
+    expect(v.stay).toBe(true);
+  });
+
+  it('says move, with better spots, when your scent blows onto the trail', () => {
+    // A south wind carries scent north; sitting just south of the trail puts it right on the deer.
+    const at = stepYards(mid(16, 16), 180, 20);
+    const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 180, weapon: 'bow' }, at)!;
+    expect(v.pct).toBeLessThan(STAY_AT_PCT);
+    expect(v.stay).toBe(false);
+    expect(v.better.length).toBeGreaterThan(0);
+    expect(v.better[0]!.lngLat[1]).toBeGreaterThan(trail.coordinates[0]![1]); // the better sit is on the north side
+  });
+
+  it('keeps better spots on screen, and names a walkable one just off it', () => {
+    const view = boxOf(21, 30, 4, 27); // south of the trail; the trail itself is off screen
+    const at = mid(24, 16); // ~360 yd south of the trail
+    const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: view }, at)!;
+    expect(v.stay).toBe(false);
+    for (const b of v.better) expect(insideBounds(view, b.lngLat)).toBe(true);
+    expect(v.offScreen).toBeDefined();
+    expect(insideBounds(view, v.offScreen!.lngLat)).toBe(false);
+    expect(yardsBetween(at, v.offScreen!.lngLat)).toBeLessThanOrEqual(WALK_YD);
+  });
+
+  it('names nothing off screen past walking distance', () => {
+    const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: boxOf(30, 31, 4, 27) }, mid(31, 16));
+    // ~620 yd south of the trail with a 400 yd walk: nothing to walk to.
+    const near = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: boxOf(30, 31, 4, 27) }, mid(31, 16), { walkYd: 400 });
+    expect(v?.offScreen).toBeDefined();
+    expect(near?.offScreen).toBeUndefined();
+  });
+
+  it('returns null with no trails to judge against', () => {
+    expect(sitVerdict({ grid, trails: [], beds: [], windFromDeg: () => 0, weapon: 'bow' }, mid(16, 16))).toBeNull();
+  });
+});
+
+describe('stay or move verdict: staying never sends you off the screen', () => {
+  it('drops the off-screen spot when the call is stay', () => {
+    const view = { west: grid.west, east: grid.east, south: mid(30, 0)[1], north: mid(17, 0)[1] }; // trail just north of the screen
+    for (const r of [17, 18, 19, 20, 22, 24]) {
+      const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: view }, mid(r, 16));
+      if (v?.stay) expect(v.offScreen).toBeUndefined();
+    }
   });
 });
