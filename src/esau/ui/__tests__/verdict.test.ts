@@ -5,21 +5,47 @@ import type { LngLat } from '../../../model/geo';
 
 const at: LngLat = [-85.5, 37.5];
 const spot = (rank: number, lngLat: LngLat) => ({ rank, lngLat, watchBearingDeg: 0, score: 1, yardsToTrail: 20, reason: '' });
+const base = { at, of: 'sit' as const, better: [], rangeYd: 35 };
 
-describe('stay-or-move card', () => {
-  it('says stay with the percentage', () => {
-    const w = verdictWords({ pct: 86, stay: true, better: [], at, of: 'sit' });
-    expect(w.call).toBe('Stay · 86%');
+describe('stay-or-move card, in plain words', () => {
+  it('says stay with a score out of 100, never "% as good"', () => {
+    const w = verdictWords({ ...base, pct: 86, stay: true });
+    expect(w.call).toBe('Stay here');
+    expect(w.score).toBe('Score 86 / 100');
+    expect(w.detail).not.toMatch(/as good/);
     expect(w.better).toEqual([]);
   });
-  it('says move and lists the better spots with distance and direction', () => {
-    const w = verdictWords({ pct: 30, stay: false, better: [spot(1, [-85.5, 37.501])], at, of: 'hunter' });
-    expect(w.call).toBe('Move · 30%');
-    expect(w.detail).toContain('Where you stand');
+  it('calls the best spot the best spot', () => {
+    expect(verdictWords({ ...base, pct: 100, stay: true }).detail).toMatch(/best spot Esau found/);
+  });
+  it('explains a zero: no trail within range, and how far the nearest is', () => {
+    const w = verdictWords({ ...base, pct: 0, stay: false, why: 'out_of_range', trailYd: 212 });
+    expect(w.call).toBe('Move');
+    expect(w.score).toBe('Score 0 / 100');
+    expect(w.detail).toMatch(/no predicted deer trail within 35 yd/i);
+    expect(w.detail).toContain('210 yd');
+    expect(w.detail).not.toMatch(/as good/);
+  });
+  it('says plainly when the wind carries scent onto the trail or a bed', () => {
+    expect(verdictWords({ ...base, pct: 12, stay: false, why: 'scent_on_trail' }).detail).toMatch(/wind carries your scent onto the trail/i);
+    expect(verdictWords({ ...base, pct: 0, stay: false, why: 'bed_downwind' }).detail).toMatch(/where deer bed/i);
+  });
+  it('says plainly when you are standing on the trail', () => {
+    expect(verdictWords({ ...base, pct: 0, stay: false, why: 'on_trail', trailYd: 0 }).detail).toMatch(/standing on the trail/);
+  });
+  it('never mentions "spots below" when none are listed', () => {
+    expect(verdictWords({ ...base, pct: 40, stay: false }).detail).not.toMatch(/below/);
+  });
+  it('on a stay, owns up to the wind warning instead of contradicting it', () => {
+    expect(verdictWords({ ...base, pct: 100, stay: true }, { wrongWind: true }).detail).toMatch(/wind warning/);
+  });
+  it('lists the better spots with distance and direction', () => {
+    const w = verdictWords({ ...base, pct: 30, stay: false, better: [spot(1, [-85.5, 37.501])], of: 'hunter' });
     expect(w.better[0]).toMatch(/^#1: \d+ yd N$/);
+    expect(w.detail).toMatch(/where you stand/i);
   });
   it('points to a better spot just off the screen', () => {
-    const w = verdictWords({ pct: 10, stay: false, better: [], at, of: 'sit', offScreen: spot(1, [-85.5, 37.497]) });
+    const w = verdictWords({ ...base, pct: 10, stay: false, offScreen: spot(1, [-85.5, 37.497]) });
     expect(w.detail).toMatch(/\d+ yd S, just off the screen/);
   });
 });

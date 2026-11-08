@@ -227,3 +227,40 @@ describe('setup: a bed close by', () => {
     expect(rateSit({ ...input, setup: 'saddle' }, at)).toBeGreaterThan(rateSit({ ...input, setup: 'ground' }, at));
   });
 });
+
+describe('stay or move: why a spot scores low', () => {
+  const input = { grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow' as const };
+  it('a spot far from any trail scores 0 because no trail is in range, and says how far the nearest is', () => {
+    const v = sitVerdict(input, mid(26, 16))!; // ~450 yd south of the trail, bow reaches 35 yd
+    expect(v.pct).toBe(0);
+    expect(v.why).toBe('out_of_range');
+    expect(v.trailYd).toBeGreaterThan(300);
+    expect(v.rangeYd).toBe(35);
+  });
+  it('blames the wind when scent blows onto the trail', () => {
+    const v = sitVerdict({ ...input, windFromDeg: () => 180 }, stepYards(mid(16, 16), 180, 20))!;
+    expect(v.why).toBe('scent_on_trail');
+  });
+  it('gives no reason on the best spot', () => {
+    const best = topSitSpots(input).spots[0]!;
+    expect(sitVerdict(input, best.lngLat)!.why).toBeUndefined();
+  });
+});
+
+describe('stay or move: range is measured to the trail line', () => {
+  const input = { grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow' as const };
+  it('standing on the trail says so, never "no trail in range"', () => {
+    const v = sitVerdict(input, trail.coordinates[10]!)!;
+    expect(v.why).toBe('on_trail');
+  });
+  it('a sit 25 yd off the line between two cell middles still sees deer', () => {
+    const a = trail.coordinates[10]!, b = trail.coordinates[11]!;
+    const between: LngLat = [(a[0] + b[0]) / 2, a[1]];
+    const at = stepYards(between, 180, 25); // downwind side with a north wind
+    expect(rateSit(input, at)).toBeGreaterThan(0);
+    expect(sitVerdict(input, at)!.why).not.toBe('out_of_range');
+  });
+  it('gives no verdict off the ground read', () => {
+    expect(sitVerdict(input, [BOX.east + 0.05, BOX.north])).toBeNull();
+  });
+});

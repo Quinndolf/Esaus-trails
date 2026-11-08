@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cellCenter, type LngLat } from "../../model/geo";
+import { cellCenter, stepYards, type LngLat } from "../../model/geo";
 import type { Trail } from "../../model/movement";
 import { BOX, makeGrid } from "../../model/__tests__/fixtures";
 import { analyzeHour, toSitSpotQuery } from "../analyze";
@@ -77,11 +77,14 @@ describe("field report: legal and sit spots", () => {
   it("gives Esau the stay-or-move call to say first, even with no spots on screen", () => {
     const r = buildBrief({ ...q, weapon: "bow", sitSpots: [], sitUnsure: true, verdict: { pct: 12, stay: false, of: "sit", betterRanks: [], offScreen: { yards: 310, compass: "S" } } }).report;
     expect(r).toContain("STAY OR MOVE");
-    expect(r).toContain("12%");
+    expect(r).toContain("scores 12 out of 100");
+    expect(r).toContain('Never say "percent as good"');
     expect(r).toContain("MOVE");
     expect(r).toContain("310 yd S, just off the screen");
     const stay = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false, verdict: { pct: 90, stay: true, of: "hunter", betterRanks: [] } }).report;
-    expect(stay).toContain("so the call is STAY");
+    expect(stay).toContain("The call is STAY");
+    const zero = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false, verdict: { pct: 0, stay: false, of: "sit", betterRanks: [1], why: "out_of_range", trailYd: 212, rangeYd: 35 } }).report;
+    expect(zero).toContain("no predicted deer trail within the weapon's 35 yd range; the nearest is about 210 yd away");
     expect(stay).toContain("where the hunter is standing");
   });
   it("lists ranked spots and calls them predictions", () => {
@@ -157,6 +160,11 @@ describe("stay or move", () => {
     expect(bad.verdict!.better.length).toBeGreaterThan(0);
     const top = analyzeHour({ ...base, wind: wind(0) }).spots[0]!;
     expect(analyzeHour({ ...base, wind: wind(0), sit: top.lngLat }).verdict).toMatchObject({ stay: true });
+  });
+  it("does not blame the wind on the card when the air is calm", () => {
+    const sit = stepYards(mid(16, 16), 180, 20);
+    expect(analyzeHour({ ...base, wind: wind(180, 8), sit }).verdict?.why).toBe("scent_on_trail");
+    expect(analyzeHour({ ...base, wind: wind(180, 1), sit }).verdict?.why).toBeUndefined();
   });
   it("judges where the hunter stands when no sit is chosen, only if it is on screen", () => {
     const view = { west: grid.west, east: grid.east, south: grid.south, north: grid.north };

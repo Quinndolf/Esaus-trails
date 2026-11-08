@@ -89,7 +89,7 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
     spots: ranked.spots,
     unsure: ranked.unsure,
     legal,
-    ...(v && judged ? { verdict: { ...v, ...judged } } : {}),
+    ...(v && judged ? { verdict: calmed({ ...v, ...judged }, windAtSit(i.wind).mph) } : {}),
     ...(route ? { route } : {}),
     advisories: advisories({
       legal,
@@ -99,6 +99,14 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
       targets: [...i.movement.trails.flatMap((t) => t.coordinates.map((lngLat) => ({ lngLat }))), ...i.movement.beds.map((b) => ({ lngLat: b.lngLat }))],
     }),
   };
+}
+
+/** In air this still, scent pools rather than blows: don't blame the wind on the card. */
+const CALM_MPH = 2;
+function calmed<V extends SitVerdict>(v: V, mph: number): V {
+  if (v.why !== "scent_on_trail" || mph >= CALM_MPH) return v;
+  const { why: _drop, ...rest } = v;
+  return rest as V;
 }
 
 /** Closer than this, the stand is where you are: no route. */
@@ -144,6 +152,9 @@ export const toVerdictQuery = (v: NonNullable<Analysis["verdict"]>): VerdictQuer
   stay: v.stay,
   of: v.of,
   betterRanks: v.better.map((b) => b.rank),
+  rangeYd: v.rangeYd,
+  ...(v.why ? { why: v.why } : {}),
+  ...(v.trailYd != null ? { trailYd: v.trailYd } : {}),
   ...(v.offScreen
     ? { offScreen: { yards: Math.round(yardsBetween(v.at, v.offScreen.lngLat)), compass: cardinal(bearingBetween(v.at, v.offScreen.lngLat)) } }
     : {}),
