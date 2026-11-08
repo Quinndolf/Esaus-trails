@@ -227,3 +227,22 @@ describe('setup: a bed close by', () => {
     expect(rateSit({ ...input, setup: 'saddle' }, at)).toBeGreaterThan(rateSit({ ...input, setup: 'ground' }, at));
   });
 });
+
+describe('stay or move: why a spot scores low', () => {
+  const input = { grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow' as const };
+  it('a spot far from any trail scores 0 because no trail is in range, and says how far the nearest is', () => {
+    const v = sitVerdict(input, mid(26, 16))!; // ~450 yd south of the trail, bow reaches 35 yd
+    expect(v.pct).toBe(0);
+    expect(v.why).toBe('out_of_range');
+    expect(v.trailYd).toBeGreaterThan(300);
+    expect(v.rangeYd).toBe(35);
+  });
+  it('blames the wind when scent blows onto the trail', () => {
+    const v = sitVerdict({ ...input, windFromDeg: () => 180 }, stepYards(mid(16, 16), 180, 20))!;
+    expect(v.why).toBe('scent_on_trail');
+  });
+  it('gives no reason on the best spot', () => {
+    const best = topSitSpots(input).spots[0]!;
+    expect(sitVerdict(input, best.lngLat)!.why).toBeUndefined();
+  });
+});

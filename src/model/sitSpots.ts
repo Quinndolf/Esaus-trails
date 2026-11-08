@@ -156,8 +156,41 @@ function scorer(input: SitSpotInput) {
     if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= APPROACH_FACTOR;
     return { traffic, best, wind: (toward + 180) % 360 };
   };
-  return { points, ideal, rate };
+
+  /** The main thing holding a spot back, in the order a hunter should fix it. Null when it is just quieter. */
+  const weakness = (at: LngLat): { why: SitWeakness | null; trailYd: number | null } => {
+    let nearest = Infinity;
+    let inReach = 0, smelledInReach = 0;
+    const toward = towardOf(at);
+    for (const q of points) {
+      const d = yardsBetween(at, q.p);
+      nearest = Math.min(nearest, d);
+      if (d > reach || d < TOO_CLOSE_YD) continue;
+      inReach += q.w;
+      if (toward != null && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG) smelledInReach += q.w;
+    }
+    const trailYd = Number.isFinite(nearest) ? Math.round(nearest) : null;
+    const why: SitWeakness | null =
+      toward == null
+        ? null
+        : bedDownwind(at, toward)
+          ? 'bed_downwind'
+          : inReach === 0
+            ? 'out_of_range'
+            : smelledInReach >= inReach / 2
+              ? 'scent_on_trail'
+              : beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)
+                ? 'near_bed'
+                : onTrailAxis(at, trails, flat)
+                  ? 'on_axis'
+                  : null;
+    return { why, trailYd };
+  };
+  return { points, ideal, rate, weakness, reach };
 }
+
+/** Why a spot rates low: scent onto a bed, no trail in range, scent onto the trail, too near a bed, or deer walking straight at you. */
+export type SitWeakness = 'bed_downwind' | 'out_of_range' | 'scent_on_trail' | 'near_bed' | 'on_axis';
 
 /**
  * How much deer traffic a hunter sitting right here would see this hour, on the same scale `topSitSpots`
@@ -235,6 +268,12 @@ export interface SitVerdict {
   better: SitSpot[];
   /** A clearly better sit just off the screen, within walking distance. */
   offScreen?: SitSpot;
+  /** What holds this spot back, when it is not the best. */
+  why?: SitWeakness;
+  /** Yards to the nearest predicted trail. */
+  trailYd?: number;
+  /** The weapon's working range, yards, for "no trail within range". */
+  rangeYd: number;
 }
 
 /**
@@ -242,7 +281,7 @@ export interface SitVerdict {
  * clearly better one just off it but within `walkYd`. Null when there is no deer traffic to judge by.
  */
 export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: number } = {}): SitVerdict | null {
-  const { rate } = scorer(input);
+  const { rate, weakness, reach: rangeYd } = scorer(input);
   const trafficAt = (p: LngLat) => rate(p)?.traffic ?? 0;
   const here = trafficAt(at);
   const on = topSitSpots({ ...input, max: 3 }).spots.map((s) => ({ s, t: trafficAt(s.lngLat) }));
@@ -268,7 +307,16 @@ export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: num
   const stay = pct >= STAY_AT_PCT;
   const better = on.filter((o) => o.t > here).map((o) => o.s);
   // Only a move sends the hunter off the screen.
-  return { pct, stay, better, ...(off && !stay ? { offScreen: off.s } : {}) };
+  const w = pct < 95 ? weakness(at) : { why: null, trailYd: null };
+  return {
+    pct,
+    stay,
+    better,
+    rangeYd,
+    ...(off && !stay ? { offScreen: off.s } : {}),
+    ...(w.why ? { why: w.why } : {}),
+    ...(w.trailYd != null ? { trailYd: w.trailYd } : {}),
+  };
 }
 
 /**

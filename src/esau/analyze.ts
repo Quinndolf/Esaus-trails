@@ -144,6 +144,9 @@ export const toVerdictQuery = (v: NonNullable<Analysis["verdict"]>): VerdictQuer
   stay: v.stay,
   of: v.of,
   betterRanks: v.better.map((b) => b.rank),
+  rangeYd: v.rangeYd,
+  ...(v.why ? { why: v.why } : {}),
+  ...(v.trailYd != null ? { trailYd: v.trailYd } : {}),
   ...(v.offScreen
     ? { offScreen: { yards: Math.round(yardsBetween(v.at, v.offScreen.lngLat)), compass: cardinal(bearingBetween(v.at, v.offScreen.lngLat)) } }
     : {}),

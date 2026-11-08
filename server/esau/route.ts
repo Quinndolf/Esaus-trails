@@ -72,7 +72,9 @@ function validate(body: unknown): SpotQuery {
       (v.of === "sit" || v.of === "hunter") &&
       Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) &&
       (off === undefined || (typeof off.yards === "number" && off.yards >= 0 && off.yards < 5000 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass)));
-    if (!ok) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?}");
+    const yd = (x: unknown) => x === undefined || (typeof x === "number" && x >= 0 && x < 20000);
+    const whyOk = v?.why === undefined || ["bed_downwind", "out_of_range", "scent_on_trail", "near_bed", "on_axis"].includes(v.why as string);
+    if (!ok || !whyOk || !yd(v.trailYd) || !yd(v.rangeYd)) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?,why?,trailYd?,rangeYd?}");
   }
   if (q.question && q.question.length > 2000) throw new EsauInputError("question is too long");
   return q as SpotQuery;

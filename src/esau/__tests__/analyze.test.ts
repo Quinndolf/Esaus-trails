@@ -77,11 +77,14 @@ describe("field report: legal and sit spots", () => {
   it("gives Esau the stay-or-move call to say first, even with no spots on screen", () => {
     const r = buildBrief({ ...q, weapon: "bow", sitSpots: [], sitUnsure: true, verdict: { pct: 12, stay: false, of: "sit", betterRanks: [], offScreen: { yards: 310, compass: "S" } } }).report;
     expect(r).toContain("STAY OR MOVE");
-    expect(r).toContain("12%");
+    expect(r).toContain("scores 12 out of 100");
+    expect(r).toContain('Never say "percent as good"');
     expect(r).toContain("MOVE");
     expect(r).toContain("310 yd S, just off the screen");
     const stay = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false, verdict: { pct: 90, stay: true, of: "hunter", betterRanks: [] } }).report;
-    expect(stay).toContain("so the call is STAY");
+    expect(stay).toContain("The call is STAY");
+    const zero = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false, verdict: { pct: 0, stay: false, of: "sit", betterRanks: [1], why: "out_of_range", trailYd: 212, rangeYd: 35 } }).report;
+    expect(zero).toContain("no predicted deer trail within the weapon's 35 yd range; the nearest is about 210 yd away");
     expect(stay).toContain("where the hunter is standing");
   });
   it("lists ranked spots and calls them predictions", () => {

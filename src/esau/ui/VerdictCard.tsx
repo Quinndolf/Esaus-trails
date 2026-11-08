@@ -6,21 +6,34 @@ type Verdict = NonNullable<Analysis['verdict']>;
 
 const away = (from: LngLat, to: LngLat) => `${Math.round(yardsBetween(from, to) / 5) * 5} yd ${cardinal(bearingBetween(from, to))}`;
 
-/** The plain words on the card: one line for the call, one for what to do about it. */
-export function verdictWords(v: Verdict): { call: string; detail: string; better: string[] } {
-  const where = v.of === 'hunter' ? 'Where you stand' : 'This spot';
-  const better = v.better.map((b) => `#${b.rank}: ${away(v.at, b.lngLat)}`);
+const ROUND = (yd: number) => Math.round(yd / 10) * 10;
+
+/** The plain words on the card: the call, a score out of 100, why, and where to go instead. */
+export function verdictWords(v: Verdict): { call: string; score: string; detail: string; better: string[] } {
+  const here = v.of === 'hunter' ? 'Where you stand' : 'This spot';
+  const score = `Score ${v.pct} / 100`;
   if (v.stay)
-    return { call: `Stay · ${v.pct}%`, detail: `${where} is ${v.pct}% as good as the best sit Esau found. Sit tight.`, better: [] };
-  return {
-    call: `Move · ${v.pct}%`,
-    detail: v.offScreen
-      ? `${where} is only ${v.pct}% as good. The best sit is ${away(v.at, v.offScreen.lngLat)}, just off the screen.`
-      : better.length
-        ? `${where} is only ${v.pct}% as good as the numbered spots. Try one of these:`
-        : `${where} is only ${v.pct}% as good as the best sit Esau found.`,
-    better,
+    return {
+      call: 'Stay here',
+      score,
+      detail: v.pct >= 95 ? `${here} is the best spot Esau found on your screen.` : `${here} is close to the best spot Esau found (that one scores 100). Sit tight.`,
+      better: [],
+    };
+  const why: Record<NonNullable<Verdict['why']>, string> = {
+    out_of_range: `No predicted deer trail within ${v.rangeYd} yd, your weapon's range${v.trailYd != null ? `. The nearest is about ${ROUND(v.trailYd)} yd away` : ''}.`,
+    bed_downwind: 'The wind would carry your scent right into where deer bed.',
+    scent_on_trail: 'The wind carries your scent onto the trail, so deer would smell you before they are in range.',
+    near_bed: 'You are very close to where deer bed. They would likely see or hear you.',
+    on_axis: 'Deer would walk straight at you here and see you first.',
   };
+  const reason = v.why ? why[v.why] : 'Fewer deer are predicted to pass in range here than at the spots below.';
+  const better = v.better.map((b) => `#${b.rank}: ${away(v.at, b.lngLat)}`);
+  const go = v.offScreen
+    ? ` A better spot is ${away(v.at, v.offScreen.lngLat)}, just off the screen.`
+    : better.length
+      ? ' Try one of these numbered spots:'
+      : '';
+  return { call: 'Move', score, detail: `${here}: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}${go}`, better };
 }
 
 /** Stay or move, in big plain words, at the top of Esau's panel. */
@@ -28,7 +41,10 @@ export function VerdictCard({ verdict }: { verdict: Verdict }) {
   const w = verdictWords(verdict);
   return (
     <div className={`esau-verdict ${verdict.stay ? 'is-stay' : 'is-move'}`} data-testid="verdict">
-      <strong>{w.call}</strong>
+      <div className="esau-verdict-head">
+        <strong>{w.call}</strong>
+        <span className="esau-verdict-score">{w.score}</span>
+      </div>
       <span>{w.detail}</span>
       {w.better.length > 0 && (
         <ul>
