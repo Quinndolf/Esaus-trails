@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useTools } from "../tools/store";
 import type { Track } from "../tools/types";
-import { cardinal, distance, type LngLat } from "../map/geo";
+import { cardinal, distance, formatDistance, formatDuration, type LngLat } from "../map/geo";
 import { analyzeTrack, scentCrossings } from "./analyze";
 import { debriefLines } from "./debrief";
 import { useJournal, type JournalEntry } from "./store";
@@ -13,30 +13,51 @@ interface Props {
   onClose: () => void;
   /** Called with where the hunter was while replaying, and null when the replay closes. */
   onReplay?: (at: LngLat | null) => void;
+  /** Close the sheet and frame this route on the map. */
+  onShow?: (points: LngLat[]) => void;
 }
 
 /** Past hunts and what the walk looked like. Computed here on the phone from the saved route. */
-export function JournalSheet({ open, onClose, onReplay }: Props) {
+export function JournalSheet({ open, onClose, onReplay, onShow }: Props) {
   const entries = useJournal((s) => s.entries);
   const tracks = useTools((s) => s.tracks);
   const byId = useMemo(() => new Map(tracks.map((t) => [t.id, t])), [tracks]);
   useEffect(() => {
     if (!open) onReplay?.(null);
   }, [open, onReplay]);
+  const linked = new Set(entries.map((e) => e.trackId));
+  const loose = tracks.filter((t) => !linked.has(t.id));
   return (
     <BottomSheet title="Hunt journal" open={open} onClose={onClose}>
-      {!entries.length && <p className="hint">No hunts yet. Stop the tracker when you finish and your hunt shows up here.</p>}
+      {!entries.length && !loose.length && <p className="hint">No hunts yet. Stop the tracker when you finish and your hunt shows up here.</p>}
       {entries.map((e) => (
-        <Entry key={e.id} e={e} track={e.trackId ? byId.get(e.trackId) : undefined} onReplay={onReplay} />
+        <Entry key={e.id} e={e} track={e.trackId ? byId.get(e.trackId) : undefined} onReplay={onReplay} onShow={onShow} />
+      ))}
+      {loose.length > 0 && <h3 className="journal-subhead">Other tracked walks</h3>}
+      {loose.map((t) => (
+        <Entry key={t.id} e={looseEntry(t)} track={t} onReplay={onReplay} onShow={onShow} loose />
       ))}
     </BottomSheet>
   );
 }
 
+/** A saved route nobody wrote up: shown with the same replay, minus the snag line. */
+const looseEntry = (t: Track): JournalEntry => ({
+  id: `loose-${t.id}`,
+  trackId: t.id,
+  date: new Date(t.startedAt).toLocaleDateString("en-CA"),
+  species: null,
+  weapon: null,
+  snagged: null,
+  windFromDeg: null,
+  beds: [],
+  trails: [],
+});
+
 const windFor = (e: JournalEntry) => (at: number): number => windAt(e.wind ?? [], at)?.fromDeg ?? e.windFromDeg ?? NaN;
 const hasWind = (e: JournalEntry) => (e.wind?.length ?? 0) > 0 || e.windFromDeg != null;
 
-function Entry({ e, track, onReplay }: { e: JournalEntry; track: Track | undefined; onReplay?: (at: LngLat | null) => void }) {
+function Entry({ e, track, onReplay, onShow, loose }: { e: JournalEntry; track: Track | undefined; onReplay?: (at: LngLat | null) => void; onShow?: (points: LngLat[]) => void; loose?: boolean }) {
   const [replaying, setReplaying] = useState(false);
   const crossings = useMemo(
     () => (track && hasWind(e) && e.beds.length + e.trails.length > 0 ? scentCrossings(track, { windFromDeg: (_p, at) => windFor(e)(at), beds: e.beds, trails: e.trails }) : []),
@@ -53,8 +74,19 @@ function Entry({ e, track, onReplay }: { e: JournalEntry; track: Track | undefin
         {e.date}
         {e.species ? ` · ${e.species.replace("_", " ")}` : ""}
       </strong>
-      <p>{e.snagged === "yes" ? `Snagged: ${e.what || "yes"}` : e.snagged === "no" ? "Nothing this time" : "Didn't say"}</p>
-      {track ? lines.map((l, i) => <p key={i}>{l}</p>) : <p className="hint">This hunt has no route saved.</p>}
+      {!loose && <p>{e.snagged === "yes" ? `Snagged: ${e.what || "yes"}` : e.snagged === "no" ? "Nothing this time" : "Didn't say"}</p>}
+      {track && (
+        <p data-testid="journal-route">
+          {track.name} · {formatDistance(track.distance)} · {formatDuration(track.endedAt - track.startedAt)}
+        </p>
+      )}
+      {track && !loose && lines.map((l, i) => <p key={i}>{l}</p>)}
+      {!track && <p className="hint">This hunt has no route saved.</p>}
+      {track && onShow && track.points.some((q) => q.lngLat.every(Number.isFinite)) && (
+        <button className="link-btn" data-testid="journal-show" onClick={() => onShow(track.points.map((q) => q.lngLat).filter((l) => l.every(Number.isFinite)))}>
+          Show on map
+        </button>
+      )}
       {track && track.points.filter((q) => q.lngLat.every(Number.isFinite)).length > 1 && !replaying && (
         <button className="link-btn" data-testid="replay-open" onClick={() => setReplaying(true)}>
           Replay this walk

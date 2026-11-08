@@ -164,3 +164,16 @@ describe("route replay", () => {
     expect(host.querySelector('[data-testid="replay-wind"]')!.textContent).toMatch(/end of the hunt.*W/);
   });
 });
+
+describe("hunt journal: tracked walks", () => {
+  it("lists a saved track with no write-up and frames it on the map", async () => {
+    useTools.setState({ tracks: [{ ...track, name: "Ridge walk", distance: 800, endedAt: 45 * 60_000 }] });
+    const onShow = vi.fn();
+    const host = await mount(createElement(JournalSheet, { open: true, onClose: () => {}, onShow }));
+    expect(host.textContent).toContain("Ridge walk");
+    expect(host.textContent).toContain("Other tracked walks");
+    await click(host, '[data-testid="journal-show"]');
+    expect(onShow).toHaveBeenCalledOnce();
+    expect(onShow.mock.calls[0]![0]).toHaveLength(11);
+  });
+});
