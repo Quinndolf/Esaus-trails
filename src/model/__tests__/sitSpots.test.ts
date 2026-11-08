@@ -218,3 +218,12 @@ describe('setup: ground, tree stand or saddle', () => {
     expect(run({ setup: 'ground' }).spots).toEqual(run().spots);
   });
 });
+
+describe('setup: a bed close by', () => {
+  it('costs less up a tree than on the ground', () => {
+    const at = stepYards(mid(16, 16), 0, 20); // a good sit north of the trail with a north wind
+    const bed: Bed = { lngLat: stepYards(at, 270, 50), score: 1, elevationFt: 800 }; // 50 yd west, crosswind
+    const input = { grid, trails: [trail], beds: [bed], windFromDeg: () => 0, weapon: 'bow' as const };
+    expect(rateSit({ ...input, setup: 'saddle' }, at)).toBeGreaterThan(rateSit({ ...input, setup: 'ground' }, at));
+  });
+});

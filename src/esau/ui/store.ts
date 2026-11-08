@@ -4,7 +4,7 @@ import { askEsau, EsauApiError } from '../client';
 import { toSitSpotQuery, toVerdictQuery, type Analysis, type Bounds } from '../analyze';
 import type { Weapon } from '../../rules/types';
 import type { LngLat } from '../../model/geo';
-import type { Setup } from '../../model/sitSpots';
+import { SETUPS, type Setup } from '../../model/sitSpots';
 import { offlineRead } from '../offline';
 import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
 import { groundFor } from './ground';
@@ -83,7 +83,6 @@ function savedWeapon(): Weapon | null {
   }
 }
 const SETUP_KEY = 'esau-setup';
-const SETUPS: Setup[] = ['ground', 'tree_stand', 'saddle'];
 
 function savedSetup(): Setup | null {
   try {
@@ -145,6 +144,7 @@ export const useEsau = create<EsauState>((set, get) => ({
   time: null,
 
   setSetup(setup) {
+    if (setup === get().setup) return;
     try {
       localStorage.setItem(SETUP_KEY, setup);
     } catch {

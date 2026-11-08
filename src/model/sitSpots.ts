@@ -88,6 +88,7 @@ export interface SitSpot {
 
 /** How the hunter sits: on the ground, in a tree stand, or in a saddle. */
 export type Setup = 'ground' | 'tree_stand' | 'saddle';
+export const SETUPS: Setup[] = ['ground', 'tree_stand', 'saddle'];
 export const isElevated = (s: Setup | undefined) => s === 'tree_stand' || s === 'saddle';
 
 export interface SitSpotInput {

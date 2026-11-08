@@ -116,3 +116,5 @@ button.sit-marker { padding: 0; cursor: pointer; }
 .route-pill { position: absolute; left: 12px; bottom: calc(var(--safe-b) + 180px); height: 36px; padding: 0 14px; border-radius: 18px; font-weight: 600; font-size: 13px; z-index: 4; }
 .route-pill.is-on { background: #e2711d; color: #fff; }
 .route-pill-warn { font-weight: 500; }
+.chip-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip-row .chip-item { flex: 1 1 auto; text-align: center; }

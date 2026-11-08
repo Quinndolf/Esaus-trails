@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe('animal chip', () => {
-  it('opens a list in order, asks the weapon and the setup, then shows "Whitetail · Crossbow · Saddle"', async () => {
+  it('opens a list in order, asks the weapon and setup on one card, then shows "Whitetail · Crossbow · Saddle"', async () => {
     const host = await mount(createElement(AnimalChip));
     expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('What are you hunting?');
     await click(host, '[data-testid="animal-chip"]');
@@ -37,11 +37,12 @@ describe('animal chip', () => {
     expect(names.slice(0, 4)).toEqual(['animal-whitetail', 'animal-squirrel', 'animal-ginseng', 'animal-turkey']);
     await click(host, '[data-testid="animal-whitetail"]');
     expect(host.textContent).toContain('What are you hunting with?');
+    expect(host.textContent).toContain('How are you set up?'); // same card
+    await click(host, '[data-testid="setup-saddle"]');
+    expect(host.querySelector('[data-testid="weapon-crossbow"]')).toBeTruthy(); // still open: no weapon tapped yet
     await click(host, '[data-testid="weapon-crossbow"]');
     expect(useEsau.getState().species).toBe('whitetail');
     expect(useWeapon.getState().weapon).toBe('crossbow');
-    expect(host.textContent).toContain('How are you set up?');
-    await click(host, '[data-testid="setup-saddle"]');
     expect(useEsau.getState().setup).toBe('saddle');
     expect(localStorage.getItem('esau-setup')).toBe('saddle');
     expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('Whitetail · Crossbow · Saddle');
@@ -114,5 +115,28 @@ describe('exit prompt', () => {
     expect(loadSnags()).toMatchObject([{ yes: true, what: 'Doe' }]);
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('setup step', () => {
+  it('with a setup saved, picking the weapon closes the card', async () => {
+    useEsau.setState({ setup: 'tree_stand' });
+    const host = await mount(createElement(AnimalChip));
+    await click(host, '[data-testid="animal-chip"]');
+    await click(host, '[data-testid="animal-whitetail"]');
+    await click(host, '[data-testid="weapon-bow"]');
+    expect(host.querySelector('[data-testid="weapon-bow"]')).toBeNull();
+    expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('Tree stand');
+  });
+  it('re-picking the same setup does not ask Esau again', () => {
+    useEsau.setState({ setup: 'saddle', reply: { headline: 'x' } as never });
+    useEsau.getState().setSetup('saddle');
+    expect(useEsau.getState().reply).not.toBeNull();
+  });
+  it('skips the setup question for ginseng', async () => {
+    const host = await mount(createElement(AnimalChip));
+    await click(host, '[data-testid="animal-chip"]');
+    await click(host, '[data-testid="animal-ginseng"]');
+    expect(host.textContent).not.toContain('How are you set up?');
   });
 });
