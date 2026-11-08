@@ -30,6 +30,7 @@ function keyOf(q: SpotQuery): string {
   return JSON.stringify([
     q.species,
     q.weapon ?? null,
+    q.setup ?? null,
     g.weather.hours[q.hourIndex ?? 0] ?? q.hourIndex ?? 0,
     g.notes ?? null,
     [g.west, g.south, g.east, g.north].map((v) => v.toFixed(4)),

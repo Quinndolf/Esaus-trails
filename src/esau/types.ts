@@ -44,7 +44,7 @@ export interface GroundGrid {
   notes?: string[];
 }
 
-import type { Weapon } from "../model/sitSpots";
+import type { Setup, Weapon } from "../model/sitSpots";
 
 export type PinKind = "food" | "water" | "bed" | "sign" | "stand" | "photo";
 
@@ -109,6 +109,8 @@ export interface SpotQuery {
   view?: { west: number; east: number; south: number; north: number };
   /** What the hunter carries; drives range and the legal read. */
   weapon?: Weapon;
+  /** How the hunter sits: ground, tree stand or saddle. */
+  setup?: Setup;
   /** Ranked sit spots predicted from the trail model, wind and the weapon's range. Predictions, not sign. */
   sitSpots?: SitSpotQuery[];
   /** True when the ground gave nothing strong to go on for sit spots. */

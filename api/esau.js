@@ -31168,6 +31168,7 @@ function buildBrief(q, opts = {}) {
   lines.push(
     legal.status === "unknown" ? `I do not have this in the rules table. ${legal.note} Tell the hunter you don't have the dates and to check the KDFWR guide; state no dates or limits yourself.` : legal.status === "closed" ? `OUT OF SEASON: ${legal.note} A big "Out of season" banner is already on the hunter's screen. Do not lecture. Still say what the animal is doing and where it would be.` : `In season: ${legal.note}${legal.unconfirmed ? " (The season's end date is not confirmed; say to verify with KDFWR.)" : ""} State only what is written here, and say to verify with KDFWR.`
   );
+  if (q.weapon && q.species !== "ginseng") lines.push("", ...setupLines(q.setup, q.species));
   if (q.weapon) {
     lines.push("");
     lines.push(`TOP SIT SPOTS (${q.species === "squirrel" ? "predicted from hardwood cover and the hour; not confirmed on the ground, and Esau cannot see which trees are nut trees" : q.species === "turkey" ? "predicted from timber, open ground, ridges and the hour; not confirmed on the ground. Turkeys see and hear far better than they smell, so give no wind or scent advice" : `predicted from the trail model, today's wind and the ${q.weapon}'s range; not confirmed on the ground`})`);
@@ -31208,6 +31209,16 @@ function verdictLines(v) {
   if (!v.stay && v.offScreen) out.push(`The best sit is ${v.offScreen.yards} yd ${v.offScreen.compass}, just off the screen; the map zooms out to show it.`);
   out.push(`Open the short read with this call in plain words ("${v.stay ? "Stay here" : "Move"}" and the ${v.pct}%), then say why in one sentence. Never contradict it.`);
   return out;
+}
+function setupLines(setup, species) {
+  const scent = species !== "turkey";
+  const deer = species !== "turkey" && species !== "squirrel";
+  const head = `SETUP: ${setup === "tree_stand" ? "a tree stand, about 20 ft up" : setup === "saddle" ? "a saddle, about 15-20 ft up" : setup === "ground" ? "on the ground" : "not said; read it as on the ground"}.`;
+  if (setup === "tree_stand")
+    return [head, `Height hides movement and lifts ${scent ? "some scent over deer close in, but it never beats a wrong wind, and evening thermals sinking downhill still carry scent to the ground" : "the hunter above a turkey's eye line"}.${deer ? " A hung stand is work to move: if the call is move, say whether it is worth hanging a new one or using a climber." : ""}`];
+  if (setup === "saddle")
+    return [head, `A saddle is mobile: the hunter can pick any straight tree near the better spot today. ${scent ? "Height helps with close deer but never beats a wrong wind; evening thermals still pull scent down. " : ""}It shoots best around the tree on the off side${deer ? "; say which side to put the tree on so the shot lane faces the trail" : ""}.`];
+  return [head, `On the ground the animal ${scent ? "smells and " : ""}sees the hunter at its own level: back into cover, break up the outline, keep still${scent ? ", and keep the wind right; scent stays low and travels along the ground" : ""}.`];
 }
 
 // src/model/sitSpots.ts
@@ -37639,6 +37650,8 @@ function validate2(body) {
     const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
     if (!ok || v.west >= v.east || v.south >= v.north) throw new EsauInputError("view must be a {west,east,south,north} box");
   }
+  if (q.setup !== void 0 && !["ground", "tree_stand", "saddle"].includes(q.setup))
+    throw new EsauInputError("setup must be ground, tree_stand or saddle");
   if (q.verdict !== void 0) {
     const v = q.verdict;
     const off = v?.offScreen;

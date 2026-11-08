@@ -60,6 +60,8 @@ function validate(body: unknown): SpotQuery {
     const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
     if (!ok || (v.west as number) >= (v.east as number) || (v.south as number) >= (v.north as number)) throw new EsauInputError("view must be a {west,east,south,north} box");
   }
+  if (q.setup !== undefined && !["ground", "tree_stand", "saddle"].includes(q.setup as string))
+    throw new EsauInputError("setup must be ground, tree_stand or saddle");
   if (q.verdict !== undefined) {
     const v = q.verdict as unknown as Record<string, unknown> | null;
     const off = v?.offScreen as Record<string, unknown> | undefined;

@@ -33,6 +33,14 @@ const MIN_SPACING_YD = 100;
 const TOO_CLOSE_YD = 8;
 /** Deer smelling the hunter still count a little, never a lot. */
 const SMELLED_FACTOR = 0.1;
+/**
+ * Up a tree (stand or saddle, ~15-20 ft) some scent carries over deer close in, and they see you less.
+ * It helps a little, never enough to sit with the wind wrong.
+ */
+const SMELLED_FACTOR_UP = 0.25;
+const NEAR_BED_FACTOR_UP = 0.6;
+/** Scent from up a tree comes back down to the ground past about this far. */
+const UP_CLOSE_YD = 30;
 /** A bed within this distance is busted by a hunter even with the wind right. */
 const NEAR_BED_YD = 60;
 const NEAR_BED_FACTOR = 0.4;
@@ -78,6 +86,11 @@ export interface SitSpot {
   kind?: 'trail' | 'food_trees' | 'roost' | 'strut_zone';
 }
 
+/** How the hunter sits: on the ground, in a tree stand, or in a saddle. */
+export type Setup = 'ground' | 'tree_stand' | 'saddle';
+export const SETUPS: Setup[] = ['ground', 'tree_stand', 'saddle'];
+export const isElevated = (s: Setup | undefined) => s === 'tree_stand' || s === 'saddle';
+
 export interface SitSpotInput {
   grid: ElevationGrid;
   trails: Trail[];
@@ -85,6 +98,8 @@ export interface SitSpotInput {
   /** Direction the wind blows FROM at a cell index. */
   windFromDeg: (cell: number) => number;
   weapon: Weapon;
+  /** Ground (the default), tree stand or saddle. Up a tree, close deer downwind count a little more. */
+  setup?: Setup;
   /** If given, an approach that walks scent over a bed is marked down. */
   hunter?: LngLat;
   max?: number;
@@ -107,6 +122,8 @@ function scorer(input: SitSpotInput) {
   const { ideal, max: reach } = WEAPON_RANGE_YD[weapon];
   const points = pinch(trails, grid);
   const flat = trails.flatMap((t) => t.coordinates);
+  const up = isElevated(input.setup);
+  const nearBedFactor = up ? NEAR_BED_FACTOR_UP : NEAR_BED_FACTOR;
   const towardOf = (at: LngLat) => {
     const i = cellAt(grid, at);
     return i == null ? null : (input.windFromDeg(i) + 180) % 360;
@@ -127,13 +144,13 @@ function scorer(input: SitSpotInput) {
       const quality = d < TOO_CLOSE_YD ? 0 : Math.max(0, 1 - Math.abs(d - ideal) / reach);
       // Deer whose nose is in your scent are not coming past.
       const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
-      const gain = q.w * quality * (smelled ? SMELLED_FACTOR : 1);
+      const gain = q.w * quality * (smelled ? (up && d <= UP_CLOSE_YD ? SMELLED_FACTOR_UP : SMELLED_FACTOR) : 1);
       traffic += gain;
       if (gain > best.gain) best = { p: q.p, gain, pt: q };
     }
     if (traffic <= 0) return null;
     // Too close to a bed busts it even with the wind right.
-    if (beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)) traffic *= NEAR_BED_FACTOR;
+    if (beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)) traffic *= nearBedFactor;
     // Straight down the trail's line is where deer walk at you; off to the side is a sit.
     if (onTrailAxis(at, trails, flat)) traffic *= ON_AXIS_FACTOR;
     if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= APPROACH_FACTOR;

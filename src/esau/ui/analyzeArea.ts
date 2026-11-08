@@ -18,6 +18,7 @@ export function analysisForSlider(sit: LatLng | null): Analysis | null {
     wind: hc.wind,
     species: e.species,
     weapon: e.weapon,
+    setup: e.setup ?? undefined,
     at: h.date,
     sit: sit ? ([sit.lng, sit.lat] as LngLat) : null,
     hunter: e.hunter ? ([e.hunter.lng, e.hunter.lat] as LngLat) : null,
