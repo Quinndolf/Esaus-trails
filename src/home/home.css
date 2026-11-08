@@ -118,3 +118,4 @@ button.sit-marker { padding: 0; cursor: pointer; }
 .route-pill-warn { font-weight: 500; }
 .chip-row { display: flex; gap: 4px; flex-wrap: wrap; }
 .chip-row .chip-item { flex: 1 1 auto; text-align: center; }
+.journal-subhead { margin: 16px 0 0; font-size: 14px; opacity: 0.7; }

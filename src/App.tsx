@@ -84,6 +84,16 @@ export function App() {
   const visible = usePageVisible();
   useWindLog(recording);
   const replayAt = useReplayMarker(map);
+  const showRoute = useCallback(
+    (pts: [number, number][]) => {
+      setSheet(null);
+      if (!map || !pts.length) return;
+      const lngs = pts.map((q) => q[0]);
+      const lats = pts.map((q) => q[1]);
+      map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 60, maxZoom: 17, duration: 600 });
+    },
+    [map],
+  );
   const gpsOn = gpsWanted({ mode, recording, visible });
   const { fix: liveFix, status: gps } = useGeolocation(gpsOn);
   // Long-press 'find me' reading, and the last known spot, so the dot shows even before the live GPS locks on.
@@ -351,7 +361,7 @@ export function App() {
         onJournal={() => setSheet('journal')}
         onGotOne={() => setSheet('harvest')}
       />
-      <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} onReplay={replayAt} />
+      <JournalSheet open={sheet === 'journal'} onClose={() => setSheet(null)} onReplay={replayAt} onShow={showRoute} />
       <GinsengRulesSheet />
       <GinsengHowToSheet />
       <GinsengGearSheet />
