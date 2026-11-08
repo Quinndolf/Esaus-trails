@@ -7,6 +7,7 @@ import { offlineOverlays } from './layers/offline';
 import { useLayerState } from './layers/useLayerState';
 import { useMapLayers } from './layers/useMapLayers';
 import { MapView, type LocationMode } from './map/MapView';
+import { ThreeDButton } from './map/ThreeDButton';
 import { bestFix, currentFix, gpsWanted, lastKnownFix, useGeolocation, type Fix } from './map/useGeolocation';
 import { useLongPress } from './map/useLongPress';
 import { usePageVisible } from './map/usePageVisible';
@@ -306,6 +307,7 @@ export function App() {
 
       <div className="home-stack">
         <MapKeyButton />
+        <ThreeDButton map={map} />
         <button className="frost-btn" onClick={() => setSheet('layers')} aria-label="Map Layers">
           <LayersIcon />
         </button>
