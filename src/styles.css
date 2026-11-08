@@ -131,3 +131,41 @@ button { font: inherit; color: inherit; }
 
 /* Markers must stay absolutely positioned by MapLibre whatever order the CSS bundles in. */
 .maplibregl-canvas-container > .maplibregl-marker { position: absolute; top: 0; left: 0; }
+
+/* Light bottom sheets (onX-style): white card, soft grey tiles, bold title. Scoped to .sheet so the map controls keep their own look. */
+.sheet { --panel: #ffffff; --panel-2: #f2f3f5; --line: #e4e6ea; --text: #14181c; --muted: #6a727c; color: var(--text);
+  color-scheme: light; box-shadow: 0 -4px 28px rgba(0, 0, 0, .22); border-radius: 20px 20px 0 0; }
+.sheet .sheet-handle { background: #cfd3d8; }
+.sheet-head h2 { font-size: 19px; font-weight: 800; }
+.sheet .sheet-section { font-weight: 700; color: var(--muted); }
+.sheet .toggle { background: #d5d8dd; }
+.sheet .toggle.is-on { background: var(--green); }
+.sheet .swatch { border-color: rgba(0, 0, 0, .15); }
+.sheet .tool-tile { box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.sheet .tool-tile.is-primary { background: #fdecea; color: #7a1410; box-shadow: inset 0 0 0 2px #e53935; }
+.sheet .basemap-card.is-active { border-color: var(--green); background: #eefaf1; }
+.sheet .link-btn, .sheet .text-btn { color: #0a8f3c; }
+.sheet .primary-btn, .sheet .segmented button.is-active { color: #fff; background: #1f9d4c; }
+/* Dark-on-dark guards: things that sit on a dark fill inside a light sheet keep white text. */
+.sheet .fab, .sheet .mark-chip.is-active { color: #fff; }
+.sheet .badge { color: var(--text); }
+
+/* Esau's read card: same light look as the bottom sheets. */
+.esau-panel { --panel: #ffffff; --panel-2: #f2f3f5; --line: #e4e6ea; --text: #14181c; --muted: #6a727c; color: var(--text); color-scheme: light;
+  border-radius: 20px 20px 0 0; box-shadow: 0 -4px 28px rgba(0, 0, 0, .22); }
+.esau-panel .esau-spot strong { font-size: 19px; font-weight: 800; }
+.esau-panel .esau-reply { background: #f6f7f9; border-left-color: var(--accent); }
+.esau-panel .link-btn, .esau-panel .text-btn { color: #0a8f3c; }
+.esau-panel .badge.conf-low { background: #fde8df; color: #8a3414; }
+.esau-panel .badge.conf-good { background: #dff5e5; color: #17622d; }
+.esau-panel .icon-btn { color: var(--muted); }
+
+/* onX-style map controls: solid white buttons with a crisp shadow instead of see-through frost. */
+:root { --frost: #ffffff; --frost-shadow: 0 1px 3px rgba(0, 0, 0, .3), 0 3px 10px rgba(0, 0, 0, .22); }
+.frost-btn, .chip, .pill-btn { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.frost-btn { width: 46px; height: 46px; }
+.frost-btn svg { width: 24px; height: 24px; }
+.tools-btn { width: 54px; height: 54px; }
+.chip { height: 44px; font-weight: 800; }
+.hour-bar { background: rgba(255, 255, 255, .94); -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 16px; }
+.maplibregl-ctrl-top-right { top: calc(var(--safe-t) + 62px); }
