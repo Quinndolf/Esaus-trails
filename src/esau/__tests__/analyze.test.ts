@@ -74,6 +74,16 @@ describe("field report: legal and sit spots", () => {
   const g = hollowGrid();
   const q = { species: "whitetail" as const, spot: cell(6, 16), grid: g, hourIndex: 0, timeZone: "America/Chicago" };
   const spots = [{ rank: 1, lat: 36.75, lng: -85.7, watchBearingDeg: 90, yardsToTrail: 22, reason: "Predicted trail 22 yd E." }];
+  it("gives Esau the stay-or-move call to say first, even with no spots on screen", () => {
+    const r = buildBrief({ ...q, weapon: "bow", sitSpots: [], sitUnsure: true, verdict: { pct: 12, stay: false, of: "sit", betterRanks: [], offScreen: { yards: 310, compass: "S" } } }).report;
+    expect(r).toContain("STAY OR MOVE");
+    expect(r).toContain("12%");
+    expect(r).toContain("MOVE");
+    expect(r).toContain("310 yd S, just off the screen");
+    const stay = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false, verdict: { pct: 90, stay: true, of: "hunter", betterRanks: [] } }).report;
+    expect(stay).toContain("so the call is STAY");
+    expect(stay).toContain("where the hunter is standing");
+  });
   it("lists ranked spots and calls them predictions", () => {
     const r = buildBrief({ ...q, weapon: "bow", sitSpots: spots, sitUnsure: false }).report;
     expect(r).toContain("TOP SIT SPOTS");
@@ -137,5 +147,23 @@ describe("answer cap on dates", () => {
   it("says unsure when nothing on screen is worth a sit", () => {
     const view = { west: BOX.west, east: mid(0, 2)[0], south: BOX.south, north: mid(2, 0)[1] }; // a corner far from the trail
     expect(analyzeHour({ ...base, wind: wind(0), view })).toMatchObject({ spots: [], unsure: true });
+  });
+});
+
+describe("stay or move", () => {
+  it("tells a deer hunter to move off a spot that blows scent on the trail, and to stay on the top pick", () => {
+    const bad = analyzeHour({ ...base, wind: wind(180), sit: mid(17, 16) });
+    expect(bad.verdict).toMatchObject({ stay: false, of: "sit" });
+    expect(bad.verdict!.better.length).toBeGreaterThan(0);
+    const top = analyzeHour({ ...base, wind: wind(0) }).spots[0]!;
+    expect(analyzeHour({ ...base, wind: wind(0), sit: top.lngLat }).verdict).toMatchObject({ stay: true });
+  });
+  it("judges where the hunter stands when no sit is chosen, only if it is on screen", () => {
+    const view = { west: grid.west, east: grid.east, south: grid.south, north: grid.north };
+    expect(analyzeHour({ ...base, wind: wind(0), hunter: mid(17, 16), view }).verdict?.of).toBe("hunter");
+    expect(analyzeHour({ ...base, wind: wind(0), hunter: [grid.east + 0.01, grid.north] as LngLat, view }).verdict).toBeUndefined();
+  });
+  it("gives no verdict without a weapon or for other animals", () => {
+    expect(analyzeHour({ ...base, wind: wind(0), weapon: null, sit: mid(17, 16) }).verdict).toBeUndefined();
   });
 });

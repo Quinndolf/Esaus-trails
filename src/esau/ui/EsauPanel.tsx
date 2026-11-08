@@ -4,6 +4,7 @@ import { localTime } from '../conditions';
 import type { EsauReply } from '../types';
 import { CloseIcon } from '../../ui/icons';
 import { quickBrief, useEsau } from './store';
+import { VerdictCard } from './VerdictCard';
 import './esau.css';
 
 /** Battery percent, or null where the browser can't say (iOS Safari). Never throws. */
@@ -99,6 +100,7 @@ export function EsauPanel() {
       </header>
 
       <div className="esau-body">
+        {s.analysis?.verdict && <VerdictCard verdict={s.analysis.verdict} />}
         {s.analysis?.advisories.map((a) => (
           <div key={a.kind} className={`esau-advisory is-${a.kind}`} role="alert" data-testid={`advisory-${a.kind}`}>
             <strong>{a.title}</strong>

@@ -9,7 +9,7 @@ import { readSpot } from "./terrain";
 import { cellSize } from "../model/geo";
 import { legalToday } from "../rules/kentucky";
 import type { Legal } from "../rules/types";
-import type { ConditionsReading, SpotQuery, SpotReading } from "./types";
+import type { ConditionsReading, SpotQuery, SpotReading, VerdictQuery } from "./types";
 
 export interface EsauBrief {
   species: SpeciesBrain;
@@ -168,6 +168,7 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
           : "No sit spots were worked out. Do not invent any.",
       );
     }
+    if (q.verdict) lines.push(...verdictLines(q.verdict));
   } else {
     lines.push("");
     lines.push("The hunter has not picked a weapon yet, so give no range or sit-spot advice.");
@@ -187,4 +188,17 @@ export function buildBrief(q: SpotQuery, opts: { thermal?: ThermalFn; rutPeak?: 
   );
 
   return { species, system: buildSystemPrompt(species), report: lines.join("\n"), spot, conditions, phase, scores, legal };
+}
+
+/** Stay or move, already shown on the hunter's screen as a card; Esau says it first and plainly. */
+function verdictLines(v: VerdictQuery): string[] {
+  const whose = v.of === "hunter" ? "where the hunter is standing" : "the spot the hunter tapped";
+  const out = [
+    "",
+    `STAY OR MOVE (shown on the hunter's screen as a card): ${whose} scores ${v.pct}% of the best sit found, so the call is ${v.stay ? "STAY" : "MOVE"}.`,
+  ];
+  if (!v.stay && v.betterRanks.length) out.push(`Better sits on screen: ${v.betterRanks.map((r) => `#${r}`).join(", ")}.`);
+  if (!v.stay && v.offScreen) out.push(`The best sit is ${v.offScreen.yards} yd ${v.offScreen.compass}, just off the screen; the map zooms out to show it.`);
+  out.push(`Open the short read with this call in plain words ("${v.stay ? "Stay here" : "Move"}" and the ${v.pct}%), then say why in one sentence. Never contradict it.`);
+  return out;
 }

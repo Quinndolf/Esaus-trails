@@ -59,6 +59,18 @@ function validate(body: unknown): SpotQuery {
     const ok = v && ["west", "east", "south", "north"].every((k) => typeof v[k] === "number" && Number.isFinite(v[k]));
     if (!ok || (v.west as number) >= (v.east as number) || (v.south as number) >= (v.north as number)) throw new EsauInputError("view must be a {west,east,south,north} box");
   }
+  if (q.verdict !== undefined) {
+    const v = q.verdict as unknown as Record<string, unknown> | null;
+    const off = v?.offScreen as Record<string, unknown> | undefined;
+    const ok =
+      v &&
+      typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 &&
+      typeof v.stay === "boolean" &&
+      (v.of === "sit" || v.of === "hunter") &&
+      Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) &&
+      (off === undefined || (typeof off.yards === "number" && off.yards >= 0 && off.yards < 5000 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass)));
+    if (!ok) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?}");
+  }
   if (q.question && q.question.length > 2000) throw new EsauInputError("question is too long");
   return q as SpotQuery;
 }

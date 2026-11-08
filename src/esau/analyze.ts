@@ -1,14 +1,14 @@
-import { cellAt, type Bounds, type LngLat } from "../model/geo";
+import { bearingBetween, cardinal, cellAt, insideBounds, yardsBetween, type Bounds, type LngLat } from "../model/geo";
 import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
-import { topSitSpots, type SitSpot, type Weapon } from "../model/sitSpots";
+import { sitVerdict, topSitSpots, type SitSpot, type SitSpotInput, type SitVerdict, type Weapon } from "../model/sitSpots";
 import { squirrelSitSpots } from "../model/squirrelSpots";
 import { turkeySitSpots } from "../model/turkeySpots";
 import type { ElevationGrid } from "../model/types";
 import { legalToday } from "../rules/kentucky";
 import type { Legal } from "../rules/types";
 import { advisories, type Advisory } from "./advisory";
-import type { SitSpotQuery, SpeciesId } from "./types";
+import type { SitSpotQuery, SpeciesId, VerdictQuery } from "./types";
 
 /** Animals the movement model's trails and beds describe. Squirrel and turkey have their own models; others get no sit spots yet. */
 const TRAIL_MODEL_SPECIES: SpeciesId[] = ["whitetail", "mule_deer"];
@@ -18,6 +18,8 @@ export interface Analysis {
   unsure: boolean;
   advisories: Advisory[];
   legal: Legal;
+  /** Stay or move, for the spot the hunter chose (or stands on). Deer only for now. */
+  verdict?: SitVerdict & { at: LngLat; of: "sit" | "hunter" };
 }
 
 export interface AnalyzeInput {
@@ -60,16 +62,15 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
     : turkey
     ? turkey
     : canRank
-    ? topSitSpots({
-        grid: i.grid,
-        trails: i.movement.trails,
-        beds: i.movement.beds,
-        windFromDeg: (cell) => i.wind.fromDeg[cell] ?? 0,
-        weapon: i.weapon!,
-        hunter: i.hunter ?? undefined,
-        within: i.view ?? undefined,
-      })
+    ? topSitSpots(deerInput(i))
     : { spots: [], unsure: true };
+  // Judge the hunter's chosen spot, else where they stand when that is on screen.
+  const judged: { at: LngLat; of: "sit" | "hunter" } | null = i.sit
+    ? { at: i.sit, of: "sit" }
+    : i.hunter && i.view && insideBounds(i.view, i.hunter)
+      ? { at: i.hunter, of: "hunter" }
+      : null;
+  const v = canRank && judged ? sitVerdict(deerInput(i), judged.at) : null;
 
   const sitCell = i.sit ? cellAt(i.grid, i.sit) : null;
   const windAtSit = (w: WindField) => (sitCell != null ? { mph: w.mph[sitCell] ?? 0, fromDeg: w.fromDeg[sitCell] ?? 0 } : { mph: 0, fromDeg: 0 });
@@ -78,6 +79,7 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
     spots: ranked.spots,
     unsure: ranked.unsure,
     legal,
+    ...(v && judged ? { verdict: { ...v, ...judged } } : {}),
     advisories: advisories({
       legal,
       wind: windHere,
@@ -85,6 +87,18 @@ export function analyzeHour(i: AnalyzeInput): Analysis {
       later: i.windLater?.map((l) => ({ hoursAhead: l.hoursAhead, wind: windAtSit(l.wind) })),
       targets: [...i.movement.trails.flatMap((t) => t.coordinates.map((lngLat) => ({ lngLat }))), ...i.movement.beds.map((b) => ({ lngLat: b.lngLat }))],
     }),
+  };
+}
+
+function deerInput(i: AnalyzeInput): SitSpotInput {
+  return {
+    grid: i.grid,
+    trails: i.movement.trails,
+    beds: i.movement.beds,
+    windFromDeg: (cell) => i.wind.fromDeg[cell] ?? 0,
+    weapon: i.weapon!,
+    hunter: i.hunter ?? undefined,
+    within: i.view ?? undefined,
   };
 }
 
@@ -96,4 +110,14 @@ export const toSitSpotQuery = (s: SitSpot): SitSpotQuery => ({
   yardsToTrail: s.yardsToTrail,
   reason: s.reason,
   kind: s.kind,
+});
+
+export const toVerdictQuery = (v: NonNullable<Analysis["verdict"]>): VerdictQuery => ({
+  pct: v.pct,
+  stay: v.stay,
+  of: v.of,
+  betterRanks: v.better.map((b) => b.rank),
+  ...(v.offScreen
+    ? { offScreen: { yards: Math.round(yardsBetween(v.at, v.offScreen.lngLat)), compass: cardinal(bearingBetween(v.at, v.offScreen.lngLat)) } }
+    : {}),
 });

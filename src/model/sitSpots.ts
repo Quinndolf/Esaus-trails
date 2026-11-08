@@ -98,14 +98,15 @@ export interface SitSpotResult {
   unsure: boolean;
 }
 
-export function topSitSpots(input: SitSpotInput): SitSpotResult {
+type Pt = ReturnType<typeof pinch>[number];
+type Rated = { traffic: number; best: { p: LngLat; gain: number; pt: Pt }; wind: number };
+
+/** Builds the scorer for one hour: how much traffic a hunter sitting at a point would see, with every penalty applied. */
+function scorer(input: SitSpotInput) {
   const { grid, trails, beds, weapon } = input;
   const { ideal, max: reach } = WEAPON_RANGE_YD[weapon];
   const points = pinch(trails, grid);
   const flat = trails.flatMap((t) => t.coordinates);
-  const limit = Math.max(0, Math.floor(input.max ?? 3));
-  if (!points.length || !limit) return { spots: [], unsure: true };
-
   const towardOf = (at: LngLat) => {
     const i = cellAt(grid, at);
     return i == null ? null : (input.windFromDeg(i) + 180) % 360;
@@ -113,8 +114,48 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
   const bedDownwind = (at: LngLat, toward: number) =>
     beds.some((b) => yardsBetween(at, b.lngLat) <= BED_BUST_YD && angleDiff(bearingBetween(at, b.lngLat), toward) <= SCENT_CONE_DEG);
 
-  type Pt = (typeof points)[number];
-  type Cand = { at: LngLat; traffic: number; best: { p: LngLat; gain: number; pt: Pt }; wind: number };
+  /** Null when the spot is off the ground, blows scent onto a bed, or sees no deer at all. */
+  const rate = (at: LngLat): Rated | null => {
+    if (!points.length) return null;
+    const toward = towardOf(at);
+    if (toward == null || bedDownwind(at, toward)) return null;
+    let traffic = 0;
+    let best = { p: points[0]!.p, gain: 0, pt: points[0]! };
+    for (const q of points) {
+      const d = yardsBetween(at, q.p);
+      if (d > reach) continue;
+      const quality = d < TOO_CLOSE_YD ? 0 : Math.max(0, 1 - Math.abs(d - ideal) / reach);
+      // Deer whose nose is in your scent are not coming past.
+      const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
+      const gain = q.w * quality * (smelled ? SMELLED_FACTOR : 1);
+      traffic += gain;
+      if (gain > best.gain) best = { p: q.p, gain, pt: q };
+    }
+    if (traffic <= 0) return null;
+    // Too close to a bed busts it even with the wind right.
+    if (beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)) traffic *= NEAR_BED_FACTOR;
+    // Straight down the trail's line is where deer walk at you; off to the side is a sit.
+    if (onTrailAxis(at, trails, flat)) traffic *= ON_AXIS_FACTOR;
+    if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= APPROACH_FACTOR;
+    return { traffic, best, wind: (toward + 180) % 360 };
+  };
+  return { points, ideal, rate };
+}
+
+/**
+ * How much deer traffic a hunter sitting right here would see this hour, on the same scale `topSitSpots`
+ * ranks by (0 when the wind or a bed rules the spot out). Compare it with `rateSit` at the top pick.
+ */
+export function rateSit(input: SitSpotInput, at: LngLat): number {
+  return scorer(input).rate(at)?.traffic ?? 0;
+}
+
+export function topSitSpots(input: SitSpotInput): SitSpotResult {
+  const { points, ideal, rate } = scorer(input);
+  const limit = Math.max(0, Math.floor(input.max ?? 3));
+  if (!points.length || !limit) return { spots: [], unsure: true };
+
+  type Cand = Rated & { at: LngLat };
   const cands: Cand[] = [];
   const seen = new Set<string>();
   for (const { p } of points) {
@@ -123,27 +164,8 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
       const key = `${at[0].toFixed(5)},${at[1].toFixed(5)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const toward = towardOf(at);
-      if (toward == null || bedDownwind(at, toward)) continue;
-      let traffic = 0;
-      let best = { p, gain: 0, pt: points[0]! };
-      for (const q of points) {
-        const d = yardsBetween(at, q.p);
-        if (d > reach) continue;
-        const quality = d < TOO_CLOSE_YD ? 0 : Math.max(0, 1 - Math.abs(d - ideal) / reach);
-        // Deer whose nose is in your scent are not coming past.
-        const smelled = d > 3 && angleDiff(bearingBetween(at, q.p), toward) <= SCENT_CONE_DEG;
-        const gain = q.w * quality * (smelled ? SMELLED_FACTOR : 1);
-        traffic += gain;
-        if (gain > best.gain) best = { p: q.p, gain, pt: q };
-      }
-      if (traffic <= 0) continue;
-      // Too close to a bed busts it even with the wind right.
-      if (beds.some((bd) => yardsBetween(at, bd.lngLat) < NEAR_BED_YD)) traffic *= NEAR_BED_FACTOR;
-      // Straight down the trail's line is where deer walk at you; off to the side is a sit.
-      if (onTrailAxis(at, trails, flat)) traffic *= ON_AXIS_FACTOR;
-      if (input.hunter && approachCrossesBed(input.hunter, at, toward, beds)) traffic *= APPROACH_FACTOR;
-      cands.push({ at, traffic, best, wind: (toward + 180) % 360 });
+      const r = rate(at);
+      if (r) cands.push({ at, ...r });
     }
   }
   if (input.within) {
@@ -179,6 +201,57 @@ export function topSitSpots(input: SitSpotInput): SitSpotResult {
     };
   });
   return { spots, unsure: top < UNSURE_BELOW };
+}
+
+/** At or above this share of the best spot within walking distance, Esau says stay. */
+export const STAY_AT_PCT = 70;
+/** How far a hunter will walk to a better spot just off the screen: under half a mile. */
+export const WALK_YD = 800;
+/** A spot off the screen has to beat the best one on it by this much to be worth the walk. */
+const OFF_SCREEN_EDGE = 1.25;
+/** A spot this close to yours is the same sit, not a better one. */
+const SAME_SIT_YD = 30;
+
+export interface SitVerdict {
+  /** 0-100: your spot's traffic against the best spot on screen (or just off it, within a walk). */
+  pct: number;
+  stay: boolean;
+  /** Better sits on the screen, best first, at most three. */
+  better: SitSpot[];
+  /** A clearly better sit just off the screen, within walking distance. */
+  offScreen?: SitSpot;
+}
+
+/**
+ * Stay or move: rates the hunter's spot against the best ones on the screen (`within`), and against any
+ * clearly better one just off it but within `walkYd`. Null when there is no deer traffic to judge by.
+ */
+export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: number } = {}): SitVerdict | null {
+  const { rate } = scorer(input);
+  const trafficAt = (p: LngLat) => rate(p)?.traffic ?? 0;
+  const here = trafficAt(at);
+  const on = topSitSpots({ ...input, max: 3 }).spots.map((s) => ({ s, t: trafficAt(s.lngLat) }));
+  let off: { s: SitSpot; t: number } | undefined;
+  if (input.within) {
+    const walk = opts.walkYd ?? WALK_YD;
+    const reach: Bounds = {
+      north: stepYards(at, 0, walk)[1],
+      south: stepYards(at, 180, walk)[1],
+      east: stepYards(at, 90, walk)[0],
+      west: stepYards(at, 270, walk)[0],
+    };
+    const view = input.within;
+    const top = topSitSpots({ ...input, within: reach, max: 3 }).spots.find(
+      (s) => !insideBounds(view, s.lngLat) && yardsBetween(at, s.lngLat) <= walk,
+    );
+    const t = top ? trafficAt(top.lngLat) : 0;
+    if (top && t > Math.max(here, on[0]?.t ?? 0) * OFF_SCREEN_EDGE) off = { s: top, t };
+  }
+  const best = Math.max(here, on[0]?.t ?? 0, off?.t ?? 0);
+  if (best <= 0) return null;
+  const pct = Math.round((100 * here) / best);
+  const better = on.filter((o) => o.t > here && yardsBetween(at, o.s.lngLat) >= SAME_SIT_YD).map((o) => o.s);
+  return { pct, stay: pct >= STAY_AT_PCT, better, ...(off ? { offScreen: off.s } : {}) };
 }
 
 /**

@@ -82,6 +82,18 @@ export interface SitSpotQuery {
 }
 
 /** What the app sends when the hunter taps a spot (or asks a follow-up). */
+export interface VerdictQuery {
+  /** 0-100 against the best sit found. */
+  pct: number;
+  stay: boolean;
+  /** Whose spot: the one they tapped, or where they stand. */
+  of: "sit" | "hunter";
+  /** Ranks of the sit spots that beat it. */
+  betterRanks: number[];
+  /** A clearly better sit just off the screen; the map zooms out to show it. */
+  offScreen?: { yards: number; compass: string };
+}
+
 export interface SpotQuery {
   species: SpeciesId;
   /** The tapped spot. */
@@ -101,6 +113,8 @@ export interface SpotQuery {
   sitSpots?: SitSpotQuery[];
   /** True when the ground gave nothing strong to go on for sit spots. */
   sitUnsure?: boolean;
+  /** Stay or move for the hunter's spot, worked out on the phone and shown as a card. */
+  verdict?: VerdictQuery;
   /** IANA zone for talking about clock time. Defaults to the device's zone. */
   timeZone?: string;
   /** The hunter's own words, if they asked something. */
