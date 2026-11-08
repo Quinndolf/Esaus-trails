@@ -3,7 +3,7 @@ import type { Map as MLMap } from 'maplibre-gl';
 import { analysisForSlider, analyzeArea } from '../esau/ui/analyzeArea';
 import { useEsau } from '../esau/ui/store';
 import { ensureGroundForView, visibleBox } from '../hour/view';
-import type { Bounds, LngLat } from '../model/geo';
+import { insideBounds, type Bounds, type LngLat } from '../model/geo';
 import './home.css';
 
 /**
@@ -28,7 +28,10 @@ export function AnalyzePill({ map }: { map: MLMap | null }) {
         void ensureGroundForView(map).then(async () => {
           useEsau.setState({ view: visibleBox(map) });
           const off = analysisForSlider(useEsau.getState().sit)?.verdict?.offScreen;
-          if (off) await zoomOutTo(map, off.lngLat);
+          if (off) {
+            await zoomOutTo(map, off.lngLat);
+            await ensureGroundForView(map); // the wider screen may reach past the ground read so far
+          }
           return analyzeArea();
         });
       }}
@@ -58,7 +61,9 @@ export function useShowSpot(map: MLMap | null) {
   useEffect(() => {
     if (!map || !want) return;
     useEsau.setState({ showSpot: null });
-    void zoomOutTo(map, want).then(() => analyzeArea());
+    void zoomOutTo(map, want)
+      .then(() => ensureGroundForView(map))
+      .then(() => analyzeArea());
   }, [map, want]);
 }
 
@@ -75,9 +80,17 @@ export function boxIncluding(v: Bounds, [lng, lat]: LngLat, margin = 0.08): Boun
   };
 }
 
-/** Zoom out (never in) until `p` is on screen, keeping the map's turn, and update Esau's view when it lands. */
-export function zoomOutTo(map: MLMap, p: LngLat): Promise<void> {
-  const b = boxIncluding(visibleBox(map), p);
+/**
+ * Zoom out (never in) until `p` is on screen, keeping the map's turn, and update Esau's view when it lands.
+ * A turned map shows less than the box it was fit to, so if `p` is still off the screen it widens once more.
+ */
+export async function zoomOutTo(map: MLMap, p: LngLat): Promise<void> {
+  await fitOnce(map, p, 0.08);
+  if (!insideBounds(visibleBox(map), p)) await fitOnce(map, p, 0.3);
+}
+
+function fitOnce(map: MLMap, p: LngLat, margin: number): Promise<void> {
+  const b = boxIncluding(visibleBox(map), p, margin);
   return new Promise<void>((done) => {
     let landed = false;
     const finish = () => {

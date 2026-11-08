@@ -209,8 +209,6 @@ export const STAY_AT_PCT = 70;
 export const WALK_YD = 800;
 /** A spot off the screen has to beat the best one on it by this much to be worth the walk. */
 const OFF_SCREEN_EDGE = 1.25;
-/** A spot this close to yours is the same sit, not a better one. */
-const SAME_SIT_YD = 30;
 
 export interface SitVerdict {
   /** 0-100: your spot's traffic against the best spot on screen (or just off it, within a walk). */
@@ -241,7 +239,7 @@ export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: num
       west: stepYards(at, 270, walk)[0],
     };
     const view = input.within;
-    const top = topSitSpots({ ...input, within: reach, max: 3 }).spots.find(
+    const top = topSitSpots({ ...input, within: reach, max: 9 }).spots.find(
       (s) => !insideBounds(view, s.lngLat) && yardsBetween(at, s.lngLat) <= walk,
     );
     const t = top ? trafficAt(top.lngLat) : 0;
@@ -250,8 +248,10 @@ export function sitVerdict(input: SitSpotInput, at: LngLat, opts: { walkYd?: num
   const best = Math.max(here, on[0]?.t ?? 0, off?.t ?? 0);
   if (best <= 0) return null;
   const pct = Math.round((100 * here) / best);
-  const better = on.filter((o) => o.t > here && yardsBetween(at, o.s.lngLat) >= SAME_SIT_YD).map((o) => o.s);
-  return { pct, stay: pct >= STAY_AT_PCT, better, ...(off ? { offScreen: off.s } : {}) };
+  const stay = pct >= STAY_AT_PCT;
+  const better = on.filter((o) => o.t > here).map((o) => o.s);
+  // Only a move sends the hunter off the screen.
+  return { pct, stay, better, ...(off && !stay ? { offScreen: off.s } : {}) };
 }
 
 /**

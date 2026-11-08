@@ -31210,6 +31210,9 @@ function verdictLines(v) {
   return out;
 }
 
+// src/model/sitSpots.ts
+var STAY_AT_PCT = 70;
+
 // server/esau/ask.ts
 init_sdk();
 
@@ -37639,7 +37642,7 @@ function validate2(body) {
   if (q.verdict !== void 0) {
     const v = q.verdict;
     const off = v?.offScreen;
-    const ok = v && typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 && typeof v.stay === "boolean" && (v.of === "sit" || v.of === "hunter") && Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) && (off === void 0 || typeof off.yards === "number" && off.yards >= 0 && off.yards < 5e3 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass));
+    const ok = v && typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 && typeof v.stay === "boolean" && v.stay === v.pct >= STAY_AT_PCT && (v.of === "sit" || v.of === "hunter") && Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) && (off === void 0 || typeof off.yards === "number" && off.yards >= 0 && off.yards < 5e3 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass));
     if (!ok) throw new EsauInputError("verdict must be {pct,stay,of,betterRanks,offScreen?}");
   }
   if (q.question && q.question.length > 2e3) throw new EsauInputError("question is too long");

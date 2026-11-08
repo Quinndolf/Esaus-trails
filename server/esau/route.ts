@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import Anthropic from "@anthropic-ai/sdk";
 import { EsauInputError } from "../../src/esau/brief";
 import type { SpotQuery } from "../../src/esau/types";
+import { STAY_AT_PCT } from "../../src/model/sitSpots";
 import { askClaude, type AskConfig } from "./ask";
 
 const MAX_BODY = 2 * 1024 * 1024; // no photos or marks ever arrive here
@@ -65,7 +66,7 @@ function validate(body: unknown): SpotQuery {
     const ok =
       v &&
       typeof v.pct === "number" && v.pct >= 0 && v.pct <= 100 &&
-      typeof v.stay === "boolean" &&
+      typeof v.stay === "boolean" && v.stay === v.pct >= STAY_AT_PCT &&
       (v.of === "sit" || v.of === "hunter") &&
       Array.isArray(v.betterRanks) && v.betterRanks.length <= 3 && v.betterRanks.every((r) => Number.isInteger(r) && r >= 1 && r <= 9) &&
       (off === undefined || (typeof off.yards === "number" && off.yards >= 0 && off.yards < 5000 && typeof off.compass === "string" && /^[NSEW]{1,3}$/.test(off.compass)));

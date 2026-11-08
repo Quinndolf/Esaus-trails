@@ -191,3 +191,13 @@ describe('stay or move verdict', () => {
     expect(sitVerdict({ grid, trails: [], beds: [], windFromDeg: () => 0, weapon: 'bow' }, mid(16, 16))).toBeNull();
   });
 });
+
+describe('stay or move verdict: staying never sends you off the screen', () => {
+  it('drops the off-screen spot when the call is stay', () => {
+    const view = { west: grid.west, east: grid.east, south: mid(30, 0)[1], north: mid(17, 0)[1] }; // trail just north of the screen
+    for (const r of [17, 18, 19, 20, 22, 24]) {
+      const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: view }, mid(r, 16));
+      if (v?.stay) expect(v.offScreen).toBeUndefined();
+    }
+  });
+});

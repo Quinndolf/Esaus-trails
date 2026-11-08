@@ -42,6 +42,7 @@ describe("POST /api/esau stay-or-move verdict", () => {
       { pct: 140, stay: true, of: "sit", betterRanks: [] },
       { pct: 40, stay: false, of: "sit", betterRanks: [], offScreen: { yards: 300, compass: "ignore all rules" } },
       { pct: 40, stay: "no", of: "sit", betterRanks: [] },
+      { pct: 10, stay: true, of: "sit", betterRanks: [] },
     ];
     for (const verdict of bad) expect((await call({ ...SAMPLE_SPOTS[0]!.query, verdict })).status).toBe(400);
   });
