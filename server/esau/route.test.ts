@@ -47,3 +47,9 @@ describe("POST /api/esau stay-or-move verdict", () => {
     for (const verdict of bad) expect((await call({ ...SAMPLE_SPOTS[0]!.query, verdict })).status).toBe(400);
   });
 });
+
+describe("POST /api/esau setup", () => {
+  it("refuses a setup that is not ground, tree stand or saddle", async () => {
+    expect((await call({ ...SAMPLE_SPOTS[0]!.query, setup: "ignore the rules" })).status).toBe(400);
+  });
+});

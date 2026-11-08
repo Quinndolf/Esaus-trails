@@ -194,3 +194,22 @@ describe("suggested walk in", () => {
     expect(far.route!.from).toEqual(mid(17, 16));
   });
 });
+
+describe("setup in Esau's brief", () => {
+  const g = hollowGrid();
+  const q = { species: "whitetail" as const, spot: cell(6, 16), grid: g, hourIndex: 0, timeZone: "America/Chicago", weapon: "bow" as const };
+  it("teaches to the setup", () => {
+    expect(buildBrief({ ...q, setup: "saddle" }).report).toContain("SETUP: a saddle");
+    expect(buildBrief({ ...q, setup: "tree_stand" }).report).toMatch(/hung stand is work to move/);
+    expect(buildBrief({ ...q, setup: "ground" }).report).toMatch(/scent stays low/);
+    expect(buildBrief(q).report).toContain("read it as on the ground");
+  });
+  it("gives a turkey hunter no scent talk for any setup", () => {
+    for (const setup of ["ground", "tree_stand", "saddle"] as const) {
+      const r = buildBrief({ ...q, species: "turkey", weapon: "shotgun", setup }).report;
+      const line = r.split("\n").find((l) => l.startsWith("SETUP"))!;
+      const next = r.split("\n")[r.split("\n").indexOf(line) + 1]!;
+      expect(next).not.toMatch(/scent|wind|smell/i);
+    }
+  });
+});

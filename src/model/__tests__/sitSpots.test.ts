@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cellCenter, yardsBetween, stepYards, bearingBetween, angleDiff, insideBounds, type LngLat } from '../geo';
 import type { Bed, Trail } from '../movement';
-import { SCENT_CONE_DEG, sitVerdict, STAY_AT_PCT, topSitSpots, UNSURE_BELOW, WALK_YD } from '../sitSpots';
+import { rateSit, SCENT_CONE_DEG, sitVerdict, STAY_AT_PCT, topSitSpots, UNSURE_BELOW, WALK_YD } from '../sitSpots';
 import { BOX, makeGrid } from './fixtures';
 
 const grid = makeGrid(() => 250);
@@ -199,5 +199,22 @@ describe('stay or move verdict: staying never sends you off the screen', () => {
       const v = sitVerdict({ grid, trails: [trail], beds: [], windFromDeg: () => 0, weapon: 'bow', within: view }, mid(r, 16));
       if (v?.stay) expect(v.offScreen).toBeUndefined();
     }
+  });
+});
+
+describe('setup: ground, tree stand or saddle', () => {
+  it('up a tree, a close spot with the wind a little wrong rates higher than on the ground, but still below a good one', () => {
+    const at = stepYards(mid(16, 16), 180, 20); // south of the trail; a south wind blows scent onto it
+    const input = { grid, trails: [trail], beds: [], windFromDeg: () => 180, weapon: 'bow' as const };
+    const ground = rateSit({ ...input, setup: 'ground' }, at);
+    const stand = rateSit({ ...input, setup: 'tree_stand' }, at);
+    const saddle = rateSit({ ...input, setup: 'saddle' }, at);
+    expect(stand).toBeGreaterThan(ground);
+    expect(saddle).toBe(stand);
+    const good = rateSit({ ...input, setup: 'tree_stand' }, stepYards(mid(16, 16), 0, 20));
+    expect(stand).toBeLessThan(good * 0.7);
+  });
+  it('leaves the ground hunter\'s picks as they were', () => {
+    expect(run({ setup: 'ground' }).spots).toEqual(run().spots);
   });
 });

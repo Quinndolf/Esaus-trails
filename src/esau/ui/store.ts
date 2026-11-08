@@ -4,6 +4,7 @@ import { askEsau, EsauApiError } from '../client';
 import { toSitSpotQuery, toVerdictQuery, type Analysis, type Bounds } from '../analyze';
 import type { Weapon } from '../../rules/types';
 import type { LngLat } from '../../model/geo';
+import type { Setup } from '../../model/sitSpots';
 import { offlineRead } from '../offline';
 import type { EsauReply, GroundGrid, LatLng, SpeciesId, SpotQuery } from '../types';
 import { groundFor } from './ground';
@@ -41,6 +42,8 @@ interface EsauState {
   hunter: Hunter | null;
   /** What the hunter carries. Null until they pick one, which the app asks right after the animal. */
   weapon: Weapon | null;
+  /** How the hunter sits: ground, tree stand or saddle. Null until they say; read as ground. */
+  setup: Setup | null;
   /** Where the hunter plans to sit. A tap on the map sets it. Stays on the phone. */
   sit: LatLng | null;
   /** The latest area analysis: sit spots, legal read and banners. */
@@ -53,6 +56,7 @@ interface EsauState {
   showSpot: LngLat | null;
 
   setWeapon(w: Weapon | null): void;
+  setSetup(s: Setup): void;
   setHunter(h: Hunter | null): void;
   setSpecies(s: SpeciesId | null): void;
   setChoosing(open: boolean): void;
@@ -74,6 +78,17 @@ function savedWeapon(): Weapon | null {
   try {
     const v = localStorage.getItem(WEAPON_KEY);
     return v && WEAPONS.includes(v) ? (v as Weapon) : null;
+  } catch {
+    return null;
+  }
+}
+const SETUP_KEY = 'esau-setup';
+const SETUPS: Setup[] = ['ground', 'tree_stand', 'saddle'];
+
+function savedSetup(): Setup | null {
+  try {
+    const v = localStorage.getItem(SETUP_KEY) as Setup | null;
+    return v && SETUPS.includes(v) ? v : null;
   } catch {
     return null;
   }
@@ -121,12 +136,24 @@ export const useEsau = create<EsauState>((set, get) => ({
   error: null,
   hunter: null,
   weapon: savedWeapon(),
+  setup: savedSetup(),
   sit: null,
   analysis: null,
   view: null,
   analyzer: null,
   showSpot: null,
   time: null,
+
+  setSetup(setup) {
+    try {
+      localStorage.setItem(SETUP_KEY, setup);
+    } catch {
+      /* ignore */
+    }
+    ticket++;
+    set({ setup, reply: null, analysis: refresh(get()) ?? get().analysis });
+    if (get().spot && get().grid) void get().ask();
+  },
 
   setWeapon(weapon) {
     try {
@@ -194,6 +221,7 @@ export const useEsau = create<EsauState>((set, get) => ({
     const base: SpotQuery = {
       species: s.species,
       weapon: s.weapon ?? undefined,
+      setup: s.setup ?? undefined,
       ...(an ? { sitSpots: an.spots.map(toSitSpotQuery), sitUnsure: an.unsure } : {}),
       ...(an?.verdict ? { verdict: toVerdictQuery(an.verdict) } : {}),
       spot: s.spot,

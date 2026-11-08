@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useEsau } from '../esau/ui/store';
 import { ANIMAL_ORDER, SHORT_NAME, WEAPON_NAME, chipLabel, useWeapon, weaponsFor } from './weapon';
 import type { SpeciesId } from '../esau/types';
+import type { Setup } from '../model/sitSpots';
 import './home.css';
 
 /**
@@ -12,7 +13,8 @@ export function AnimalChip() {
   const species = useEsau((s) => s.species);
   const setSpecies = useEsau((s) => s.setSpecies);
   const weapon = useWeapon((s) => s.weapon);
-  const [step, setStep] = useState<'closed' | 'animal' | 'weapon'>('closed');
+  const [step, setStep] = useState<'closed' | 'animal' | 'weapon' | 'setup'>('closed');
+  const setup = useEsau((s) => s.setup);
   const [pending, setPending] = useState<SpeciesId | null>(null);
 
   const wrap = useRef<HTMLDivElement>(null);
@@ -52,7 +54,8 @@ export function AnimalChip() {
         aria-label={`Hunting: ${chipLabel(species, weapon)}. Change`}
         onClick={() => (step === 'closed' ? setStep('animal') : close())}
       >
-        {chipLabel(species, species === 'ginseng' ? null : weapon)} <span aria-hidden>⌃</span>
+        {chipLabel(species, species === 'ginseng' ? null : weapon)}
+        {species !== 'ginseng' && weapon && setup ? ` · ${SETUP_NAME[setup]}` : ''} <span aria-hidden>⌃</span>
       </button>
 
       {step === 'animal' && (
@@ -82,7 +85,7 @@ export function AnimalChip() {
               data-testid={`weapon-${w}`}
               onClick={() => {
                 useWeapon.getState().setWeapon(w);
-                close();
+                setStep('setup');
               }}
             >
               {WEAPON_NAME[w]}
@@ -90,6 +93,28 @@ export function AnimalChip() {
           ))}
         </div>
       )}
+
+      {step === 'setup' && (
+        <div className="chip-list" role="group" aria-label="Setup">
+          <p className="chip-q">How are you set up?</p>
+          {SETUPS.map((k) => (
+            <button
+              key={k}
+              className={`chip-item ${setup === k ? 'is-active' : ''}`}
+              data-testid={`setup-${k}`}
+              onClick={() => {
+                useEsau.getState().setSetup(k);
+                close();
+              }}
+            >
+              {SETUP_NAME[k]}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+const SETUPS: Setup[] = ['ground', 'tree_stand', 'saddle'];
+export const SETUP_NAME: Record<Setup, string> = { ground: 'Ground', tree_stand: 'Tree stand', saddle: 'Saddle' };

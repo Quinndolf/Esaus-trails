@@ -2,7 +2,7 @@ import { bearingBetween, cardinal, cellAt, insideBounds, yardsBetween, type Boun
 import type { MovementHour } from "../model/movement";
 import type { WindField } from "../model/wind";
 import { walkRoute, type WalkRoute } from "../model/walkRoute";
-import { sitVerdict, topSitSpots, type SitSpot, type SitSpotInput, type SitVerdict, type Weapon } from "../model/sitSpots";
+import { sitVerdict, topSitSpots, type Setup, type SitSpot, type SitSpotInput, type SitVerdict, type Weapon } from "../model/sitSpots";
 import { squirrelSitSpots } from "../model/squirrelSpots";
 import { turkeySitSpots } from "../model/turkeySpots";
 import type { ElevationGrid } from "../model/types";
@@ -32,6 +32,8 @@ export interface AnalyzeInput {
   wind: WindField;
   species: SpeciesId;
   weapon: Weapon | null;
+  /** Ground (default), tree stand or saddle. */
+  setup?: Setup;
   at: Date;
   timeZone?: string;
   /** The hunter's chosen sit spot, if any. Used only for the wrong-wind banner. */
@@ -121,6 +123,7 @@ function deerInput(i: AnalyzeInput): SitSpotInput {
     beds: i.movement.beds,
     windFromDeg: (cell) => i.wind.fromDeg[cell] ?? 0,
     weapon: i.weapon!,
+    setup: i.setup,
     hunter: i.hunter ?? undefined,
     within: i.view ?? undefined,
   };

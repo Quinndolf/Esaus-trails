@@ -24,12 +24,12 @@ const click = (host: HTMLElement, sel: string) => act(async () => void (host.que
 afterEach(() => {
   document.body.innerHTML = '';
   localStorage.clear();
-  useEsau.setState({ species: null, choosing: false });
+  useEsau.setState({ species: null, choosing: false, setup: null });
   useWeapon.setState({ weapon: null });
 });
 
 describe('animal chip', () => {
-  it('opens a list in order, then asks the weapon, then shows "Whitetail · Crossbow"', async () => {
+  it('opens a list in order, asks the weapon and the setup, then shows "Whitetail · Crossbow · Saddle"', async () => {
     const host = await mount(createElement(AnimalChip));
     expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('What are you hunting?');
     await click(host, '[data-testid="animal-chip"]');
@@ -40,7 +40,11 @@ describe('animal chip', () => {
     await click(host, '[data-testid="weapon-crossbow"]');
     expect(useEsau.getState().species).toBe('whitetail');
     expect(useWeapon.getState().weapon).toBe('crossbow');
-    expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('Whitetail · Crossbow');
+    expect(host.textContent).toContain('How are you set up?');
+    await click(host, '[data-testid="setup-saddle"]');
+    expect(useEsau.getState().setup).toBe('saddle');
+    expect(localStorage.getItem('esau-setup')).toBe('saddle');
+    expect(host.querySelector('[data-testid="animal-chip"]')?.textContent).toContain('Whitetail · Crossbow · Saddle');
     expect(host.querySelector('[role="listbox"]')).toBeNull();
   });
 
