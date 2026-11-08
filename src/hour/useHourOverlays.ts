@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { GeoJSONSource, ImageSource, Map as MLMap } from 'maplibre-gl';
 import type { LngLat } from '../map/geo';
 import { cellAt, gridCenter } from '../model/geo';
@@ -16,6 +16,7 @@ import {
   windArrows,
 } from './overlays';
 import { useEsau } from '../esau/ui/store';
+import { huntBox } from './ground';
 import { hourScope, type HourScope } from './scope';
 import { likelihoodField } from './likelihood';
 import { trailsInView } from './facing';
@@ -221,6 +222,14 @@ function setVisible(map: MLMap, on: boolean, scope: HourScope | null, food: bool
 export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing: number | null = null) {
   const { grid, conditions, movement, date, open, status, showFood, showThermals } = useHour();
   const species = useEsau((st) => st.species);
+  // Predicted trails and beds are drawn only where the hunter can walk and hunt: the screen, cut to a 1 mile box
+  // at its middle when zoomed out (huntBox). Esau's own read of the screen is not changed by this.
+  // A tap off the screen forgets Esau's view for a moment; keep drawing on the last screen known.
+  const live = useEsau((st) => st.view);
+  const lastView = useRef(live);
+  if (live) lastView.current = live;
+  const view = lastView.current;
+  const drawBox = useMemo(() => (view ? huntBox(view) : null), [view?.west, view?.east, view?.south, view?.north]);
   const scope = useMemo(() => hourScope(species), [species]);
   const show = open && status === 'ready' && !!scope;
 
@@ -254,13 +263,19 @@ export function useHourOverlays(map: MLMap | null, hunter: LngLat | null, facing
     });
     (map.getSource('hour-wind') as GeoJSONSource).setData(windArrows(grid, frame.hc));
     (map.getSource('hour-ticks') as GeoJSONSource).setData(thermalTicks(grid, frame.hc));
-    (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m));
-    (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m));
     (map.getSource('hour-facing') as GeoJSONSource).setData(
       facing != null && hunter ? trailsInView(frame.m.trails, hunter, facing) : { type: 'FeatureCollection', features: [] },
     );
     (map.getSource('hour-scent') as GeoJSONSource).setData(plumePolygon(frame.plume));
   }, [map, frame, show, grid, scope, showFood, showThermals, facing != null ? Math.round(facing / 5) : null, hunter?.[0], hunter?.[1]]);
+
+  // Trails and beds follow the screen on their own, so a pan doesn't redraw every other layer.
+  useEffect(() => {
+    if (!map || !show || !frame) return;
+    ensureLayers(map);
+    (map.getSource('hour-trails') as GeoJSONSource).setData(trailLines(frame.m, drawBox));
+    (map.getSource('hour-beds') as GeoJSONSource).setData(bedPoints(frame.m, drawBox));
+  }, [map, frame, show, drawBox]);
 
   return frame;
 }
