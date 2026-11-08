@@ -36,6 +36,7 @@ import { LayersSheet } from './ui/LayersSheet';
 import { OfflineSheet } from './ui/OfflineSheet';
 import { ToolsSheet } from './ui/ToolsSheet';
 import { AnalyzePill } from './home/AnalyzePill';
+import { RouteToggle, useRouteLine } from './home/RouteToggle';
 import { AdvisoryBanner, RangePill, useSitSpotMarkers } from './home/MapExtras';
 import { SpotWhyCard } from './home/SpotWhyCard';
 import { MapKeyButton, MapKeyCard, WhatsThisCard, useExplain } from './home/MapKey';
@@ -108,6 +109,7 @@ export function App() {
   useEffect(() => void useTools.getState().load(), []);
   useToolLayers(map);
   useSitSpotMarkers(map);
+  useRouteLine(map);
   useGinsengLayer(map);
   const ginsengOn = species === 'ginseng';
   // Picking Ginseng from Esau's animal chips counts as entering the mode too: rules first, then the ground.
@@ -300,6 +302,7 @@ export function App() {
       <MapKeyCard />
       <RangePill />
       <AnalyzePill map={map} />
+      <RouteToggle />
 
       <button className="frost-btn tools-btn" onClick={() => setSheet('tools')} aria-label="Tools">
         <ToolsIcon />

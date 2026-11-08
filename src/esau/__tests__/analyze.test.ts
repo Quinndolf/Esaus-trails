@@ -167,3 +167,30 @@ describe("stay or move", () => {
     expect(analyzeHour({ ...base, wind: wind(0), weapon: null, sit: mid(17, 16) }).verdict).toBeUndefined();
   });
 });
+
+describe("suggested walk in", () => {
+  const scent = (deg: number) => ({ driftBearing: new Float32Array(n).fill(deg), spreadDeg: new Float32Array(n).fill(60) });
+  it("walks from the hunter to the better spot on a move", () => {
+    const hunter = mid(28, 16);
+    const a = analyzeHour({ ...base, wind: wind(180), sit: mid(17, 16), hunter, scent: scent(0) });
+    expect(a.verdict?.stay).toBe(false);
+    expect(a.route!.from).toEqual(hunter);
+    expect(a.route!.to).toEqual(a.verdict!.better[0]!.lngLat);
+    expect(a.route!.path[0]).toEqual(hunter);
+  });
+  it("walks to the top pick when no spot is chosen, and draws nothing without the scent read", () => {
+    const hunter = mid(28, 16);
+    const a = analyzeHour({ ...base, wind: wind(0), hunter, scent: scent(180) });
+    expect(a.route!.to).toEqual(a.spots[0]!.lngLat);
+    expect(analyzeHour({ ...base, wind: wind(0), hunter }).route).toBeUndefined();
+  });
+  it("on a stay, walks to your own spot; with the GPS off the ground, starts from your spot", () => {
+    const top = analyzeHour({ ...base, wind: wind(0) }).spots[0]!;
+    const hunter = mid(28, 16);
+    const stay = analyzeHour({ ...base, wind: wind(0), sit: top.lngLat, hunter, scent: scent(180) });
+    expect(stay.verdict?.stay).toBe(true);
+    expect(stay.route!.to).toEqual(top.lngLat);
+    const far = analyzeHour({ ...base, wind: wind(180), sit: mid(17, 16), hunter: [grid.east + 0.05, grid.north] as LngLat, scent: scent(0) });
+    expect(far.route!.from).toEqual(mid(17, 16));
+  });
+});
