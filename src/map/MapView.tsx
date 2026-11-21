@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { BASEMAP_LAYERS, RASTER_SOURCES, buildStyle, type BasemapId, type RasterSourceId } from './basemaps';
 import { circleRing, coneRing, type LngLat } from './geo';
 import type { Fix } from './useGeolocation';
+import { followBearing } from './rotation';
 
 export type LocationMode = 'free' | 'follow' | 'compass';
 
@@ -30,6 +31,7 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
   const loaded = useRef(false);
+  const wasCompass = useRef(false);
   const [zoomTick, setZoomTick] = useState(0);
   // State, not just the ref: a GPS fix that lands before the style loads must redraw the dot once it does.
   const [ready, setReady] = useState(false);
@@ -44,12 +46,12 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
       center: initialCenter,
       zoom: initialZoom,
       maxZoom: 19,
-      dragRotate: false,
+      dragRotate: true,
       pitchWithRotate: false,
       attributionControl: false,
     });
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
-    map.touchZoomRotate.disableRotation();
+    map.touchZoomRotate.enableRotation();
     mapRef.current = map;
 
     // Any drag or pinch by the hunter drops follow mode, like onX.
@@ -57,6 +59,7 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
       if (e.originalEvent) latest.current.onUserMove();
     };
     map.on('dragstart', userMove);
+    map.on('rotatestart', userMove);
     map.on('zoomstart', (e) => {
       if (e.originalEvent && (e.originalEvent as TouchEvent).touches?.length > 1) latest.current.onUserMove();
     });
@@ -165,13 +168,15 @@ export function MapView({ basemap, fix, heading, mode, initialCenter, initialZoo
     const map = mapRef.current;
     if (!map || !fix || mode === 'free') return;
     const zoom = map.getZoom() < 14 ? 16 : map.getZoom();
-    const bearing = mode === 'compass' ? (heading ?? map.getBearing()) : 0;
+    const bearing = followBearing(mode, heading, map.getBearing());
     map.easeTo({ center: fix.lngLat, zoom, bearing, duration: mode === 'compass' ? 250 : 400 });
   }, [fix, heading, mode]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (map && mode === 'free' && map.getBearing() !== 0) map.easeTo({ bearing: 0, duration: 300 });
+    // Leaving the heading-up compass turns the map back to north. A turn the hunter made themselves is kept.
+    if (map && wasCompass.current && mode !== 'compass' && map.getBearing() !== 0) map.easeTo({ bearing: 0, duration: 300 });
+    wasCompass.current = mode === 'compass';
   }, [mode]);
 
   return <div ref={el} className="map" data-testid="map" />;

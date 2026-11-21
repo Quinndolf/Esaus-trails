@@ -25,6 +25,7 @@ import {
   usePhotoPins,
 } from './photos';
 import { ToolBar, TrackerChip, WaypointSheet, isToolCapturingTaps, useToolLayers, useTools } from './tools';
+import { NorthButton } from './map/NorthButton';
 import { CompassIcon, LayersIcon, LocateFilledIcon, LocateIcon, ToolsIcon } from './ui/icons';
 import { CallsSheet } from './calls/CallsSheet';
 import { GinsengGearSheet, GinsengHowToSheet, GinsengPill, GinsengRulesSheet, useGinsengLayer } from './ginseng/GinsengMode';
@@ -320,6 +321,7 @@ export function App() {
 
       <div className="home-stack">
         <MapKeyButton />
+        <NorthButton map={map} />
         <ThreeDButton map={map} />
         <button className="frost-btn" onClick={() => setSheet('layers')} aria-label="Map Layers">
           <LayersIcon />
