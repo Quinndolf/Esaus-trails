@@ -11,7 +11,7 @@ export function setTerrain3D(map: MLMap, on: boolean) {
     map.touchPitch.enable();
     map.easeTo({ pitch: PITCH, duration: 600 });
   } else {
-    map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+    map.easeTo({ pitch: 0, duration: 400 });
     map.once('moveend', () => map.setTerrain(null));
     map.touchPitch.disable();
   }
